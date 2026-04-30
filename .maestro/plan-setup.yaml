@@ -1,0 +1,47 @@
+appId: com.aipushupcoach.app
+name: Plan setup one-option flow
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Next"
+    timeout: 8000
+- tapOn:
+    id: "onboarding-next"
+- tapOn:
+    id: "onboarding-next"
+- tapOn:
+    id: "onboarding-next"
+- extendedWaitUntil:
+    visible: "Choose your push-up state"
+    timeout: 5000
+- tapOn:
+    id: "setup-level-beginner"
+- tapOn:
+    id: "setup-level-continue"
+- extendedWaitUntil:
+    visible: "Pick realistic training days"
+    timeout: 5000
+- tapOn:
+    id: "setup-day-tue"
+- tapOn:
+    id: "setup-days-continue"
+- extendedWaitUntil:
+    visible: "Choose one goal"
+    timeout: 5000
+- tapOn:
+    id: "setup-goal-road_50"
+- tapOn:
+    id: "setup-goal-continue"
+- extendedWaitUntil:
+    visible: "Choose training time"
+    timeout: 5000
+- tapOn:
+    id: "setup-time-input"
+- eraseText
+- inputText: "07:30"
+- tapOn:
+    id: "setup-generate-plan"
+- extendedWaitUntil:
+    visible: "Road to 50 Pushups"
+    timeout: 10000
