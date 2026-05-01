@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { borderRadius, colors, layout, spacing, typography } from '../../../src/theme';
 import { useUserStore, type User } from '../../../src/store';
+import { getCountryByCode } from '../../../src/data/countries';
 
 const toneOptions: Array<{ id: User['coachTone']; label: string }> = [
   { id: 'balanced', label: 'Balanced' },
@@ -20,6 +21,7 @@ export default function EditProfileScreen() {
   const [nickname, setNickname] = useState(user.nickname);
   const [bio, setBio] = useState(user.bio || '');
   const [coachTone, setCoachTone] = useState<User['coachTone']>(user.coachTone ?? 'balanced');
+  const selectedCountry = getCountryByCode(user.countryCode);
 
   const handleSave = () => {
     const displayName = name.trim() || user.name;
@@ -29,6 +31,8 @@ export default function EditProfileScreen() {
       nickname: nickname.trim() || displayName,
       bio: bio.trim(),
       coachTone,
+      countryCode: selectedCountry.code,
+      countryName: selectedCountry.name,
     });
     router.back();
   };
@@ -68,6 +72,16 @@ export default function EditProfileScreen() {
               </React.Fragment>
             );
           })}
+        </View>
+
+        <View style={styles.section}>
+          <Pressable style={({ pressed }) => [styles.toneRow, pressed && styles.rowPressed]} onPress={() => router.push('/(stack)/settings/country' as any)}>
+            <View style={styles.countryCopy}>
+              <Text style={styles.rowLabel}>Country</Text>
+              <Text style={styles.rowValue}>{selectedCountry.code === 'GLOBAL' ? 'Global / Earth' : selectedCountry.name}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={17} color={colors.textMuted} />
+          </Pressable>
         </View>
 
         <Pressable style={styles.saveButton} onPress={handleSave}>
@@ -163,6 +177,8 @@ const styles = StyleSheet.create({
   },
   rowPressed: { backgroundColor: colors.cardSecondary },
   rowLabel: { ...typography.body, color: colors.textPrimary },
+  rowValue: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
+  countryCopy: { flex: 1, minWidth: 0 },
   saveButton: {
     minHeight: 50,
     borderRadius: borderRadius.md,
@@ -170,5 +186,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveButtonText: { ...typography.bodyBold, color: colors.background },
+  saveButtonText: { ...typography.bodyBold, color: colors.textInverse },
 });

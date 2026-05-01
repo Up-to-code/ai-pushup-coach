@@ -8,6 +8,7 @@ export interface Settings {
   notificationsEnabled: boolean;
   workoutReminderEnabled: boolean;
   missedReminderEnabled: boolean;
+  allowGuestMode: boolean;
   defaultWorkoutTime: string;
   defaultCameraMode: 'faceFocus' | 'fullScene';
   theme: 'dark' | 'mirror';
@@ -19,7 +20,7 @@ export interface OnboardingProfile {
   pains: string[];
   statements: string[];
   preferences: string[];
-  demoPlan: string[];
+  trainingSequence: string[];
   cameraPrimed: boolean;
   notificationsPrimed: boolean;
 }
@@ -33,8 +34,10 @@ interface SettingsState {
   setHapticsEnabled: (enabled: boolean) => void;
   setSoundEnabled: (enabled: boolean) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
+  setAllowGuestMode: (enabled: boolean) => void;
   setTheme: (theme: 'dark' | 'mirror') => void;
   completeOnboarding: () => void;
+  resetOnboarding: () => void;
   resetSettings: () => void;
 }
 
@@ -44,6 +47,7 @@ const defaultSettings: Settings = {
   notificationsEnabled: false,
   workoutReminderEnabled: true,
   missedReminderEnabled: true,
+  allowGuestMode: false,
   defaultWorkoutTime: '07:30',
   defaultCameraMode: 'faceFocus',
   theme: 'dark',
@@ -54,7 +58,7 @@ const defaultOnboardingProfile: OnboardingProfile = {
   pains: [],
   statements: [],
   preferences: [],
-  demoPlan: [],
+  trainingSequence: [],
   cameraPrimed: false,
   notificationsPrimed: false,
 };
@@ -77,7 +81,7 @@ export const useSettingsStore = create<SettingsState>()(
             pains: profile.pains ?? state.onboardingProfile.pains,
             statements: profile.statements ?? state.onboardingProfile.statements,
             preferences: profile.preferences ?? state.onboardingProfile.preferences,
-            demoPlan: profile.demoPlan ?? state.onboardingProfile.demoPlan,
+            trainingSequence: profile.trainingSequence ?? state.onboardingProfile.trainingSequence,
           },
         })),
       setHapticsEnabled: (enabled) =>
@@ -97,11 +101,16 @@ export const useSettingsStore = create<SettingsState>()(
             missedReminderEnabled: enabled ? state.settings.missedReminderEnabled : false,
           },
         })),
+      setAllowGuestMode: (enabled) =>
+        set((state) => ({
+          settings: { ...state.settings, allowGuestMode: enabled },
+        })),
       setTheme: (theme) =>
         set((state) => ({
           settings: { ...state.settings, theme },
         })),
       completeOnboarding: () => set({ hasCompletedOnboarding: true }),
+      resetOnboarding: () => set({ hasCompletedOnboarding: false, onboardingProfile: defaultOnboardingProfile }),
       resetSettings: () => set({ settings: defaultSettings }),
     }),
     {
@@ -109,6 +118,9 @@ export const useSettingsStore = create<SettingsState>()(
       storage: customStorage,
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<SettingsState> | undefined;
+        const legacyOnboardingProfile = persisted?.onboardingProfile as
+          | (Partial<OnboardingProfile> & { demoPlan?: unknown })
+          | undefined;
 
         return {
           ...currentState,
@@ -131,9 +143,11 @@ export const useSettingsStore = create<SettingsState>()(
             preferences: Array.isArray(persisted?.onboardingProfile?.preferences)
               ? persisted.onboardingProfile.preferences
               : currentState.onboardingProfile.preferences,
-            demoPlan: Array.isArray(persisted?.onboardingProfile?.demoPlan)
-              ? persisted.onboardingProfile.demoPlan
-              : currentState.onboardingProfile.demoPlan,
+            trainingSequence: Array.isArray(persisted?.onboardingProfile?.trainingSequence)
+              ? persisted.onboardingProfile.trainingSequence
+              : Array.isArray(legacyOnboardingProfile?.demoPlan)
+                ? legacyOnboardingProfile.demoPlan.filter((item): item is string => typeof item === 'string')
+                : currentState.onboardingProfile.trainingSequence,
           },
           hasCompletedOnboarding:
             typeof persisted?.hasCompletedOnboarding === 'boolean'

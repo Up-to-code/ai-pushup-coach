@@ -16,7 +16,7 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
   height,
   width,
   color = colors.accent,
-  fillColor = 'rgba(218, 63, 69, 0.2)',
+  fillColor = 'rgba(225, 29, 72, 0.2)',
 }) => {
   if (data.length < 2) return null;
 

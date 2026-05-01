@@ -46,13 +46,9 @@ export const CFEView: React.FC<CFEViewProps> = ({
 
   if (withBackground) {
     return (
-      <ImageBackground 
-        source={require('../../assets/images/home_bg.png')} 
-        style={styles.background}
-        resizeMode="cover"
-      >
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {content}
-      </ImageBackground>
+      </View>
     );
   }
 
@@ -60,10 +56,6 @@ export const CFEView: React.FC<CFEViewProps> = ({
 };
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   container: {
     flex: 1,
   },

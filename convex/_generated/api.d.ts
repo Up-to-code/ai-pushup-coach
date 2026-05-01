@@ -9,8 +9,12 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as challenges from "../challenges.js";
 import type * as leaderboard from "../leaderboard.js";
+import type * as rateLimit from "../rateLimit.js";
 import type * as settings from "../settings.js";
+import type * as social from "../social.js";
+import type * as socialNotifications from "../socialNotifications.js";
 import type * as telemetry from "../telemetry.js";
 import type * as users from "../users.js";
 import type * as workouts from "../workouts.js";
@@ -23,8 +27,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  challenges: typeof challenges;
   leaderboard: typeof leaderboard;
+  rateLimit: typeof rateLimit;
   settings: typeof settings;
+  social: typeof social;
+  socialNotifications: typeof socialNotifications;
   telemetry: typeof telemetry;
   users: typeof users;
   workouts: typeof workouts;

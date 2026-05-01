@@ -38,7 +38,7 @@ export const shadows = {
     elevation: 4,
   },
   accent: {
-    shadowColor: '#DA3F45',
+    shadowColor: '#E11D48',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.18,
     shadowRadius: 14,

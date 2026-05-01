@@ -2,7 +2,7 @@ import { ClerkProvider } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet } from 'react-native';
+import { LogBox, View, StyleSheet } from 'react-native';
 import { ClerkUserSync } from '../src/auth/ClerkUserSync';
 import { ConvexBackendProvider } from '../src/backend';
 import { SubscriptionProvider } from '../src/revenuecat';
@@ -12,6 +12,19 @@ const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 if (!clerkPublishableKey) {
   throw new Error('Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your Expo environment.');
+}
+
+LogBox.ignoreLogs(['Clerk: Clerk has been loaded with development keys']);
+
+if (__DEV__) {
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    const first = args[0];
+    if (typeof first === 'string' && first.includes('Clerk: Clerk has been loaded with development keys')) {
+      return;
+    }
+    originalWarn(...args);
+  };
 }
 
 export default function RootLayout() {
@@ -28,66 +41,7 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: colors.background },
                 animation: 'slide_from_right',
               }}
-            >
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen 
-                name="(stack)/training-setup"
-                options={{
-                  presentation: 'card',
-                  animation: 'slide_from_right',
-                }}
-              />
-              <Stack.Screen 
-                name="(stack)/session-ready"
-                options={{
-                  presentation: 'card',
-                  animation: 'slide_from_right',
-                }}
-              />
-              <Stack.Screen 
-                name="(stack)/workout-session" 
-                options={{
-                  presentation: 'fullScreenModal',
-                  animation: 'slide_from_bottom',
-                }}
-              />
-              <Stack.Screen 
-                name="(stack)/workout-complete" 
-                options={{
-                  presentation: 'card',
-                  animation: 'slide_from_bottom',
-                }}
-              />
-              <Stack.Screen 
-                name="(stack)/settings" 
-                options={{
-                  presentation: 'card',
-                  animation: 'slide_from_right',
-                }}
-              />
-              <Stack.Screen 
-                name="(stack)/settings/edit-profile" 
-                options={{
-                  presentation: 'card',
-                  animation: 'slide_from_right',
-                }}
-              />
-              <Stack.Screen 
-                name="(stack)/onboarding" 
-                options={{
-                  presentation: 'fullScreenModal',
-                  animation: 'fade',
-                }}
-              />
-              <Stack.Screen name="(stack)/setup/level" />
-              <Stack.Screen name="(stack)/setup/days" />
-              <Stack.Screen name="(stack)/setup/goal" />
-              <Stack.Screen name="(stack)/setup/time" />
-              <Stack.Screen name="(stack)/legal/privacy" />
-              <Stack.Screen name="(stack)/legal/terms" />
-              <Stack.Screen name="(stack)/legal/data-camera" />
-            </Stack>
+            />
           </View>
         </SubscriptionProvider>
       </ConvexBackendProvider>

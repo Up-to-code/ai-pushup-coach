@@ -7,7 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { colors, typography, spacing, borderRadius, layout, shadows } from '../theme';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'white';
 
 interface NeonButtonProps {
   title: string;
@@ -57,6 +57,7 @@ export const NeonButton: React.FC<NeonButtonProps> = ({
         variant === 'primary' && styles.buttonPrimary,
         variant === 'secondary' && styles.buttonSecondary,
         variant === 'outline' && styles.buttonOutline,
+        variant === 'white' && styles.buttonWhite,
         disabled && styles.buttonDisabled,
         animatedStyle,
         style,
@@ -68,6 +69,7 @@ export const NeonButton: React.FC<NeonButtonProps> = ({
           variant === 'primary' && styles.textPrimary,
           variant === 'secondary' && styles.textSecondary,
           variant === 'outline' && styles.textOutline,
+          variant === 'white' && styles.textWhite,
           disabled && styles.textDisabled,
         ]}
       >
@@ -100,6 +102,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundElevated,
     borderColor: colors.border,
   },
+  buttonWhite: {
+    backgroundColor: colors.textPrimary,
+    borderColor: colors.textPrimary,
+  },
   buttonDisabled: {
     opacity: 0.5,
   },
@@ -107,13 +113,16 @@ const styles = StyleSheet.create({
     ...typography.bodyBold,
   },
   textPrimary: {
-    color: colors.textPrimary,
+    color: colors.accentContrast,
   },
   textSecondary: {
     color: colors.textPrimary,
   },
   textOutline: {
     color: colors.textPrimary,
+  },
+  textWhite: {
+    color: colors.background,
   },
   textDisabled: {
     color: colors.textMuted,

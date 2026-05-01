@@ -1,13 +1,14 @@
 import { Tabs } from 'expo-router';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { borderRadius, colors, typography } from '../../src/theme';
 
 export default function TabLayout() {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Tabs
+        sceneContainerStyle={{ backgroundColor: 'transparent' }}
         screenOptions={{
           headerShown: false,
           tabBarShowLabel: true,
@@ -69,7 +70,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   tabBar: {
     backgroundColor: 'transparent',

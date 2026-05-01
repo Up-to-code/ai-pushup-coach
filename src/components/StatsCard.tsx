@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import { colors, typography, spacing, borderRadius, layout, shadows } from '../theme';
-import { MonthlyStat } from '../data';
+import type { MonthlyStat } from '../utils';
 
 interface StatsCardProps {
   title: string;

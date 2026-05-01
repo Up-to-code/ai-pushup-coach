@@ -33,6 +33,7 @@ export interface Workout {
 interface WorkoutState {
   workouts: Workout[];
   currentWorkout: Partial<Workout> | null;
+  lastCompletedWorkout: Workout | null;
   isActive: boolean;
   isPaused: boolean;
   addWorkout: (workout: Workout) => void;
@@ -44,7 +45,9 @@ interface WorkoutState {
     restTime?: number
   ) => void;
   updateCurrentWorkout: (updates: Partial<Workout>) => void;
-  endWorkout: () => void;
+  endWorkout: (completed?: boolean) => void;
+  finishWorkout: (completed?: boolean, updates?: Partial<Workout>) => Workout | null;
+  discardWorkout: () => void;
   incrementReps: () => void;
   decrementReps: () => void;
   updateDuration: (duration: number) => void;
@@ -58,6 +61,7 @@ export const useWorkoutStore = create<WorkoutState>()(
     (set, get) => ({
       workouts: [],
       currentWorkout: null,
+      lastCompletedWorkout: null,
       isActive: false,
       isPaused: false,
 
@@ -98,12 +102,12 @@ export const useWorkoutStore = create<WorkoutState>()(
             : null,
         })),
 
-      endWorkout: () => {
+      endWorkout: (completed = true) => {
         const state = get();
         if (state.currentWorkout) {
           const completedWorkout: Workout = {
             ...state.currentWorkout,
-            completed: true,
+            completed,
             duration: state.currentWorkout.duration || 0,
             calories: Math.round((state.currentWorkout.reps || 0) * 0.29),
           } as Workout;
@@ -111,11 +115,46 @@ export const useWorkoutStore = create<WorkoutState>()(
           set((s) => ({
             workouts: [...s.workouts, completedWorkout],
             currentWorkout: null,
+            lastCompletedWorkout: completedWorkout,
             isActive: false,
             isPaused: false,
           }));
         }
       },
+
+      finishWorkout: (completed = true, updates = {}) => {
+        const state = get();
+        if (!state.currentWorkout) {
+          return null;
+        }
+
+        const mergedWorkout = { ...state.currentWorkout, ...updates };
+        const completedWorkout: Workout = {
+          ...mergedWorkout,
+          completed,
+          duration: mergedWorkout.duration || 0,
+          reps: mergedWorkout.reps || 0,
+          calories: Math.round((mergedWorkout.reps || 0) * 0.29),
+        } as Workout;
+
+        set((s) => ({
+          workouts: [...s.workouts.filter((workout) => workout.id !== completedWorkout.id), completedWorkout],
+          currentWorkout: null,
+          lastCompletedWorkout: completedWorkout,
+          isActive: false,
+          isPaused: false,
+        }));
+
+        return completedWorkout;
+      },
+
+      discardWorkout: () =>
+        set({
+          currentWorkout: null,
+          lastCompletedWorkout: null,
+          isActive: false,
+          isPaused: false,
+        }),
 
       incrementReps: () =>
         set((state) => ({
@@ -151,7 +190,10 @@ export const useWorkoutStore = create<WorkoutState>()(
     {
       name: 'workout-storage',
       storage: customStorage,
-      partialize: (state) => ({ workouts: state.workouts }),
+      partialize: (state) => ({
+        workouts: state.workouts,
+        lastCompletedWorkout: state.lastCompletedWorkout,
+      }),
     }
   )
 );

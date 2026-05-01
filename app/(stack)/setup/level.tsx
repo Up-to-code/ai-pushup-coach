@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { NeonButton } from '../../../src/components';
+import { NeonButton, CFEView } from '../../../src/components';
 import { colors, spacing, typography, borderRadius } from '../../../src/theme';
 import { usePlanStore, type PlanLevel } from '../../../src/store';
 import { debugPlanSetup } from '../../../src/utils/debug';
@@ -28,15 +27,7 @@ export default function SetupLevelScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.stepText}>Step 1 of 4</Text>
-        <View style={styles.placeholder} />
-      </View>
-
+    <CFEView style={styles.container} withBackground={true}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Choose your push-up state</Text>
         <Text style={styles.subtitle}>Pick the level that matches your clean reps today. This screen only sets your starting point.</Text>
@@ -54,7 +45,7 @@ export default function SetupLevelScreen() {
                 onPress={() => setSelectedLevel(level.id)}
               >
                 <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
-                  <Ionicons name={level.icon as any} size={24} color={active ? colors.textPrimary : colors.textSecondary} />
+                  <Ionicons name={level.icon as any} size={24} color={active ? colors.background : colors.textSecondary} />
                 </View>
                 <View style={styles.optionCopy}>
                   <Text style={styles.optionTitle}>{level.title}</Text>
@@ -67,42 +58,28 @@ export default function SetupLevelScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <NeonButton title="Continue" onPress={handleNext} disabled={!selectedLevel} testID="setup-level-continue" />
+        <NeonButton title="Continue" onPress={handleNext} disabled={!selectedLevel} testID="setup-level-continue" variant="white" />
       </View>
-    </SafeAreaView>
+    </CFEView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  backButton: { width: 40, height: 40, justifyContent: 'center' },
-  stepText: { ...typography.bodyBold, color: colors.textSecondary },
-  placeholder: { width: 40 },
+  container: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: spacing.md, paddingTop: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.xl },
   title: { ...typography.headline, color: colors.textPrimary },
   subtitle: { ...typography.body, color: colors.textSecondary, lineHeight: 24 },
   section: { gap: spacing.md },
-  label: { ...typography.label, color: colors.accent },
+  label: { ...typography.label, color: colors.textSecondary, letterSpacing: 1.2 },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
     borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardSecondary,
     gap: spacing.md,
   },
   optionCardActive: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentAlpha,
+    backgroundColor: colors.surfaceStrong,
   },
   iconWrap: {
     width: 48,
@@ -112,7 +89,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconWrapActive: { backgroundColor: colors.accent },
+  iconWrapActive: { backgroundColor: colors.textPrimary },
   optionCopy: { flex: 1, gap: 4 },
   optionTitle: { ...typography.bodyBold, color: colors.textPrimary },
   optionDesc: { ...typography.caption, color: colors.textSecondary },

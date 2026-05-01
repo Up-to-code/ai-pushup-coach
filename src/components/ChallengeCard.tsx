@@ -1,18 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../theme';
-import { Challenge } from '../data';
 import { useResponsive } from '../hooks';
 
+export interface ChallengeCardData {
+  title: string;
+  description: string;
+  category: string;
+  goal: number;
+  progress?: number;
+  rewards: string[];
+}
+
 interface ChallengeCardProps {
-  challenge: Challenge;
+  challenge: ChallengeCardData;
   onPress: () => void;
 }
 
@@ -48,11 +55,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
       onPressOut={handlePressOut}
       style={[styles.card, animatedStyle]}
     >
-      <ImageBackground 
-        source={require('../../assets/images/home_bg.png')} 
-        style={styles.cardBg}
-        imageStyle={{ opacity: 0.25 }}
-      >
+      <View style={styles.cardBg}>
         <View style={styles.header}>
           <View style={styles.iconContainer}>
             <Ionicons name="body" size={normalize(20)} color={colors.accent} />
@@ -87,18 +90,14 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
             <Text style={styles.rewardText}>{challenge.rewards[0]}</Text>
           </View>
         </View>
-      </ImageBackground>
+      </View>
     </AnimatedPressable>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.cardSecondary,
-    borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   cardBg: {
     padding: spacing.md,
@@ -114,7 +113,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(218, 63, 69, 0.1)',
+    backgroundColor: 'rgba(225, 29, 72, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -183,7 +182,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(218, 63, 69, 0.1)',
+    backgroundColor: 'rgba(225, 29, 72, 0.1)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,

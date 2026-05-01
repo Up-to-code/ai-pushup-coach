@@ -74,3 +74,60 @@ export const me = query({
       .unique();
   },
 });
+
+export const publicProfile = query({
+  args: {
+    viewerClientUserId: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, { viewerClientUserId, userId }) => {
+    await requireMatchingIdentity(ctx, viewerClientUserId);
+
+    const viewer = await ctx.db
+      .query('users')
+      .withIndex('by_client_user_id', (q) => q.eq('clientUserId', viewerClientUserId))
+      .unique();
+    const profile = await ctx.db
+      .query('users')
+      .withIndex('by_client_user_id', (q) => q.eq('clientUserId', userId))
+      .unique();
+
+    if (!viewer || !profile) return null;
+
+    const following = await ctx.db
+      .query('follows')
+      .withIndex('by_pair', (q) => q.eq('followerUserId', viewer._id).eq('followingUserId', profile._id))
+      .unique();
+    const followedBy = await ctx.db
+      .query('follows')
+      .withIndex('by_pair', (q) => q.eq('followerUserId', profile._id).eq('followingUserId', viewer._id))
+      .unique();
+    const followers = await ctx.db
+      .query('follows')
+      .withIndex('by_following', (q) => q.eq('followingUserId', profile._id))
+      .collect();
+    const followingRows = await ctx.db
+      .query('follows')
+      .withIndex('by_follower', (q) => q.eq('followerUserId', profile._id))
+      .collect();
+
+    return {
+      ...profile,
+      isCurrentUser: viewer._id === profile._id,
+      isFollowing: following?.status === 'active',
+      followsYou: followedBy?.status === 'active',
+      isFriend: following?.status === 'active' && followedBy?.status === 'active',
+      followersCount: followers.filter((row) => row.status === 'active').length,
+      followingCount: followingRows.filter((row) => row.status === 'active').length,
+      friendsCount: followers.filter(
+        (follower) =>
+          follower.status === 'active' &&
+          followingRows.some(
+            (followingRow) =>
+              followingRow.status === 'active' &&
+              followingRow.followingUserId === follower.followerUserId
+          )
+      ).length,
+    };
+  },
+});

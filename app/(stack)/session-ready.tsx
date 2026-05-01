@@ -15,7 +15,7 @@ export default function SessionReadyScreen() {
       return;
     }
 
-    router.replace('/(tabs)/start' as any);
+    router.replace('/(tabs)/practice' as any);
   }, [currentWorkout?.id, router]);
 
   return (

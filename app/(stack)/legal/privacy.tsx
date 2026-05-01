@@ -27,6 +27,9 @@ export default function PrivacyPolicyScreen() {
         <PolicyBlock title="Control">
           You can edit your profile, disable reminders, rebuild your plan, restore purchases, and manage subscriptions from Settings.
         </PolicyBlock>
+        <PolicyBlock title="Nexfiy app page">
+          Website privacy copy and app support live at https://nexfiy.com/apps/ai-pushup-coach.
+        </PolicyBlock>
       </ScrollView>
     </CFEView>
   );

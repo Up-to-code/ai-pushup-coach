@@ -15,10 +15,16 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aipushupcoach.app",
+      "appleTeamId": "U7JF269T76",
       "infoPlist": {
         "NSCameraUsageDescription": "AI Push-Up Coach uses the camera during live workouts to track push-up movement and count reps.",
         "NSMicrophoneUsageDescription": "Microphone access is not used for workout tracking."
       }
+    },
+    "android": {
+      "permissions": [
+        "com.android.vending.BILLING"
+      ]
     },
     "plugins": [
       "expo-router",

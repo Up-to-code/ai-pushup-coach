@@ -30,21 +30,21 @@ interface UserState {
 }
 
 const defaultUser: User = {
-  id: 'user-ahmed',
-  displayName: 'Ahmed',
-  name: 'Ahmed',
-  nickname: 'Ahmed Flex',
-  bio: 'Pushing boundaries, one rep at a time.',
+  id: 'local-user',
+  displayName: 'Athlete',
+  name: 'Athlete',
+  nickname: 'Coach',
+  bio: '',
   coachTone: 'balanced',
-  personalityTags: ['friendly', 'competitive'],
-  countryCode: 'EG',
-  countryName: 'Egypt',
+  personalityTags: [],
+  countryCode: 'GLOBAL',
+  countryName: 'Earth',
   proStatus: 'free',
   createdAt: new Date().toISOString(),
-  streak: 5,
-  energy: 82,
-  totalReps: 248,
-  bestReps: 78,
+  streak: 0,
+  energy: 100,
+  totalReps: 0,
+  bestReps: 0,
 };
 
 export const useUserStore = create<UserState>()(
@@ -65,6 +65,20 @@ export const useUserStore = create<UserState>()(
     {
       name: 'user-storage',
       storage: customStorage,
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<UserState> | undefined;
+        const persistedUser = persisted?.user;
+        const hasLegacySeedUser =
+          persistedUser?.id === 'user-ahmed' ||
+          persistedUser?.nickname === 'Ahmed Flex' ||
+          (persistedUser?.totalReps === 248 && persistedUser?.bestReps === 78);
+
+        return {
+          ...currentState,
+          ...persisted,
+          user: hasLegacySeedUser ? currentState.user : { ...currentState.user, ...persistedUser },
+        };
+      },
     }
   )
 );

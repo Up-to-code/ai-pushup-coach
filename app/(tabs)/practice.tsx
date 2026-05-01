@@ -39,7 +39,6 @@ export default function TrainScreen() {
   const trainingSetupRoute = '/(stack)/training-setup' as any;
 
   const handleModeSelect = (mode: typeof practiceModes[0]) => {
-    // ... same logic
     let goal: number | undefined;
     let sets: number[] | undefined;
     let restTime: number | undefined;
@@ -94,7 +93,7 @@ export default function TrainScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     paddingVertical: spacing.lg,

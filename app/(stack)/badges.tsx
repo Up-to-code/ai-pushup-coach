@@ -1,11 +1,11 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View, Pressable, ImageBackground } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../../src/theme';
 import { useWorkoutStore } from '../../src/store';
-import { calculateTotalStats, mockWorkouts } from '../../src/data';
+import { calculateTotalStats } from '../../src/utils';
 import { StackHeader } from '../../src/components';
 
 const BADGE_LEVELS = [
@@ -18,63 +18,56 @@ const BADGE_LEVELS = [
 export default function BadgesScreen() {
   const router = useRouter();
   const workouts = useWorkoutStore((state) => state.workouts);
-  const source = workouts.length > 0 ? workouts : mockWorkouts;
-  const totals = calculateTotalStats(source);
+  const totals = calculateTotalStats(workouts);
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/home_bg.png')} 
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <StackHeader 
-            title="Badge Levels" 
-            onBack={() => router.back()} 
-          />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <View style={styles.header}>
+        <StackHeader 
+          title="Badge Levels" 
+          onBack={() => router.back()} 
+        />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryLabel}>TOTAL PUSHUPS</Text>
+          <Text style={styles.summaryValue}>{totals.totalPushups.toLocaleString()}</Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>TOTAL PUSHUPS</Text>
-            <Text style={styles.summaryValue}>{totals.totalPushups.toLocaleString()}</Text>
-          </View>
-
-          <View style={styles.badgeList}>
-            {BADGE_LEVELS.map((badge, idx) => {
-              const isUnlocked = totals.totalPushups >= badge.reps;
-              const progress = Math.min(1, totals.totalPushups / badge.reps);
-              
-              return (
-                <View key={idx} style={[styles.badgeItem, !isUnlocked && styles.badgeItemLocked]}>
-                  <View style={[styles.badgeIconLarge, { backgroundColor: colors.accentDark, borderColor: badge.color }]}>
-                    <Ionicons name="trophy" size={32} color={badge.color} />
+        <View style={styles.badgeList}>
+          {BADGE_LEVELS.map((badge, idx) => {
+            const isUnlocked = totals.totalPushups >= badge.reps;
+            const progress = Math.min(1, totals.totalPushups / badge.reps);
+            
+            return (
+              <View key={idx} style={[styles.badgeItem, !isUnlocked && styles.badgeItemLocked]}>
+                <View style={[styles.badgeIconLarge, { backgroundColor: colors.accentDark, borderColor: badge.color }]}>
+                  <Ionicons name="trophy" size={32} color={badge.color} />
+                </View>
+                
+                <View style={styles.badgeInfo}>
+                  <View style={styles.badgeTitleRow}>
+                    <Text style={[styles.badgeLabel, { color: badge.color }]}>{badge.label}</Text>
+                    {isUnlocked && <Ionicons name="checkmark-circle" size={20} color={colors.accent} />}
                   </View>
+                  <Text style={styles.badgeDesc}>{badge.description}</Text>
                   
-                  <View style={styles.badgeInfo}>
-                    <View style={styles.badgeTitleRow}>
-                      <Text style={[styles.badgeLabel, { color: badge.color }]}>{badge.label}</Text>
-                      {isUnlocked && <Ionicons name="checkmark-circle" size={20} color={colors.accent} />}
+                  <View style={styles.progressContainer}>
+                    <View style={styles.progressTrack}>
+                      <View style={[styles.progressBar, { width: `${progress * 100}%`, backgroundColor: badge.color }]} />
                     </View>
-                    <Text style={styles.badgeDesc}>{badge.description}</Text>
-                    
-                    <View style={styles.progressContainer}>
-                      <View style={styles.progressTrack}>
-                        <View style={[styles.progressBar, { width: `${progress * 100}%`, backgroundColor: badge.color }]} />
-                      </View>
-                      <Text style={styles.progressText}>
-                        {totals.totalPushups.toLocaleString()} / {badge.reps.toLocaleString()} REPS
-                      </Text>
-                    </View>
+                    <Text style={styles.progressText}>
+                      {totals.totalPushups.toLocaleString()} / {badge.reps.toLocaleString()} REPS
+                    </Text>
                   </View>
                 </View>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </ImageBackground>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

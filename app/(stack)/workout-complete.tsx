@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { NeonButton } from '../../src/components';
 import { usePlanStore, useSettingsStore, useUserStore, useWorkoutStore } from '../../src/store';
@@ -11,17 +11,20 @@ import { syncNotificationsForPlan } from '../../src/services/notifications';
 
 export default function WorkoutCompleteScreen() {
   const router = useRouter();
-  const { currentWorkout, endWorkout, workouts } = useWorkoutStore();
-  const workoutSnapshotRef = useRef(currentWorkout);
+  const { workoutId } = useLocalSearchParams<{ workoutId?: string }>();
+  const { currentWorkout, lastCompletedWorkout, workouts } = useWorkoutStore();
+  const navigationStartedRef = useRef(false);
+  const [workoutSnapshot, setWorkoutSnapshot] = useState(() =>
+    workouts.find((workout) => workout.id === workoutId) ??
+    (lastCompletedWorkout?.id === workoutId || !workoutId ? lastCompletedWorkout : null) ??
+    currentWorkout
+  );
   const [saving, setSaving] = useState(false);
   const user = useUserStore((state) => state.user);
-  const updateUser = useUserStore((state) => state.updateUser);
   const settings = useSettingsStore((state) => state.settings);
   const plan = usePlanStore((state) => state.plan);
-  const markCurrentDayCompleted = usePlanStore((state) => state.markCurrentDayCompleted);
   const updatePlan = usePlanStore((state) => state.updatePlan);
 
-  const workoutSnapshot = workoutSnapshotRef.current;
   const reps = workoutSnapshot?.reps || 0;
   const duration = workoutSnapshot?.duration || 0;
   const calories = Math.round(reps * 0.29);
@@ -37,42 +40,57 @@ export default function WorkoutCompleteScreen() {
   };
 
   useEffect(() => {
-    if (!workoutSnapshotRef.current) {
-      router.replace('/(tabs)');
+    if (workoutSnapshot) {
+      return;
     }
-  }, [router]);
 
-  const saveAndGo = async (href: string) => {
-    if (saving || !workoutSnapshotRef.current) return;
+    const foundWorkout =
+      workouts.find((workout) => workout.id === workoutId) ??
+      (lastCompletedWorkout?.id === workoutId || !workoutId ? lastCompletedWorkout : null) ??
+      currentWorkout;
+    if (foundWorkout) {
+      setWorkoutSnapshot(foundWorkout);
+    }
+  }, [currentWorkout, lastCompletedWorkout, workoutId, workoutSnapshot, workouts]);
 
-    setSaving(true);
-    const nextTotal = user.totalReps + reps;
-    updateUser({
-      totalReps: nextTotal,
-      bestReps: Math.max(user.bestReps, reps),
-      streak: user.streak + 1,
-      energy: Math.max(15, user.energy - 8),
-    });
-    markCurrentDayCompleted();
+  useEffect(() => {
+    if (workoutSnapshot || navigationStartedRef.current) {
+      return;
+    }
 
-    const currentPlan = usePlanStore.getState().plan;
-    if (currentPlan) {
-      try {
-        const notificationIds = await syncNotificationsForPlan({
-          plan: currentPlan,
-          user,
-          notificationsEnabled: settings.notificationsEnabled,
-          workoutReminderEnabled: settings.workoutReminderEnabled,
-          missedReminderEnabled: settings.missedReminderEnabled,
-        });
-        updatePlan({ notificationIds });
-      } catch (error) {
-        console.warn('Notification resync after workout failed', error);
+    const fallback = setTimeout(() => {
+      if (!navigationStartedRef.current) {
+        navigationStartedRef.current = true;
+        router.replace('/(tabs)/practice' as any);
       }
-    }
+    }, 1200);
 
-    endWorkout();
+    return () => clearTimeout(fallback);
+  }, [router, workoutSnapshot]);
+
+  const saveAndGo = (href: string) => {
+    if (saving || navigationStartedRef.current || !workoutSnapshot) return;
+
+    navigationStartedRef.current = true;
+    setSaving(true);
+    const currentPlan = usePlanStore.getState().plan;
     router.replace(href as any);
+
+    if (currentPlan) {
+      void syncNotificationsForPlan({
+        plan: currentPlan,
+        user,
+        notificationsEnabled: settings.notificationsEnabled,
+        workoutReminderEnabled: settings.workoutReminderEnabled,
+        missedReminderEnabled: settings.missedReminderEnabled,
+      })
+        .then((notificationIds) => {
+          updatePlan({ notificationIds });
+        })
+        .catch((error) => {
+          console.warn('Notification resync after workout failed', error);
+        });
+    }
   };
 
   return (
@@ -83,9 +101,11 @@ export default function WorkoutCompleteScreen() {
             <Ionicons name="trophy" size={48} color={colors.accent} />
           </View>
 
-          <Text style={styles.eyebrow}>SESSION COMPLETE</Text>
-          <Text style={styles.title}>Great work!</Text>
-          <Text style={styles.coachText}>{coachMessage}</Text>
+          <Text style={styles.eyebrow}>{reps > 0 ? 'SESSION COMPLETE' : 'INCOMPLETE SESSION'}</Text>
+          <Text style={styles.title}>{reps > 0 ? 'Great work!' : 'No reps saved'}</Text>
+          <Text style={styles.coachText}>
+            {reps > 0 ? coachMessage : 'This attempt will stay out of your plan progress and leaderboard.'}
+          </Text>
 
           <Text style={styles.bigReps}>{reps}</Text>
           <Text style={styles.bigRepsLabel}>PUSHUPS</Text>
@@ -110,7 +130,7 @@ export default function WorkoutCompleteScreen() {
           </View>
 
           <View style={styles.actions}>
-            <NeonButton title={saving ? 'Saving...' : 'Save & Go Home'} onPress={() => saveAndGo('/(tabs)')} disabled={saving} />
+            <NeonButton title={saving ? 'Saving...' : reps > 0 ? 'Save & Go Home' : 'Close Session'} onPress={() => saveAndGo('/(tabs)')} disabled={saving} />
             <Pressable
               style={[styles.secondaryBtn, saving && styles.secondaryBtnDisabled]}
               onPress={() => saveAndGo('/(tabs)/profile')}

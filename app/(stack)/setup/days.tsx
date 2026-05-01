@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { NeonButton } from '../../../src/components';
+import { NeonButton, CFEView } from '../../../src/components';
 import { colors, spacing, typography, borderRadius } from '../../../src/theme';
 import { usePlanStore } from '../../../src/store';
 import { debugPlanSetup } from '../../../src/utils/debug';
@@ -38,15 +37,7 @@ export default function SetupDaysScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.stepText}>Step 2 of 4</Text>
-        <View style={styles.placeholder} />
-      </View>
-
+    <CFEView style={styles.container} withBackground={true}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Pick realistic training days</Text>
         <Text style={styles.subtitle}>Three or four days a week is the sweet spot for most people: enough repetition, enough recovery.</Text>
@@ -64,7 +55,7 @@ export default function SetupDaysScreen() {
               >
                 <View style={styles.dayInfo}>
                   <View style={[styles.letterBadge, isActive && styles.letterBadgeActive]}>
-                    <Text style={styles.letterText}>{day.letter}</Text>
+                    <Text style={[styles.letterText, isActive && styles.letterTextActive]}>{day.letter}</Text>
                   </View>
                   <View>
                     <Text style={styles.dayName}>{day.name}</Text>
@@ -72,7 +63,7 @@ export default function SetupDaysScreen() {
                   </View>
                 </View>
                 <View style={[styles.checkbox, isActive && styles.checkboxActive]}>
-                  {isActive && <Ionicons name="checkmark" size={16} color={colors.textPrimary} />}
+                  {isActive && <Ionicons name="checkmark" size={16} color={colors.background} />}
                 </View>
               </Pressable>
             );
@@ -81,25 +72,15 @@ export default function SetupDaysScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <NeonButton title="Continue" onPress={handleNext} disabled={selectedDays.length === 0} testID="setup-days-continue" />
+        <NeonButton title="Continue" onPress={handleNext} disabled={selectedDays.length === 0} testID="setup-days-continue" variant="white" />
       </View>
-    </SafeAreaView>
+    </CFEView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  backButton: { width: 40, height: 40, justifyContent: 'center' },
-  stepText: { ...typography.bodyBold, color: colors.textSecondary },
-  placeholder: { width: 40 },
-  content: { padding: spacing.md, paddingTop: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.xl },
+  container: { flex: 1, backgroundColor: 'transparent' },
+  content: { padding: spacing.md, paddingTop: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.lg },
   title: { ...typography.headline, color: colors.textPrimary },
   subtitle: { ...typography.body, color: colors.textSecondary, lineHeight: 24 },
   daysContainer: { gap: spacing.sm },
@@ -109,11 +90,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: spacing.md,
     borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.cardSecondary,
   },
-  dayCardActive: { borderColor: colors.accent, backgroundColor: colors.accentAlpha },
+  dayCardActive: { backgroundColor: colors.surfaceStrong },
   dayInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   letterBadge: {
     width: 36,
@@ -123,20 +101,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  letterBadgeActive: { backgroundColor: colors.accent },
+  letterBadgeActive: { backgroundColor: colors.textPrimary },
   letterText: { ...typography.bodyBold, color: colors.textPrimary },
+  letterTextActive: { color: colors.textInverse },
   dayName: { ...typography.bodyBold, color: colors.textPrimary },
   dayMeta: { ...typography.caption, color: colors.textSecondary },
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.textSecondary,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.textMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxActive: { borderColor: colors.accent, backgroundColor: colors.accent },
+  checkboxActive: { borderColor: 'transparent', backgroundColor: colors.textPrimary },
   footer: {
     padding: spacing.md,
     paddingBottom: spacing.lg,

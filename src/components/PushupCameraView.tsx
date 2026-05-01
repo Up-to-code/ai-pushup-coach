@@ -15,6 +15,8 @@ export interface FaceMetricsEvent {
     faceHeight: number;
     centerX: number;
     centerY: number;
+    quality?: number;
+    brightnessState?: 'ok' | 'dark' | 'unknown';
     timestamp: number;
   };
 }

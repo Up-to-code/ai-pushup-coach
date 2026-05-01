@@ -66,17 +66,13 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.cardSecondary,
-    borderRadius: 20,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   iconContainer: {
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: 'rgba(218, 63, 69, 0.1)',
+    backgroundColor: 'rgba(225, 29, 72, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,

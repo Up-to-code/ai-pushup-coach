@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { NeonButton } from '../../../src/components';
+import { NeonButton, CFEView } from '../../../src/components';
 import { colors, spacing, typography, borderRadius } from '../../../src/theme';
 import { usePlanStore, useSettingsStore, useUserStore } from '../../../src/store';
 import { generateTrainingPlan } from '../../../src/utils/planGenerator';
@@ -29,13 +29,16 @@ export default function SetupTimeScreen() {
   const settings = useSettingsStore((state) => state.settings);
   const updateSettings = useSettingsStore((state) => state.updateSettings);
 
-  const [preferredTime, setPreferredTime] = useState(
-    cleanTime(setupDraft.preferredTime) ?? cleanTime(settings.defaultWorkoutTime) ?? FALLBACK_WORKOUT_TIME
-  );
+  const initialTimeStr = cleanTime(setupDraft.preferredTime) ?? cleanTime(settings.defaultWorkoutTime) ?? FALLBACK_WORKOUT_TIME;
+  const initialDate = new Date();
+  const [hours, minutes] = initialTimeStr.split(':').map(Number);
+  initialDate.setHours(hours, minutes, 0, 0);
+
+  const [preferredDate, setPreferredDate] = useState(initialDate);
   const [saving, setSaving] = useState(false);
 
   const handleFinish = async () => {
-    const normalizedTime = cleanTime(preferredTime);
+    const normalizedTime = cleanTime(`${preferredDate.getHours()}:${preferredDate.getMinutes()}`);
     if (!setupDraft.level || !setupDraft.goal || !setupDraft.trainingDays.length || !normalizedTime) {
       Alert.alert('Plan needs a little more detail', 'Use a 24-hour time like 07:30 and complete the previous steps.');
       return;
@@ -77,33 +80,24 @@ export default function SetupTimeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.stepText}>Step 4 of 4</Text>
-        <View style={styles.placeholder} />
-      </View>
-
+    <CFEView style={styles.container} withBackground={true}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Choose training time</Text>
         <Text style={styles.subtitle}>This screen only sets when workouts land on your selected days.</Text>
 
         <View style={styles.panel}>
           <Text style={styles.label}>WORKOUT TIME</Text>
-          <View style={styles.inputRow}>
-            <Ionicons name="time-outline" size={22} color={colors.accent} />
-            <TextInput
-              testID="setup-time-input"
-              accessibilityLabel="setup-time-input"
-              value={preferredTime}
-              onChangeText={setPreferredTime}
-              placeholder="07:30"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="numbers-and-punctuation"
-              style={styles.input}
-              maxLength={5}
+          <View style={styles.pickerContainer}>
+            <DateTimePicker
+              testID="setup-time-picker"
+              value={preferredDate}
+              mode="time"
+              display="spinner"
+              onChange={(event, selectedDate) => {
+                if (selectedDate) setPreferredDate(selectedDate);
+              }}
+              textColor={colors.textPrimary}
+              style={{ flex: 1 }}
             />
           </View>
           <Text style={styles.hint}>Use 24-hour time, for example 07:30 or 18:15.</Text>
@@ -114,50 +108,32 @@ export default function SetupTimeScreen() {
         <NeonButton
           title={saving ? 'Generating...' : 'Generate My Plan'}
           onPress={handleFinish}
-          disabled={saving || !cleanTime(preferredTime)}
+          disabled={saving || !preferredDate}
           testID="setup-generate-plan"
+          variant="white"
         />
       </View>
-    </SafeAreaView>
+    </CFEView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  backButton: { width: 40, height: 40, justifyContent: 'center' },
-  stepText: { ...typography.bodyBold, color: colors.textSecondary },
-  placeholder: { width: 40 },
+  container: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: spacing.md, paddingTop: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.lg },
   title: { ...typography.headline, color: colors.textPrimary },
   subtitle: { ...typography.body, color: colors.textSecondary, lineHeight: 24 },
   panel: {
     gap: spacing.md,
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.cardSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginTop: spacing.md,
   },
-  label: { ...typography.label, color: colors.accent },
-  inputRow: {
-    minHeight: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.backgroundElevated,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+  label: { ...typography.label, color: colors.textSecondary, letterSpacing: 1.2 },
+  pickerContainer: {
+    height: 200,
+    backgroundColor: '#0A0A0A',
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    justifyContent: 'center',
   },
-  input: { flex: 1, ...typography.bodyBold, color: colors.textPrimary, paddingVertical: spacing.md },
   hint: { ...typography.caption, color: colors.textSecondary, lineHeight: 18 },
   footer: {
     padding: spacing.md,

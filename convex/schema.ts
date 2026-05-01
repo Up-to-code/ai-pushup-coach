@@ -105,7 +105,8 @@ export default defineSchema({
     trackingPhase: v.optional(v.string()),
     trackingProblem: v.optional(v.string()),
     brightnessState: v.optional(v.union(v.literal('ok'), v.literal('dark'), v.literal('unknown'))),
-  }).index('by_workout_time', ['workoutId', 'timestamp']),
+  }).index('by_workout_time', ['workoutId', 'timestamp'])
+    .index('by_user_time', ['userId', 'timestamp']),
 
   dailyStats: defineTable({
     userId: v.id('users'),
@@ -118,4 +119,68 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index('by_user_day', ['userId', 'dayKey'])
     .index('by_day_reps', ['dayKey', 'reps']),
+
+  follows: defineTable({
+    followerUserId: v.id('users'),
+    followingUserId: v.id('users'),
+    status: v.union(v.literal('active'), v.literal('blocked')),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_pair', ['followerUserId', 'followingUserId'])
+    .index('by_follower', ['followerUserId'])
+    .index('by_following', ['followingUserId']),
+
+  socialNotifications: defineTable({
+    recipientUserId: v.id('users'),
+    actorUserId: v.optional(v.id('users')),
+    type: v.union(
+      v.literal('followedYou'),
+      v.literal('followBack'),
+      v.literal('challengeJoined'),
+      v.literal('challengeCompleted'),
+      v.literal('friendPassedYou'),
+      v.literal('workoutReminder')
+    ),
+    title: v.string(),
+    body: v.string(),
+    entityId: v.optional(v.string()),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index('by_recipient_time', ['recipientUserId', 'createdAt'])
+    .index('by_recipient_read', ['recipientUserId', 'readAt']),
+
+  challenges: defineTable({
+    slug: v.string(),
+    title: v.string(),
+    description: v.string(),
+    category: v.string(),
+    goalReps: v.number(),
+    windowDays: v.number(),
+    visibility: v.union(v.literal('global'), v.literal('country'), v.literal('friends')),
+    reward: v.string(),
+    startsAt: v.number(),
+    endsAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_slug', ['slug'])
+    .index('by_visibility_ends', ['visibility', 'endsAt']),
+
+  challengeMembers: defineTable({
+    challengeId: v.id('challenges'),
+    userId: v.id('users'),
+    progressReps: v.number(),
+    joinedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index('by_challenge_user', ['challengeId', 'userId'])
+    .index('by_user', ['userId'])
+    .index('by_challenge_progress', ['challengeId', 'progressReps']),
+
+  rateLimits: defineTable({
+    userId: v.id('users'),
+    bucket: v.string(),
+    windowStart: v.number(),
+    count: v.number(),
+    updatedAt: v.number(),
+  }).index('by_user_bucket', ['userId', 'bucket']),
 });

@@ -37,5 +37,9 @@ export const formatDayNumber = (day: number): string => {
 };
 
 export { generateTrainingPlan, getCurrentPlanDay, formatPreferredTime } from './planGenerator';
+export { canProcessFaceMetrics, getSessionFinishKind, getSetCompletionAction, getSetProgress, isRepCountAccepted } from './sessionGuards';
+export type { SessionFinishKind, SetCompletionAction, TrackableSessionState } from './sessionGuards';
 export { getCoachMessage } from './coachMessages';
 export type { CoachMessageState } from './coachMessages';
+export { calculateTotalStats, formatDuration } from './stats';
+export type { MonthlyStat } from './stats';

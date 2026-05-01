@@ -210,8 +210,8 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1, backgroundColor: colors.background },
-  container: { flex: 1, backgroundColor: colors.background },
+  background: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: 'transparent' },
   content: { paddingBottom: 112, gap: spacing.lg },
   emptyState: {
     flex: 1,
@@ -240,10 +240,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   progressPanel: {
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
     padding: spacing.md,
     gap: spacing.md,
   },
@@ -325,10 +321,6 @@ const styles = StyleSheet.create({
   miniTrack: { height: 3, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2 },
   miniFill: { height: '100%', backgroundColor: colors.accent, borderRadius: 2 },
   todayCard: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
     padding: spacing.lg,
     gap: spacing.lg,
   },
@@ -360,7 +352,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     gap: 8,
   },
-  todayStartText: { ...typography.bodyBold, color: colors.background, fontSize: 14 },
+  todayStartText: { ...typography.bodyBold, color: colors.textInverse, fontSize: 14 },
   restPanel: { padding: spacing.md, borderRadius: borderRadius.lg, backgroundColor: colors.backgroundElevated },
   restText: { ...typography.bodySmall, color: colors.textSecondary, lineHeight: 20 },
   weekContainer: { marginBottom: spacing.sm },
@@ -371,14 +363,10 @@ const styles = StyleSheet.create({
   dayCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.cardSecondary,
-    borderRadius: 16,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.md,
   },
-  dayCardCurrent: { borderColor: colors.accent, backgroundColor: colors.accentDark },
+  dayCardCurrent: { backgroundColor: colors.surfaceStrong, borderRadius: 16 },
   dayLabelBox: { alignItems: 'center', width: 54 },
   dayLabelText: { ...typography.caption, color: colors.textSecondary, fontSize: 10 },
   dayNumber: { ...typography.titleMedium, color: colors.textPrimary },

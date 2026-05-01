@@ -1,520 +1,306 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, Pressable, ImageBackground, Dimensions } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { mockLeaderboard } from '../../../src/data';
-import { colors, spacing, typography } from '../../../src/theme';
-import { SimpleLineChart } from '../../../src/components';
-import { useResponsive } from '../../../src/hooks';
-import { useUserStore } from '../../../src/store';
+import { usePublicUserProfile, useWorkoutHistory, computeWorkoutStats } from '../../../src/features/profile/hooks';
+import { useFollowActions } from '../../../src/features/social/hooks';
+import { borderRadius, colors, spacing, typography } from '../../../src/theme';
+import { formatDuration } from '../../../src/utils';
+import type { Workout } from '../../../src/store';
+
+function toWorkout(row: {
+  _id: string;
+  clientWorkoutId: string;
+  date: number;
+  type: Workout['type'];
+  trainingCameraMode: Workout['trainingCameraMode'];
+  reps: number;
+  duration: number;
+  calories: number;
+  completed: boolean;
+  goal?: number;
+  sets?: number[];
+  restTime?: number;
+  formFeedbackState?: Workout['formFeedbackState'];
+  cameraPresentationState?: Workout['cameraPresentationState'];
+  qualityScore?: number;
+}): Workout {
+  return {
+    id: row.clientWorkoutId,
+    date: new Date(row.date).toISOString(),
+    type: row.type,
+    trainingCameraMode: row.trainingCameraMode,
+    reps: row.reps,
+    duration: row.duration,
+    calories: row.calories,
+    completed: row.completed,
+    goal: row.goal,
+    sets: row.sets,
+    restTime: row.restTime,
+    formFeedbackState: row.formFeedbackState,
+    cameraPresentationState: row.cameraPresentationState,
+    qualityScore: row.qualityScore,
+  };
+}
 
 export default function UserProfileScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const { normalize, horizontalPadding } = useResponsive();
-  const screenWidth = Dimensions.get('window').width;
-  
-  const currentUser = useUserStore((state) => state.user);
-  const user = mockLeaderboard.find(u => u.id === id) || mockLeaderboard[0];
-  const isMe = user.id === 'user-ahmed' || user.name === currentUser.name;
-  
-  const [isFollowing, setIsFollowing] = useState(false);
+  const params = useLocalSearchParams();
+  const targetClientUserId = String(params.id ?? '');
+  const { profile, loading } = usePublicUserProfile(targetClientUserId);
+  const { workouts } = useWorkoutHistory(targetClientUserId, 50);
+  const { follow, unfollow } = useFollowActions(targetClientUserId);
+  const [busy, setBusy] = useState(false);
 
-  // Mock data for charts
-  const getDynamicData = () => [20, 45, 30, 60, 50, 75, 40];
+  const history = workouts?.map(toWorkout) ?? [];
+  const stats = computeWorkoutStats(history);
+  const displayName = profile?.displayName ?? profile?.name ?? 'User';
+  const canFollow = profile && !profile.isCurrentUser;
+  const relationshipLabel = profile?.isFriend
+    ? 'Friends'
+    : profile?.isFollowing
+      ? 'Following'
+      : profile?.followsYou
+        ? 'Follow back'
+        : 'Follow';
+  const relationshipIcon = profile?.isFriend
+    ? 'people'
+    : profile?.isFollowing
+      ? 'checkmark'
+      : profile?.followsYou
+        ? 'person-add'
+        : 'person-add-outline';
+
+  const toggleFollow = async () => {
+    if (!profile || busy) return;
+    setBusy(true);
+    try {
+      if (profile.isFollowing) {
+        await unfollow();
+      } else {
+        await follow();
+      }
+    } catch (error) {
+      console.warn('Follow action failed', error);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
-    <ImageBackground 
-      source={require('../../../assets/images/home_bg.png')} 
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.topNav}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colors.accent} />
-          </Pressable>
-          <Text style={styles.navTitle}>{isMe ? 'MY PROFILE' : 'USER PROFILE'}</Text>
-          <Pressable style={styles.backButton}>
-            <Ionicons name="share-outline" size={22} color={colors.accent} />
-          </Pressable>
-        </View>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.nav}>
+        <Pressable style={styles.iconButton} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+        </Pressable>
+        <Text style={styles.navTitle}>PROFILE</Text>
+        <View style={styles.iconButton} />
+      </View>
 
+      {loading ? (
+        <View style={styles.stateBox}>
+          <ActivityIndicator color={colors.accent} />
+          <Text style={styles.stateText}>Loading profile...</Text>
+        </View>
+      ) : profile ? (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <View style={styles.profileMain}>
-              <View style={styles.avatarWrapper}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{user.name[0]}</Text>
-                </View>
-                <View style={styles.rankBadge}>
-                  <Text style={styles.rankBadgeNumber}>{user.rank}</Text>
-                </View>
-              </View>
-
-              <View style={styles.profileInfo}>
-                <View style={styles.usernameRow}>
-                  <Text style={styles.username}>@{user.name.toLowerCase().replace(' ', '')}</Text>
-                  {isMe && <View style={styles.meTag}><Text style={styles.meTagText}>YOU</Text></View>}
-                  {!isMe && <Ionicons name="shield-checkmark" size={18} color={colors.accent} />}
-                </View>
-                <View style={styles.rankFriendsRow}>
-                  <View style={styles.rankLabelBox}>
-                    <Text style={styles.rankLabelText}>{user.rank <= 3 ? 'ELITE ATHLETE' : 'APPRENTICE'}</Text>
-                  </View>
-                  <Text style={styles.friendsCount}><Text style={styles.friendsNumber}>{isMe ? '128' : '42'}</Text> Followers</Text>
-                </View>
-              </View>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{displayName.slice(0, 1).toUpperCase()}</Text>
             </View>
-
-            <View style={styles.bioContainer}>
-              <Text style={styles.bioText}>
-                {isMe ? 'Pushing boundaries, one rep at a time.' : 'Always looking for a challenge. Let\'s hit 100 reps together!'}
-              </Text>
-              <View style={styles.statsSummaryRow}>
-                <View style={styles.summaryItem}>
-                  <Ionicons name="barbell" size={14} color={colors.textSecondary} />
-                  <Text style={styles.summaryText}>{user.score}</Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.flagEmoji}>🇪🇬</Text>
-                  <Text style={styles.summaryText}>Egypt</Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
-                  <Text style={styles.summaryText}>Joined 2025</Text>
-                </View>
-              </View>
+            <View style={styles.identityCopy}>
+              <Text style={styles.title}>{displayName}</Text>
+              <Text style={styles.meta}>{profile.countryName} • {profile.totalReps.toLocaleString()} reps</Text>
             </View>
+          </View>
 
-            {!isMe && (
-              <View style={styles.actionRow}>
-                <Pressable 
-                  style={[styles.followButton, isFollowing && styles.followingButton]}
-                  onPress={() => setIsFollowing(!isFollowing)}
-                >
-                  <Ionicons 
-                    name={isFollowing ? "checkmark-circle" : "person-add"} 
-                    size={18} 
-                    color={isFollowing ? colors.accent : colors.background} 
+          <View style={styles.socialStats}>
+            <Stat label="Followers" value={profile.followersCount} />
+            <Stat label="Following" value={profile.followingCount} />
+            <Stat label="Friends" value={profile.friendsCount} />
+          </View>
+
+          {canFollow ? (
+            <Pressable style={[styles.primaryButton, (profile.isFollowing || profile.isFriend) && styles.secondaryButton]} onPress={toggleFollow} disabled={busy}>
+              {busy ? (
+                <ActivityIndicator color={profile.isFollowing || profile.isFriend ? colors.textPrimary : colors.textInverse} />
+              ) : (
+                <>
+                  <Ionicons
+                    name={relationshipIcon}
+                    size={18}
+                    color={profile.isFollowing || profile.isFriend ? colors.textPrimary : colors.textInverse}
                   />
-                  <Text style={[styles.followText, isFollowing && styles.followingText]}>
-                    {isFollowing ? 'Following' : 'Follow'}
+                  <Text style={[styles.primaryButtonText, (profile.isFollowing || profile.isFriend) && styles.secondaryButtonText]}>
+                    {relationshipLabel}
                   </Text>
-                </Pressable>
-                
-                <Pressable style={styles.messageButton}>
-                  <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.textPrimary} />
-                  <Text style={styles.messageText}>Message</Text>
-                </Pressable>
-              </View>
-            )}
+                </>
+              )}
+            </Pressable>
+          ) : null}
 
-            {isMe && (
-              <Pressable style={styles.editButton} onPress={() => router.push('/(stack)/settings/edit-profile' as any)}>
-                <Ionicons name="create-outline" size={18} color={colors.background} />
-                <Text style={styles.editButtonText}>Edit My Profile</Text>
-              </Pressable>
-            )}
+          {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+
+          <View style={styles.statsGrid}>
+            <Metric label="Total reps" value={stats.totalReps.toLocaleString()} icon="barbell" />
+            <Metric label="Sessions" value={stats.sessions.toLocaleString()} icon="calendar-outline" />
+            <Metric label="Duration" value={formatDuration(stats.totalDuration)} icon="time-outline" />
+            <Metric label="Avg speed" value={`${stats.avgSpeed}/min`} icon="speedometer-outline" />
           </View>
 
-          <View style={styles.tabContent}>
-            <View style={styles.statusCard}>
-              <View style={styles.statusHeader}>
-                <View>
-                  <Text style={styles.statusTitle}>PERFORMANCE TREND</Text>
-                  <Text style={styles.statusSubtitle}>Activity over the last 30 days</Text>
-                </View>
-                <View style={styles.trendIndicator}>
-                  <Ionicons name="trending-up" size={12} color="#2ECC71" />
-                  <Text style={styles.trendText}>+12%</Text>
-                </View>
-              </View>
-              <View style={styles.chartWrapper}>
-                <SimpleLineChart 
-                  data={getDynamicData()} 
-                  width={screenWidth - horizontalPadding * 2 - 40} 
-                  height={normalize(120)}
-                  color={colors.accent}
-                />
-              </View>
-            </View>
-
-            <View style={styles.statsGrid}>
-              <View style={styles.statsCardContainer}>
-                <View style={styles.statsCard}>
-                  <Text style={styles.statsCardLabel}>Total Pushups</Text>
-                  <View style={styles.statsCardBody}>
-                    <Ionicons name="body" size={22} color={colors.accent} />
-                    <Text style={styles.statsCardValue}>{user.score}</Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.statsCardContainer}>
-                <View style={styles.statsCard}>
-                  <Text style={styles.statsCardLabel}>Global Rank</Text>
-                  <View style={styles.statsCardBody}>
-                    <Ionicons name="trophy" size={22} color={colors.accent} />
-                    <Text style={styles.statsCardValue}>#{user.rank}</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.badgesSection}>
-              <Text style={styles.sectionTitle}>UNLOCKED TROPHIES</Text>
-              <View style={styles.badgeGrid}>
-                {[
-                  { icon: 'flame', color: '#E67E22', title: '100 Streak' },
-                  { icon: 'calendar', color: '#CD7F32', title: '7 Day' },
-                  { icon: 'medal', color: '#FFD700', title: 'Iron Chest' },
-                ].map((b, i) => (
-                  <View key={i} style={styles.miniBadgeCard}>
-                    <Ionicons name={b.icon as any} size={28} color={b.color} />
-                    <Text style={styles.miniBadgeTitle}>{b.title}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Sessions</Text>
           </View>
+
+          {history.length > 0 ? (
+            history.slice(0, 12).map((session) => (
+              <View key={session.id} style={styles.row}>
+                <View style={styles.rowIcon}>
+                  <Ionicons name="fitness-outline" size={18} color={colors.accent} />
+                </View>
+                <View style={styles.rowCopy}>
+                  <Text style={styles.rowTitle}>{session.reps} reps</Text>
+                  <Text style={styles.rowMeta}>{new Date(session.date).toLocaleDateString()} • {formatDuration(session.duration)}</Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.statePanel}>
+              <Text style={styles.stateTitle}>No public sessions yet</Text>
+              <Text style={styles.stateText}>When this user saves workouts, they will appear here.</Text>
+            </View>
+          )}
         </ScrollView>
-      </SafeAreaView>
-    </ImageBackground>
+      ) : (
+        <View style={styles.stateBox}>
+          <Text style={styles.stateTitle}>Profile unavailable</Text>
+          <Text style={styles.stateText}>This user has not synced yet.</Text>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statValue}>{value.toLocaleString()}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function Metric({ label, value, icon }: { label: string; value: string; icon: string }) {
+  return (
+    <View style={styles.metric}>
+      <Ionicons name={icon as any} size={19} color={colors.accent} />
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-  },
-  topNav: {
+  container: { flex: 1, backgroundColor: colors.background },
+  nav: {
+    minHeight: 56,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  navTitle: { ...typography.captionBold, color: colors.textSecondary, letterSpacing: 2 },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
-  navTitle: {
-    ...typography.captionBold,
-    color: colors.textSecondary,
-    letterSpacing: 2,
-    fontSize: 10,
-  },
-  content: {
-    paddingBottom: 60,
-  },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  profileMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  avatarWrapper: {
-    position: 'relative',
-  },
+  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: colors.cardSecondary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  avatarText: {
-    ...typography.titleLarge,
-    color: colors.textPrimary,
-    fontSize: 36,
-  },
-  rankBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.background,
-  },
-  rankBadgeNumber: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  profileInfo: {
-    flex: 1,
-    gap: 8,
-  },
-  usernameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  username: {
-    ...typography.titleMedium,
-    color: colors.textPrimary,
-    fontSize: 22,
-  },
-  meTag: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  meTagText: {
-    color: colors.textPrimary,
-    fontSize: 8,
-    fontWeight: '900',
-  },
-  rankFriendsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  rankLabelBox: {
-    backgroundColor: 'rgba(218, 63, 69, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(218, 63, 69, 0.2)',
+    borderColor: colors.border,
   },
-  rankLabelText: {
-    color: colors.accent,
-    fontSize: 10,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  friendsCount: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontSize: 10,
-  },
-  friendsNumber: {
-    color: colors.textPrimary,
-    fontWeight: '800',
-  },
-  bioContainer: {
-    marginBottom: spacing.lg,
-  },
-  bioText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  statsSummaryRow: {
+  avatarText: { ...typography.titleMedium, color: colors.textPrimary },
+  identityCopy: { flex: 1, minWidth: 0 },
+  title: { ...typography.titleLarge, color: colors.textPrimary },
+  meta: { ...typography.caption, color: colors.textSecondary },
+  socialStats: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  summaryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  summaryText: {
-    ...typography.captionBold,
-    color: colors.textPrimary,
-    fontSize: 11,
-  },
-  flagEmoji: {
-    fontSize: 12,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  followButton: {
-    flex: 1,
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: colors.accent,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  followingButton: {
-    backgroundColor: 'rgba(218, 63, 69, 0.1)',
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
   },
-  followText: {
-    ...typography.bodyBold,
-    color: colors.background,
-  },
-  followingText: {
-    color: colors.accent,
-  },
-  messageButton: {
-    flex: 1,
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  messageText: {
-    ...typography.bodyBold,
-    color: colors.textPrimary,
-  },
-  editButton: {
-    width: '100%',
-    height: 54,
-    borderRadius: 18,
+  stat: { flex: 1, alignItems: 'center', padding: spacing.md, gap: 2 },
+  statValue: { ...typography.bodyBold, color: colors.textPrimary },
+  statLabel: { ...typography.caption, color: colors.textSecondary },
+  primaryButton: {
+    minHeight: 50,
+    borderRadius: borderRadius.md,
     backgroundColor: colors.textPrimary,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
-  editButtonText: {
-    ...typography.bodyBold,
-    color: colors.background,
-  },
-  tabContent: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.lg,
-  },
-  statusCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 24,
-    padding: 20,
+  secondaryButton: {
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: colors.border,
   },
-  statusHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  statusTitle: {
-    ...typography.captionBold,
-    color: colors.textPrimary,
-    letterSpacing: 1.5,
-    fontSize: 12,
-  },
-  statusSubtitle: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontSize: 10,
-  },
-  trendIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(46, 204, 113, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  trendText: {
-    ...typography.captionBold,
-    color: '#2ECC71',
-    fontSize: 10,
-  },
-  chartWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -6,
-  },
-  statsCardContainer: {
-    width: '50%',
-    padding: 6,
-  },
-  statsCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 20,
-    padding: 16,
+  primaryButtonText: { ...typography.bodyBold, color: colors.textInverse },
+  secondaryButtonText: { color: colors.textPrimary },
+  bio: { ...typography.bodySmall, color: colors.textSecondary, lineHeight: 20 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  metric: {
+    width: '48%',
+    minHeight: 96,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    gap: 12,
-    minHeight: 100,
-    justifyContent: 'center',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: spacing.md,
+    gap: spacing.xs,
   },
-  statsCardLabel: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontSize: 10,
-    textTransform: 'uppercase',
-  },
-  statsCardBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  statsCardValue: {
-    ...typography.bodyBold,
-    color: colors.textPrimary,
-    fontSize: 20,
-  },
-  badgesSection: {
-    marginTop: spacing.sm,
-    gap: spacing.md,
-  },
-  sectionTitle: {
-    ...typography.captionBold,
-    color: colors.textMuted,
-    letterSpacing: 2,
-    fontSize: 10,
-  },
-  badgeGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  miniBadgeCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 20,
+  metricValue: { ...typography.bodyBold, color: colors.textPrimary },
+  metricLabel: { ...typography.caption, color: colors.textSecondary },
+  sectionHeader: { paddingTop: spacing.sm },
+  sectionTitle: { ...typography.captionBold, color: colors.textSecondary, letterSpacing: 1.4 },
+  row: { minHeight: 62, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.accentAlpha,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
+  },
+  rowCopy: { flex: 1 },
+  rowTitle: { ...typography.bodyBold, color: colors.textPrimary },
+  rowMeta: { ...typography.caption, color: colors.textSecondary },
+  stateBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.lg },
+  statePanel: {
+    minHeight: 130,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    gap: spacing.xs,
   },
-  miniBadgeTitle: {
-    ...typography.captionBold,
-    color: colors.textPrimary,
-    fontSize: 9,
-  },
+  stateTitle: { ...typography.bodyBold, color: colors.textPrimary, textAlign: 'center' },
+  stateText: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', lineHeight: 18 },
 });
-

@@ -24,6 +24,9 @@ export default function TermsScreen() {
         <TermBlock title="Availability">
           Camera tracking depends on device capability, lighting, framing, and OS permissions. Manual fallback states may appear when tracking is unavailable.
         </TermBlock>
+        <TermBlock title="Nexfiy app page">
+          Website terms copy and app support live at https://nexfiy.com/apps/ai-pushup-coach.
+        </TermBlock>
       </ScrollView>
     </CFEView>
   );
