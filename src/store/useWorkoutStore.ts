@@ -28,6 +28,7 @@ export interface Workout {
   formFeedbackState?: FormFeedbackState;
   cameraPresentationState?: CameraPresentationState;
   qualityScore?: number;
+  synced?: boolean;
 }
 
 interface WorkoutState {
@@ -54,6 +55,7 @@ interface WorkoutState {
   pauseWorkout: () => void;
   resumeWorkout: () => void;
   clearWorkouts: () => void;
+  markWorkoutSynced: (id: string) => void;
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -110,10 +112,11 @@ export const useWorkoutStore = create<WorkoutState>()(
             completed,
             duration: state.currentWorkout.duration || 0,
             calories: Math.round((state.currentWorkout.reps || 0) * 0.29),
+            synced: false,
           } as Workout;
 
           set((s) => ({
-            workouts: [...s.workouts, completedWorkout],
+            workouts: [...s.workouts, completedWorkout].slice(-50),
             currentWorkout: null,
             lastCompletedWorkout: completedWorkout,
             isActive: false,
@@ -132,13 +135,17 @@ export const useWorkoutStore = create<WorkoutState>()(
         const completedWorkout: Workout = {
           ...mergedWorkout,
           completed,
+          completedAt: Date.now(), // optional tracking
           duration: mergedWorkout.duration || 0,
           reps: mergedWorkout.reps || 0,
           calories: Math.round((mergedWorkout.reps || 0) * 0.29),
+          synced: false,
         } as Workout;
 
+        const newWorkouts = [...s.workouts.filter((workout) => workout.id !== completedWorkout.id), completedWorkout];
+        
         set((s) => ({
-          workouts: [...s.workouts.filter((workout) => workout.id !== completedWorkout.id), completedWorkout],
+          workouts: newWorkouts.slice(-50),
           currentWorkout: null,
           lastCompletedWorkout: completedWorkout,
           isActive: false,
@@ -186,6 +193,12 @@ export const useWorkoutStore = create<WorkoutState>()(
       pauseWorkout: () => set({ isPaused: true }),
       resumeWorkout: () => set({ isPaused: false }),
       clearWorkouts: () => set({ workouts: [] }),
+      markWorkoutSynced: (id) =>
+        set((state) => ({
+          workouts: state.workouts.map((w) =>
+            w.id === id ? { ...w, synced: true } : w
+          ),
+        })),
     }),
     {
       name: 'workout-storage',

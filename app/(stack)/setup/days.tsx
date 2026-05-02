@@ -33,7 +33,7 @@ export default function SetupDaysScreen() {
     if (selectedDays.length === 0) return;
     debugPlanSetup('training days selected', { trainingDays: selectedDays });
     updateSetupDraft({ trainingDays: selectedDays });
-    router.push('/(stack)/setup/goal');
+    router.push('/setup/goal');
   };
 
   return (

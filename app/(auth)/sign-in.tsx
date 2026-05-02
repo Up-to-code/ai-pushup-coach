@@ -149,11 +149,11 @@ export default function SignInScreen() {
 
                 <View style={styles.legal}>
                   <Text style={styles.legalTxt}>By continuing, you agree to our </Text>
-                  <Pressable onPress={() => router.push('/(stack)/legal/terms' as any)}>
+                  <Pressable onPress={() => router.push('/legal/terms' as any)}>
                     <Text style={styles.legalLink}>Terms</Text>
                   </Pressable>
                   <Text style={styles.legalTxt}> and </Text>
-                  <Pressable onPress={() => router.push('/(stack)/legal/privacy' as any)}>
+                  <Pressable onPress={() => router.push('/legal/privacy' as any)}>
                     <Text style={styles.legalLink}>Privacy</Text>
                   </Pressable>
                 </View>

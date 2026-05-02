@@ -261,3 +261,13 @@ export const COUNTRY_OPTIONS: CountryOption[] = [
 export function getCountryByCode(code?: string | null) {
   return COUNTRY_OPTIONS.find((country) => country.code === code) ?? GLOBAL_COUNTRY;
 }
+
+export function getFlagEmoji(code: string) {
+  if (code === 'GLOBAL') return '🌍';
+  if (code.length !== 2) return '';
+  const codePoints = code
+    .toUpperCase()
+    .split('')
+    .map((char) => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+}

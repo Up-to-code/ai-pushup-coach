@@ -18,6 +18,7 @@
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/datetimepicker": "8.0.1",
     "@types/react": "~18.2.79",
+    "@uploadthing/expo": "^7.2.6",
     "convex": "^1.36.1",
     "expo": "~51.0.0",
     "expo-auth-session": "~5.5.2",
@@ -25,7 +26,9 @@
     "expo-camera": "~15.0.16",
     "expo-constants": "~16.0.2",
     "expo-crypto": "~13.0.2",
+    "expo-document-picker": "~12.0.2",
     "expo-haptics": "~13.0.1",
+    "expo-image-picker": "~15.1.0",
     "expo-linear-gradient": "~13.0.2",
     "expo-linking": "^6.3.1",
     "expo-notifications": "~0.28.19",
@@ -44,7 +47,9 @@
     "react-native-screens": "3.31.1",
     "react-native-svg": "15.2.0",
     "react-refresh": "^0.18.0",
+    "text-encoding-polyfill": "^0.6.7",
     "typescript": "~5.3.3",
+    "uploadthing": "^7.7.4",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

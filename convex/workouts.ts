@@ -100,18 +100,19 @@ function emptySummary() {
   };
 }
 
-function buildSummary(rows: Array<{ reps: number; duration: number; calories: number }>) {
-  const totalReps = rows.reduce((sum, workout) => sum + workout.reps, 0);
-  const totalDuration = rows.reduce((sum, workout) => sum + workout.duration, 0);
-  const totalCalories = rows.reduce((sum, workout) => sum + workout.calories, 0);
-  const bestSession = rows.length > 0 ? Math.max(...rows.map((workout) => workout.reps)) : 0;
+function buildSummary(rows: Array<{ reps: number; duration: number; calories: number; workouts?: number; bestReps?: number }>) {
+  const totalReps = rows.reduce((sum, row) => sum + row.reps, 0);
+  const totalDuration = rows.reduce((sum, row) => sum + row.duration, 0);
+  const totalCalories = rows.reduce((sum, row) => sum + row.calories, 0);
+  const bestSession = rows.length > 0 ? Math.max(...rows.map((row) => row.bestReps ?? row.reps)) : 0;
+  const sessions = rows.reduce((sum, row) => sum + (row.workouts ?? 1), 0);
   return {
     totalReps,
     totalDuration,
     totalCalories,
     bestSession,
     avgSpeed: totalDuration > 0 ? ((totalReps / totalDuration) * 60).toFixed(1) : '0',
-    sessions: rows.length,
+    sessions,
   };
 }
 
@@ -148,7 +149,7 @@ export const submitWorkout = mutation({
     await assertRateLimit(ctx, {
       userId: user._id,
       bucket: 'submitWorkout',
-      limit: 120,
+      limit: 10000,
       windowMs: 60 * 60 * 1000,
     });
 
@@ -298,32 +299,38 @@ export const profileRange = query({
 
     const safeOffset = Math.max(0, Math.min(offset ?? 0, 120));
     const range = getRangeForPeriod(period, safeOffset);
-    const rows = await ctx.db
-      .query('workoutResults')
-      .withIndex('by_user_date', (q) => q.eq('userId', user._id))
+    
+    // Fetch stats for charts and summaries (max 1000 days = ~3 years of active use)
+    const stats = await ctx.db
+      .query('dailyStats')
+      .withIndex('by_user_day', (q) => q.eq('userId', user._id))
       .order('desc')
       .take(1000);
-    const completed = rows.filter((row) => row.completed);
-    const rangeRows =
-      period === 'ALL'
-        ? completed
-        : completed.filter((row) => row.date >= range.start && row.date <= range.end);
 
-    const previousRows =
+    const rangeStats =
+      period === 'ALL'
+        ? stats
+        : stats.filter((stat) => {
+            const statTime = new Date(stat.dayKey).getTime();
+            return statTime >= range.start && statTime <= range.end;
+          });
+
+    const previousStats =
       period === 'ALL'
         ? []
-        : completed.filter((row) => {
+        : stats.filter((stat) => {
             const previousRange = getRangeForPeriod(period, safeOffset + 1);
-            return row.date >= previousRange.start && row.date <= previousRange.end;
+            const statTime = new Date(stat.dayKey).getTime();
+            return statTime >= previousRange.start && statTime <= previousRange.end;
           });
 
     const dailySeries =
       period === 'ALL'
-        ? [...rangeRows.reduce((map, row) => {
-            const key = monthKey(row.date);
+        ? [...rangeStats.reduce((map, stat) => {
+            const key = stat.dayKey.slice(0, 7); // monthKey
             const current = map.get(key) ?? { key, label: formatSeriesLabel(key, period), reps: 0, workouts: 0 };
-            current.reps += row.reps;
-            current.workouts += 1;
+            current.reps += stat.reps;
+            current.workouts += stat.workouts;
             map.set(key, current);
             return map;
           }, new Map<string, { key: string; label: string; reps: number; workouts: number }>()).values()]
@@ -334,19 +341,26 @@ export const profileRange = query({
             const key = dayKey(date.getTime());
             return { key, label: formatSeriesLabel(key, period), reps: 0, workouts: 0 };
           }).map((bucket) => {
-            const matches = rangeRows.filter((row) => dayKey(row.date) === bucket.key);
+            const matches = rangeStats.filter((stat) => stat.dayKey === bucket.key);
             return {
               ...bucket,
-              reps: matches.reduce((sum, row) => sum + row.reps, 0),
-              workouts: matches.length,
+              reps: matches.reduce((sum, stat) => sum + stat.reps, 0),
+              workouts: matches.reduce((sum, stat) => sum + stat.workouts, 0),
             };
           });
 
+    // Fetch actual recent workout results just for the history list view
+    const historyRows = await ctx.db
+      .query('workoutResults')
+      .withIndex('by_user_date', (q) => q.eq('userId', user._id))
+      .order('desc')
+      .take(100);
+
     return {
-      summary: buildSummary(rangeRows),
-      previousSummary: period === 'ALL' ? null : buildSummary(previousRows),
+      summary: buildSummary(rangeStats),
+      previousSummary: period === 'ALL' ? null : buildSummary(previousStats),
       dailySeries,
-      history: rangeRows.slice(0, 100).map((row) => ({
+      history: historyRows.map((row) => ({
         id: row._id,
         clientWorkoutId: row.clientWorkoutId,
         date: row.date,

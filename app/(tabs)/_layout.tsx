@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { View, StyleSheet, ImageBackground } from 'react-native';
+import { Image, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { borderRadius, colors, typography } from '../../src/theme';
@@ -38,11 +38,16 @@ export default function TabLayout() {
         <Tabs.Screen
           name="practice"
           options={{
-            title: 'Practice',
+            title: 'Pushups',
+            tabBarLabel: '',
             tabBarIcon: ({ focused }) => (
               <View style={styles.centerButtonWrap}>
                 <View style={[styles.centerButton, focused && styles.centerButtonActive]}>
-                  <Ionicons name="radio-button-on" size={26} color={colors.textPrimary} />
+                  <Image
+                    source={require('../../assets/brand/logo-push-up.png')}
+                    style={styles.centerLogo}
+                    resizeMode="contain"
+                  />
                 </View>
               </View>
             ),
@@ -94,13 +99,18 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: colors.backgroundElevated,
+    borderColor: colors.accent,
   },
   centerButtonActive: {
-    backgroundColor: colors.accentStrong,
+    backgroundColor: colors.backgroundElevated,
+    borderColor: colors.accentStrong,
+  },
+  centerLogo: {
+    width: 42,
+    height: 42,
   },
 });

@@ -93,7 +93,7 @@ export const list = query({
     const memberships = await ctx.db
       .query('challengeMembers')
       .withIndex('by_user', (q) => q.eq('userId', user._id))
-      .collect();
+      .take(1000);
     const membershipByChallenge = new Map<Id<'challenges'>, (typeof memberships)[number]>();
     memberships.forEach((row) => membershipByChallenge.set(row.challengeId, row));
 
@@ -168,7 +168,7 @@ export async function applyWorkoutToChallenges(
   const memberships = await ctx.db
     .query('challengeMembers')
     .withIndex('by_user', (q) => q.eq('userId', userId))
-    .collect();
+    .take(1000);
   const now = Date.now();
 
   for (const membership of memberships) {

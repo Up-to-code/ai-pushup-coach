@@ -52,38 +52,16 @@ export function useWorkoutHistory(targetClientUserId?: string, limit = 100) {
 
 export function useProfileRange(period: TimePeriod, offset = 0) {
   const clientUserId = useClientUserId();
-  const workouts = useWorkoutStore((state) => state.workouts);
-  const range = useMemo(() => {
-    const rows: ProfileWorkoutRow[] = workouts
-      .map((workout) => ({
-        id: workout.id,
-        clientWorkoutId: workout.id,
-        date: Date.parse(workout.date) || 0,
-        type: workout.type,
-        trainingCameraMode: workout.trainingCameraMode,
-        reps: workout.reps,
-        duration: workout.duration,
-        calories: workout.calories,
-        completed: workout.completed,
-        formFeedbackState: workout.formFeedbackState,
-        cameraPresentationState: workout.cameraPresentationState,
-        qualityScore: workout.qualityScore,
-      }))
-      .sort((a, b) => b.date - a.date);
-    const currentRows = filterWorkoutsByPeriod(rows, period, offset);
-    const previousRows = period === 'ALL' ? [] : filterWorkoutsByPeriod(rows, period, offset + 1);
-
-    return {
-      summary: computeWorkoutStats(currentRows),
-      previousSummary: period === 'ALL' ? null : computeWorkoutStats(previousRows),
-      dailySeries: buildDailySeries(rows, period, offset),
-      history: currentRows.slice(0, 100),
-    };
-  }, [offset, period, workouts]);
+  const isGuestMode = useIsGuestMode();
+  
+  const range = useQuery(
+    api.workouts.profileRange,
+    isGuestMode ? 'skip' : { clientUserId, period, offset }
+  );
 
   return {
     range,
-    loading: false,
+    loading: !isGuestMode && range === undefined,
     clientUserId,
   };
 }

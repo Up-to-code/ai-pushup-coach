@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { customStorage } from './storage';
 
+export interface SocialLinks {
+  x?: string;
+  github?: string;
+  youtube?: string;
+  tiktok?: string;
+  website?: string;
+}
+
 export interface User {
   id: string;
   displayName: string;
@@ -19,6 +27,7 @@ export interface User {
   energy: number;
   totalReps: number;
   bestReps: number;
+  socialLinks?: SocialLinks;
 }
 
 interface UserState {

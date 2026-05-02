@@ -7,6 +7,7 @@ import { ClerkUserSync } from '../src/auth/ClerkUserSync';
 import { ConvexBackendProvider } from '../src/backend';
 import { SubscriptionProvider } from '../src/revenuecat';
 import { colors } from '../src/theme';
+import { WidgetDataSync } from '../src/widgets/WidgetDataSync';
 
 const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
@@ -33,6 +34,7 @@ export default function RootLayout() {
       <ConvexBackendProvider>
         <SubscriptionProvider>
           <ClerkUserSync />
+          <WidgetDataSync />
           <View style={styles.container}>
             <StatusBar style="light" />
             <Stack

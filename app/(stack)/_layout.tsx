@@ -53,6 +53,20 @@ export default function StackLayout() {
         }}
       />
       <Stack.Screen
+        name="settings/social-links"
+        options={{
+          presentation: 'card',
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="settings/country"
+        options={{
+          presentation: 'card',
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
         name="notifications"
         options={{
           presentation: 'card',

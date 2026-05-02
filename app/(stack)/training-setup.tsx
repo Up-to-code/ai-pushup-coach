@@ -16,7 +16,7 @@ function parseNumberParam(value: string | string[] | undefined) {
 
 function parseSetsParam(value: string | string[] | undefined) {
   const raw = Array.isArray(value) ? value[0] : value;
-  if (!raw) return undefined;
+  if (!raw || raw === 'undefined') return undefined;
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.map(Number) : undefined;
@@ -84,7 +84,7 @@ export default function TrainingSetupScreen() {
           title="Start live session"
           onPress={() => {
             startWorkout(type, settings.defaultCameraMode, goal, sets, restTime);
-            router.replace('/(stack)/workout-session');
+            router.replace('/workout-session');
           }}
         />
       </View>
@@ -160,4 +160,3 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
 });
-

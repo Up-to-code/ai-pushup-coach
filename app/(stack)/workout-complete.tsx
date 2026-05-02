@@ -15,23 +15,24 @@ export default function WorkoutCompleteScreen() {
   const { currentWorkout, lastCompletedWorkout, workouts } = useWorkoutStore();
   const navigationStartedRef = useRef(false);
   const [workoutSnapshot, setWorkoutSnapshot] = useState(() =>
-    workouts.find((workout) => workout.id === workoutId) ??
+    workouts.find((w) => w.id === workoutId) ??
     (lastCompletedWorkout?.id === workoutId || !workoutId ? lastCompletedWorkout : null) ??
     currentWorkout
   );
   const [saving, setSaving] = useState(false);
-  const user = useUserStore((state) => state.user);
-  const settings = useSettingsStore((state) => state.settings);
-  const plan = usePlanStore((state) => state.plan);
-  const updatePlan = usePlanStore((state) => state.updatePlan);
+  const user = useUserStore((s) => s.user);
+  const settings = useSettingsStore((s) => s.settings);
+  const plan = usePlanStore((s) => s.plan);
+  const updatePlan = usePlanStore((s) => s.updatePlan);
 
-  const reps = workoutSnapshot?.reps || 0;
-  const duration = workoutSnapshot?.duration || 0;
+  const reps = workoutSnapshot?.reps ?? 0;
+  const duration = workoutSnapshot?.duration ?? 0;
   const calories = Math.round(reps * 0.29);
-  const qualityScore = workoutSnapshot?.qualityScore || 84;
-  const cameraMode = workoutSnapshot?.trainingCameraMode === 'fullScene' ? 'Full Scene' : 'Face Focus';
-  const nextDay = plan?.days.find((day, index) => index > (plan.currentDayIndex ?? 0) && day.status !== 'rest');
+  const qualityScore = workoutSnapshot?.qualityScore ?? 84;
   const coachMessage = getCoachMessage('workoutComplete', user, plan, workouts);
+
+  // Next upcoming workout day
+  const nextDay = plan?.days.find((day, idx) => idx > (plan.currentDayIndex ?? 0) && day.status !== 'rest');
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -39,43 +40,26 @@ export default function WorkoutCompleteScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Fallback if no workout data after short delay
   useEffect(() => {
-    if (workoutSnapshot) {
-      return;
-    }
-
-    const foundWorkout =
-      workouts.find((workout) => workout.id === workoutId) ??
-      (lastCompletedWorkout?.id === workoutId || !workoutId ? lastCompletedWorkout : null) ??
-      currentWorkout;
-    if (foundWorkout) {
-      setWorkoutSnapshot(foundWorkout);
-    }
-  }, [currentWorkout, lastCompletedWorkout, workoutId, workoutSnapshot, workouts]);
-
-  useEffect(() => {
-    if (workoutSnapshot || navigationStartedRef.current) {
-      return;
-    }
-
+    if (workoutSnapshot) return;
     const fallback = setTimeout(() => {
       if (!navigationStartedRef.current) {
         navigationStartedRef.current = true;
-        router.replace('/(tabs)/practice' as any);
+        router.replace('/practice' as any);
       }
     }, 1200);
-
     return () => clearTimeout(fallback);
   }, [router, workoutSnapshot]);
 
   const saveAndGo = (href: string) => {
     if (saving || navigationStartedRef.current || !workoutSnapshot) return;
-
     navigationStartedRef.current = true;
     setSaving(true);
-    const currentPlan = usePlanStore.getState().plan;
+
     router.replace(href as any);
 
+    const currentPlan = usePlanStore.getState().plan;
     if (currentPlan) {
       void syncNotificationsForPlan({
         plan: currentPlan,
@@ -84,181 +68,175 @@ export default function WorkoutCompleteScreen() {
         workoutReminderEnabled: settings.workoutReminderEnabled,
         missedReminderEnabled: settings.missedReminderEnabled,
       })
-        .then((notificationIds) => {
-          updatePlan({ notificationIds });
-        })
-        .catch((error) => {
-          console.warn('Notification resync after workout failed', error);
-        });
+        .then((ids) => updatePlan({ notificationIds: ids }))
+        .catch((err) => console.warn('Notification sync failed', err));
     }
   };
 
   return (
-    <View style={styles.background}>
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.trophyCircle}>
-            <Ionicons name="trophy" size={48} color={colors.accent} />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Success badge */}
+        <View style={styles.iconBadge}>
+          <Ionicons name="checkmark-circle" size={40} color={colors.accent} />
+        </View>
+
+        <Text style={styles.title}>{reps > 0 ? 'Amazing work' : 'Session incomplete'}</Text>
+        <Text style={styles.subtitle}>
+          {reps > 0 ? coachMessage : 'This attempt won’t count toward your plan or leaderboard.'}
+        </Text>
+
+        {/* Big number */}
+        <Text style={styles.hugeNumber}>{reps}</Text>
+        <Text style={styles.unit}>pushups</Text>
+
+        {/* Metrics row (no cards) */}
+        <View style={styles.metricsRow}>
+          <View style={styles.metricItem}>
+            <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
+            <Text style={styles.metricValue}>{formatTime(duration)}</Text>
+            <Text style={styles.metricLabel}>Duration</Text>
           </View>
-
-          <Text style={styles.eyebrow}>{reps > 0 ? 'SESSION COMPLETE' : 'INCOMPLETE SESSION'}</Text>
-          <Text style={styles.title}>{reps > 0 ? 'Great work!' : 'No reps saved'}</Text>
-          <Text style={styles.coachText}>
-            {reps > 0 ? coachMessage : 'This attempt will stay out of your plan progress and leaderboard.'}
-          </Text>
-
-          <Text style={styles.bigReps}>{reps}</Text>
-          <Text style={styles.bigRepsLabel}>PUSHUPS</Text>
-
-          <View style={styles.metricsGrid}>
-            <MetricTile icon="time-outline" label="Duration" value={formatTime(duration)} />
-            <MetricTile icon="flame-outline" label="Calories" value={`${calories}`} />
-            <MetricTile icon="shield-checkmark-outline" label="Quality" value={`${qualityScore}%`} />
-            <MetricTile icon="camera-outline" label="Camera" value={cameraMode} />
+          <View style={styles.metricItem}>
+            <Ionicons name="flame-outline" size={20} color={colors.textSecondary} />
+            <Text style={styles.metricValue}>{calories}</Text>
+            <Text style={styles.metricLabel}>Calories</Text>
           </View>
-
-          <View style={styles.nextCard}>
-            <Ionicons name="calendar-outline" size={20} color={colors.accent} />
-            <View style={styles.nextCopy}>
-              <Text style={styles.nextTitle}>Next session</Text>
-              <Text style={styles.nextText}>
-                {nextDay?.scheduledAt
-                  ? `Day ${nextDay.day} at ${formatPreferredTime(plan?.preferredTime ?? '07:30')}`
-                  : 'Plan complete. Rebuild when you are ready.'}
-              </Text>
-            </View>
+          <View style={styles.metricItem}>
+            <Ionicons name="shield-checkmark-outline" size={20} color={colors.textSecondary} />
+            <Text style={styles.metricValue}>{qualityScore}%</Text>
+            <Text style={styles.metricLabel}>Quality</Text>
           </View>
-
-          <View style={styles.actions}>
-            <NeonButton title={saving ? 'Saving...' : reps > 0 ? 'Save & Go Home' : 'Close Session'} onPress={() => saveAndGo('/(tabs)')} disabled={saving} />
-            <Pressable
-              style={[styles.secondaryBtn, saving && styles.secondaryBtnDisabled]}
-              onPress={() => saveAndGo('/(tabs)/profile')}
-              disabled={saving}
-            >
-              <Ionicons name="stats-chart" size={18} color={colors.textPrimary} style={{ marginRight: 8 }} />
-              <Text style={styles.secondaryBtnText}>View Profile Stats</Text>
-            </Pressable>
+          <View style={styles.metricItem}>
+            <Ionicons name="camera-outline" size={20} color={colors.textSecondary} />
+            <Text style={styles.metricValue}>
+              {workoutSnapshot?.trainingCameraMode === 'fullScene' ? 'Full' : 'Face'}
+            </Text>
+            <Text style={styles.metricLabel}>Camera</Text>
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
-  );
-}
+        </View>
 
-function MetricTile({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return (
-    <View style={styles.metricTile}>
-      <Ionicons name={icon as any} size={20} color={colors.accent} />
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
-    </View>
+        {/* Next session hint */}
+        {plan && (
+          <View style={styles.nextHint}>
+            <Text style={styles.nextText}>
+              {nextDay?.scheduledAt
+                ? `Next: Day ${nextDay.day} at ${formatPreferredTime(plan.preferredTime ?? '07:30')}`
+                : 'Plan complete – you’re on fire 🔥'}
+            </Text>
+          </View>
+        )}
+
+        {/* Actions */}
+        <View style={styles.actions}>
+          <NeonButton
+            title={saving ? 'Saving…' : reps > 0 ? 'Done' : 'Close'}
+            onPress={() => saveAndGo('/')}
+            disabled={saving}
+          />
+          <Pressable
+            onPress={() => saveAndGo('/profile')}
+            style={styles.linkButton}
+            disabled={saving}
+          >
+            <Ionicons name="stats-chart" size={18} color={colors.accent} />
+            <Text style={styles.linkText}>View profile</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
+  container: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  container: { flex: 1 },
-  content: {
+  scroll: {
     alignItems: 'center',
     padding: spacing.lg,
     paddingTop: spacing.xl,
     paddingBottom: spacing.xxl,
     gap: spacing.md,
   },
-  trophyCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: colors.accentDark,
-    borderWidth: 2,
-    borderColor: colors.accent,
+  iconBadge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(96, 165, 250, 0.1)', // soft accent glow
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  eyebrow: { 
-    ...typography.label, 
-    color: colors.accentStrong,
-    letterSpacing: 2,
-  },
-  title: { 
-    ...typography.titleLarge, 
-    color: colors.textPrimary, 
+  title: {
+    ...typography.titleLarge,
+    color: colors.textPrimary,
     textAlign: 'center',
   },
-  coachText: {
+  subtitle: {
     ...typography.bodySmall,
     color: colors.textSecondary,
-    lineHeight: 20,
     textAlign: 'center',
+    lineHeight: 20,
     maxWidth: 320,
   },
-  bigReps: {
-    fontSize: 72,
+  hugeNumber: {
+    fontSize: 96,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -2,
     marginTop: spacing.sm,
   },
-  bigRepsLabel: {
+  unit: {
     ...typography.caption,
     color: colors.textSecondary,
-    letterSpacing: 3,
-    marginTop: -spacing.xs,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
-  metricsGrid: {
+  metricsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    justifyContent: 'space-between',
     width: '100%',
     marginTop: spacing.lg,
   },
-  metricTile: {
-    width: '48%',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
+  metricItem: {
     alignItems: 'center',
-    gap: spacing.xs,
+    flex: 1,
   },
-  metricValue: { ...typography.bodyBold, color: colors.textPrimary },
-  metricLabel: { ...typography.caption, color: colors.textMuted },
-  nextCard: {
-    width: '100%',
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'center',
-    backgroundColor: colors.cardSecondary,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
+  metricValue: {
+    ...typography.bodyBold,
+    color: colors.textPrimary,
+    marginTop: 4,
+  },
+  metricLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  nextHint: {
     marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  nextCopy: { flex: 1, gap: 2 },
-  nextTitle: { ...typography.captionBold, color: colors.accent },
-  nextText: { ...typography.bodySmall, color: colors.textPrimary },
+  nextText: {
+    ...typography.caption,
+    color: colors.accent,
+    textAlign: 'center',
+  },
   actions: {
     width: '100%',
     gap: spacing.md,
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
   },
-  secondaryBtn: {
-    minHeight: 52,
+  linkButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: 'rgba(32, 37, 50, 0.4)',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
   },
-  secondaryBtnText: { ...typography.bodyBold, color: colors.textPrimary },
-  secondaryBtnDisabled: { opacity: 0.5 },
+  linkText: {
+    ...typography.bodyBold,
+    color: colors.accent,
+  },
 });

@@ -1,99 +1,176 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { borderRadius, colors, layout, spacing, typography } from '../../../src/theme';
-import { useUserStore, type User } from '../../../src/store';
-import { getCountryByCode } from '../../../src/data/countries';
-
-const toneOptions: Array<{ id: User['coachTone']; label: string }> = [
-  { id: 'balanced', label: 'Balanced' },
-  { id: 'jokey', label: 'Playful' },
-  { id: 'strict', label: 'Direct' },
-];
+import { useUserStore } from '../../../src/store';
+import { useUser } from '@clerk/clerk-expo';
+import { getCountryByCode, getFlagEmoji } from '../../../src/data/countries';
+import { CFEView, NeonButton, StackHeader } from '../../../src/components';
+import { pickAndUploadAvatar } from '../../../src/utils/uploadthing';
 
 export default function EditProfileScreen() {
   const router = useRouter();
+  const { user: clerkUser } = useUser();
   const { user, updateUser } = useUserStore();
 
   const [name, setName] = useState(user.displayName || user.name);
   const [nickname, setNickname] = useState(user.nickname);
   const [bio, setBio] = useState(user.bio || '');
-  const [coachTone, setCoachTone] = useState<User['coachTone']>(user.coachTone ?? 'balanced');
+  const [avatarUrl, setAvatarUrl] = useState(user.avatar || '');
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const selectedCountry = getCountryByCode(user.countryCode);
 
-  const handleSave = () => {
+  const handlePickAvatar = async () => {
+    setIsUploading(true);
+    try {
+      const url = await pickAndUploadAvatar();
+      if (url) {
+        setAvatarUrl(url);
+        updateUser({ avatar: url });
+        Alert.alert('Done', 'Avatar uploaded and saved.');
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     const displayName = name.trim() || user.name;
+    
+    if (clerkUser) {
+      const parts = displayName.split(' ');
+      const firstName = parts[0] || '';
+      const lastName = parts.slice(1).join(' ') || '';
+      try {
+        await clerkUser.update({ firstName, lastName });
+      } catch (err) {
+        console.warn('Failed to update Clerk identity', err);
+      }
+    }
+
     updateUser({
       name: displayName,
       displayName,
       nickname: nickname.trim() || displayName,
       bio: bio.trim(),
-      coachTone,
+      avatar: avatarUrl || undefined,
       countryCode: selectedCountry.code,
       countryName: selectedCountry.name,
     });
+    setIsSaving(false);
     router.back();
   };
 
+  const displayInitial = (user.displayName || user.name).slice(0, 1).toUpperCase();
+
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.title}>Edit profile</Text>
-      </View>
+    <CFEView withBackground>
+      <ScrollView 
+        contentContainerStyle={styles.content} 
+        showsVerticalScrollIndicator={false} 
+        keyboardShouldPersistTaps="handled"
+      >
+        <StackHeader 
+          title="Edit Profile" 
+          subtitle="Update your identity and avatar."
+          onBack={() => router.back()}
+        />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <View style={styles.section}>
-          <Field label="Name" value={name} onChangeText={setName} placeholder="Your name" maxLength={32} />
-          <Divider />
-          <Field label="Nickname" value={nickname} onChangeText={setNickname} placeholder="Coach name" maxLength={32} />
-          <Divider />
-          <Field label="Bio" value={bio} onChangeText={setBio} placeholder="Short note" maxLength={120} multiline />
+        {/* Avatar Upload */}
+        <View style={styles.avatarSection}>
+          <Pressable style={styles.avatarContainer} onPress={handlePickAvatar} disabled={isUploading}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitial}>{displayInitial}</Text>
+              </View>
+            )}
+            {isUploading ? (
+              <View style={styles.avatarOverlay}>
+                <ActivityIndicator color={colors.textPrimary} size="small" />
+              </View>
+            ) : (
+              <View style={styles.avatarBadge}>
+                <Ionicons name="camera" size={14} color={colors.textPrimary} />
+              </View>
+            )}
+          </Pressable>
+          <Text style={styles.avatarHint}>Tap to change photo</Text>
         </View>
 
-        <View style={styles.section}>
-          {toneOptions.map((tone, index) => {
-            const active = coachTone === tone.id;
-            return (
-              <React.Fragment key={tone.id}>
-                {index > 0 ? <Divider /> : null}
-                <Pressable style={({ pressed }) => [styles.toneRow, pressed && styles.rowPressed]} onPress={() => setCoachTone(tone.id)}>
-                  <Text style={styles.rowLabel}>{tone.label}</Text>
-                  <Ionicons
-                    name={active ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={22}
-                    color={active ? colors.accent : colors.textMuted}
-                  />
-                </Pressable>
-              </React.Fragment>
-            );
-          })}
-        </View>
+        <View style={styles.form}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Identity</Text>
+          </View>
+          
+          <Field 
+            label="DISPLAY NAME" 
+            value={name} 
+            onChangeText={setName} 
+            placeholder="Your name" 
+            maxLength={32} 
+          />
+          
+          <Field 
+            label="COACH NICKNAME" 
+            value={nickname} 
+            onChangeText={setNickname} 
+            placeholder="How coach addresses you" 
+            maxLength={32} 
+          />
+          
+          <Field 
+            label="BIO" 
+            value={bio} 
+            onChangeText={setBio} 
+            placeholder="A short note about yourself" 
+            maxLength={120} 
+            multiline 
+          />
 
-        <View style={styles.section}>
-          <Pressable style={({ pressed }) => [styles.toneRow, pressed && styles.rowPressed]} onPress={() => router.push('/(stack)/settings/country' as any)}>
-            <View style={styles.countryCopy}>
-              <Text style={styles.rowLabel}>Country</Text>
-              <Text style={styles.rowValue}>{selectedCountry.code === 'GLOBAL' ? 'Global / Earth' : selectedCountry.name}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Connections</Text>
+          </View>
+
+          <Pressable 
+            style={styles.navItem} 
+            onPress={() => router.push('/settings/social-links' as any)}
+          >
+            <View style={styles.navItemContent}>
+              <Text style={styles.fieldLabel}>SOCIAL LINKS</Text>
+              <Text style={styles.navItemValue}>Manage your X, GitHub, and more</Text>
             </View>
-            <Ionicons name="chevron-forward" size={17} color={colors.textMuted} />
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+
+          <Pressable 
+            style={styles.navItem} 
+            onPress={() => router.push('/settings/country' as any)}
+          >
+            <View style={styles.navItemContent}>
+              <Text style={styles.fieldLabel}>COUNTRY</Text>
+              <Text style={styles.navItemValue}>
+                {getFlagEmoji(selectedCountry.code)}  {selectedCountry.code === 'GLOBAL' ? 'Global / Earth' : selectedCountry.name}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
         </View>
 
-        <Pressable style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save</Text>
-        </Pressable>
+        <NeonButton 
+          title={isSaving ? "Saving..." : "Save Changes"} 
+          onPress={handleSave} 
+          style={styles.saveButton}
+          disabled={isSaving}
+        />
       </ScrollView>
-    </SafeAreaView>
+    </CFEView>
   );
-}
-
-function Divider() {
-  return <View style={styles.divider} />;
 }
 
 function Field({
@@ -112,7 +189,7 @@ function Field({
   multiline?: boolean;
 }) {
   return (
-    <View style={styles.field}>
+    <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
         style={[styles.input, multiline && styles.textArea]}
@@ -129,62 +206,123 @@ function Field({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    minHeight: 50,
-    flexDirection: 'row',
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.xl,
+  },
+
+  /* Avatar */
+  avatarSection: {
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: layout.hairline,
-    borderBottomColor: colors.borderLight,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.card,
+  avatarContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: colors.accent,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.cardSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { ...typography.titleMedium, color: colors.textPrimary },
-  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
-  section: {
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    overflow: 'hidden',
-  },
-  field: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: 2 },
-  fieldLabel: { ...typography.captionBold, color: colors.textSecondary },
-  input: {
-    minHeight: 36,
-    ...typography.body,
+  avatarInitial: {
+    ...typography.titleLarge,
     color: colors.textPrimary,
-    padding: 0,
   },
-  textArea: { minHeight: 74, paddingTop: spacing.xs },
-  divider: { height: 1, backgroundColor: colors.borderLight, marginLeft: spacing.md },
-  toneRow: {
-    minHeight: 54,
-    flexDirection: 'row',
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
   },
-  rowPressed: { backgroundColor: colors.cardSecondary },
-  rowLabel: { ...typography.body, color: colors.textPrimary },
-  rowValue: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
-  countryCopy: { flex: 1, minWidth: 0 },
-  saveButton: {
-    minHeight: 50,
-    borderRadius: borderRadius.md,
+  avatarBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
   },
-  saveButtonText: { ...typography.bodyBold, color: colors.textInverse },
+  avatarHint: {
+    ...typography.caption,
+    color: colors.textMuted,
+  },
+
+  /* Form */
+  form: {
+    gap: spacing.lg,
+  },
+  sectionHeader: {
+    marginTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    borderBottomWidth: layout.hairline,
+    borderBottomColor: colors.borderLight,
+  },
+  sectionTitle: {
+    ...typography.label,
+    color: colors.textSecondary,
+    letterSpacing: 1.5,
+  },
+  fieldContainer: {
+    gap: spacing.sm,
+  },
+  fieldLabel: {
+    ...typography.captionBold,
+    color: colors.textMuted,
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  input: {
+    minHeight: 48,
+    backgroundColor: colors.cardSecondary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    ...typography.body,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  textArea: {
+    minHeight: 100,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  navItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.cardSecondary,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  navItemContent: {
+    gap: 4,
+  },
+  navItemValue: {
+    ...typography.body,
+    color: colors.textPrimary,
+  },
+  saveButton: {
+    marginTop: spacing.md,
+  },
 });

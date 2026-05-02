@@ -33,10 +33,10 @@ export default function AppEntryScreen() {
   }
 
   if (!isSignedIn && !allowGuestMode) {
-    return <Redirect href={'/(auth)/sign-in' as any} />;
+    return <Redirect href={'/sign-in' as any} />;
   }
 
-  return <Redirect href={hasCompletedOnboarding ? '/(tabs)' : '/(stack)/onboarding'} />;
+  return <Redirect href={hasCompletedOnboarding ? '/(tabs)' : '/onboarding'} />;
 }
 
 const styles = StyleSheet.create({

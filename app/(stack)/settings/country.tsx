@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { COUNTRY_OPTIONS, type CountryOption } from '../../../src/data/countries';
+import { COUNTRY_OPTIONS, getFlagEmoji, type CountryOption } from '../../../src/data/countries';
 import { useUserStore } from '../../../src/store';
 import { borderRadius, colors, layout, spacing, typography } from '../../../src/theme';
 
@@ -70,10 +70,9 @@ export default function CountrySettingsScreen() {
           return (
             <Pressable style={({ pressed }) => [styles.row, pressed && styles.rowPressed]} onPress={() => selectCountry(item)}>
               <View style={styles.countryCopy}>
-                <Text style={styles.codeBadge}>{item.code === 'GLOBAL' ? 'ALL' : item.code}</Text>
+                <Text style={styles.flagIcon}>{getFlagEmoji(item.code)}</Text>
                 <View style={styles.countryText}>
                   <Text style={styles.countryName}>{item.code === 'GLOBAL' ? 'Global / Earth' : item.name}</Text>
-                  <Text style={styles.countryCode}>{item.code}</Text>
                 </View>
               </View>
               <Ionicons
@@ -168,15 +167,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
-  codeBadge: {
+  flagIcon: {
+    fontSize: 26,
     width: 38,
-    ...typography.captionBold,
-    color: colors.textSecondary,
     textAlign: 'center',
   },
   countryText: { flex: 1, minWidth: 0 },
   countryName: { ...typography.body, color: colors.textPrimary },
-  countryCode: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
   divider: { height: 1, backgroundColor: colors.borderLight, marginLeft: spacing.md },
   empty: { padding: spacing.xl, alignItems: 'center', gap: spacing.xs },
   emptyTitle: { ...typography.bodyBold, color: colors.textPrimary },

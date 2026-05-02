@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
@@ -75,11 +75,15 @@ export default function LeaderboardScreen() {
                 entry.isCurrentUser && styles.rowActive,
                 pressed && styles.rowPressed,
               ]}
-              onPress={() => router.push(`/(stack)/user/${entry.id}` as any)}
+              onPress={() => router.push(`/user/${entry.id}` as any)}
             >
               <Text style={styles.rankText}>{entry.rank}</Text>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{entry.name.slice(0, 1).toUpperCase()}</Text>
+                {entry.avatar ? (
+                  <Image source={{ uri: entry.avatar }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>{entry.name.slice(0, 1).toUpperCase()}</Text>
+                )}
               </View>
               <View style={styles.nameColumn}>
                 <View style={styles.nameRow}>
@@ -220,8 +224,15 @@ const styles = StyleSheet.create({
   avatar: {
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.04)',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: { ...typography.bodyBold, color: colors.textPrimary },
   nameColumn: { flex: 1, minWidth: 0, justifyContent: 'center' },

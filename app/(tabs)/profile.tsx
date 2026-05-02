@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,7 +92,8 @@ export default function ProfileScreen() {
   const { range: profileRange, loading: profileLoading } = useProfileRange(period, periodOffset);
   const { range: allTimeRange } = useProfileRange('ALL', 0);
   const { comparison: friendComparison } = useFriendComparison('W', 0);
-  const displayName = user.displayName || user.name;
+  const rawDisplayName = user.displayName || user.name;
+  const displayName = rawDisplayName.length > 4 ? `${rawDisplayName.slice(0, 4)}...` : rawDisplayName;
   const chartWidth = screenWidth - horizontalPadding * 2;
 
   const days = getDaysForPeriod(period);
@@ -165,7 +166,11 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.identity}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{displayName.slice(0, 1).toUpperCase()}</Text>
+              {user.avatar ? (
+                <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarText}>{rawDisplayName.slice(0, 1).toUpperCase()}</Text>
+              )}
             </View>
             <View style={styles.identityCopy}>
               <Text style={styles.title}>{displayName}</Text>
@@ -173,14 +178,14 @@ export default function ProfileScreen() {
             </View>
           </View>
           <View style={styles.headerActions}>
-            <Pressable style={styles.iconButton} onPress={() => router.push('/(stack)/notifications' as any)}>
+            <Pressable style={styles.iconButton} onPress={() => router.push('/notifications' as any)}>
               <Ionicons name={inbox?.unreadCount ? 'notifications' : 'notifications-outline'} size={20} color={colors.textPrimary} />
               {inbox?.unreadCount ? <View style={styles.notificationDot} /> : null}
             </Pressable>
-            <Pressable style={styles.iconButton} onPress={() => router.push('/(stack)/settings/edit-profile' as any)}>
+            <Pressable style={styles.iconButton} onPress={() => router.push('/settings/edit-profile' as any)}>
               <Ionicons name="create-outline" size={20} color={colors.textPrimary} />
             </Pressable>
-            <Pressable style={styles.iconButton} onPress={() => router.push('/(stack)/settings' as any)}>
+            <Pressable style={styles.iconButton} onPress={() => router.push('/settings' as any)}>
               <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
             </Pressable>
           </View>
@@ -485,6 +490,12 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 54,
+    height: 54,
+    resizeMode: 'cover',
   },
   avatarText: {
     ...typography.titleMedium,
@@ -492,7 +503,8 @@ const styles = StyleSheet.create({
   },
   identityCopy: { flex: 1, minWidth: 0 },
   title: {
-    ...typography.titleMedium,
+    fontSize: 16,
+    fontWeight: '400',
     color: colors.textPrimary,
   },
   meta: {

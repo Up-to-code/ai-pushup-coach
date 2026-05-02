@@ -1,6 +1,7 @@
-import { useQuery } from 'convex/react';
+import { useAuth } from '@clerk/clerk-expo';
+import { useConvexAuth, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useClientUserId, useIsGuestMode } from '../shared/currentUser';
+import { useClientUserId } from '../shared/currentUser';
 import { useUserStore } from '../../store';
 import type { TimePeriod } from '../profile/hooks';
 
@@ -11,6 +12,7 @@ export interface LeaderboardRow {
   id: string;
   rank: number;
   name: string;
+  avatar?: string;
   countryCode: string;
   score: number;
   isCurrentUser: boolean;
@@ -21,12 +23,14 @@ function toRows(rows: Array<{
   displayName?: string;
   name: string;
   countryCode: string;
+  avatar?: string;
   totalReps: number;
 }> | undefined, currentClientUserId: string): LeaderboardRow[] | undefined {
   return rows?.map((row, index) => ({
     id: row.clientUserId,
     rank: index + 1,
     name: row.displayName ?? row.name,
+    avatar: row.avatar,
     countryCode: row.countryCode,
     score: row.totalReps,
     isCurrentUser: row.clientUserId === currentClientUserId,
@@ -35,11 +39,14 @@ function toRows(rows: Array<{
 
 export function useLeaderboard(scope: LeaderboardScope, period: LeaderboardPeriod = 'W', limit = 50) {
   const clientUserId = useClientUserId();
-  const isGuestMode = useIsGuestMode();
+  const { isSignedIn } = useAuth();
+  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
   const countryCode = useUserStore((state) => state.user.countryCode);
+  const needsAuth = scope === 'friends';
+  const skipAuthQuery = needsAuth && (!isSignedIn || !isConvexAuthenticated);
   const rows = useQuery(
     (api as any).leaderboard.rankedLeaderboard,
-    scope === 'friends' && isGuestMode
+    skipAuthQuery
       ? 'skip'
       : {
           scope,
@@ -52,7 +59,7 @@ export function useLeaderboard(scope: LeaderboardScope, period: LeaderboardPerio
 
   return {
     rows: toRows(rows, clientUserId),
-    loading: !isGuestMode && rows === undefined,
+    loading: !skipAuthQuery && (isConvexAuthLoading || rows === undefined),
     isGlobalCountryFallback: scope === 'country' && countryCode === 'GLOBAL',
   };
 }

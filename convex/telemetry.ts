@@ -1,6 +1,7 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
+import { assertRateLimit } from './rateLimit';
 
 export const logWorkoutEvent = mutation({
   args: {
@@ -30,6 +31,16 @@ export const logWorkoutEvent = mutation({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', args.clientUserId))
       .unique();
+    if (!user) {
+      throw new Error('User must exist before telemetry submission.');
+    }
+    
+    await assertRateLimit(ctx, {
+      userId: user._id,
+      bucket: 'logWorkoutEvent',
+      limit: 5000,
+      windowMs: 60 * 60 * 1000,
+    });
     const workout = await ctx.db
       .query('workoutResults')
       .withIndex('by_client_workout_id', (q) => q.eq('clientWorkoutId', args.clientWorkoutId))
@@ -72,6 +83,16 @@ export const logFaceTrackingSample = mutation({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', args.clientUserId))
       .unique();
+    if (!user) {
+      throw new Error('User must exist before tracking sample submission.');
+    }
+
+    await assertRateLimit(ctx, {
+      userId: user._id,
+      bucket: 'logFaceTrackingSample',
+      limit: 10000,
+      windowMs: 60 * 60 * 1000,
+    });
     const workout = await ctx.db
       .query('workoutResults')
       .withIndex('by_client_workout_id', (q) => q.eq('clientWorkoutId', args.clientWorkoutId))

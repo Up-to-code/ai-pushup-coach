@@ -23,7 +23,7 @@ export default function SetupGoalScreen() {
     if (!selectedGoal) return;
     debugPlanSetup('goal selected', { goal: selectedGoal });
     updateSetupDraft({ goal: selectedGoal });
-    router.push('/(stack)/setup/time');
+    router.push('/setup/time');
   };
 
   return (

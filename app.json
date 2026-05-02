@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AI Push-Up Coach",
+    "name": "Pushup Tracking App",
     "slug": "ai-pushup-coach",
     "scheme": "aipushupcoach",
     "version": "1.0.0",
@@ -16,20 +16,40 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.aipushupcoach.app",
       "appleTeamId": "U7JF269T76",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.aipushupcoach.app"
+        ]
+      },
       "infoPlist": {
-        "NSCameraUsageDescription": "AI Push-Up Coach uses the camera during live workouts to track push-up movement and count reps.",
-        "NSMicrophoneUsageDescription": "Microphone access is not used for workout tracking."
+        "CFBundleDisplayName": "Pushup Tracking App",
+        "NSCameraUsageDescription": "Pushup Tracking App uses the camera during live workouts to track push-up movement and count reps.",
+        "NSMicrophoneUsageDescription": "Microphone access is not used for workout tracking.",
+        "NSPhotoLibraryUsageDescription": "Allow access to your photo library to set a profile picture.",
+        "NSPhotoLibraryAddUsageDescription": "Allow saving selected profile pictures when needed."
       }
     },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#030700"
+      },
       "permissions": [
-        "com.android.vending.BILLING"
+        "com.android.vending.BILLING",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE"
       ]
     },
     "plugins": [
       "expo-router",
       "expo-notifications",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to your photo library to set a profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

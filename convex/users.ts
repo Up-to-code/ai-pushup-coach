@@ -105,11 +105,11 @@ export const publicProfile = query({
     const followers = await ctx.db
       .query('follows')
       .withIndex('by_following', (q) => q.eq('followingUserId', profile._id))
-      .collect();
+      .take(1000);
     const followingRows = await ctx.db
       .query('follows')
       .withIndex('by_follower', (q) => q.eq('followerUserId', profile._id))
-      .collect();
+      .take(1000);
 
     return {
       ...profile,

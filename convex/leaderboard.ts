@@ -52,15 +52,17 @@ async function scoreUserForPeriod(
 ) {
   if (period === 'ALL') return null;
   const range = getRangeForPeriod(period);
-  const workouts = await ctx.db
-    .query('workoutResults')
-    .withIndex('by_user_date', (q) => q.eq('userId', userId))
-    .order('desc')
-    .take(1000);
+  const stats = await ctx.db
+    .query('dailyStats')
+    .withIndex('by_user_day', (q) => q.eq('userId', userId))
+    .take(365);
 
-  return workouts
-    .filter((workout) => workout.completed && workout.date >= range.start && workout.date <= range.end)
-    .reduce((sum, workout) => sum + workout.reps, 0);
+  return stats
+    .filter((stat) => {
+      const statTime = new Date(stat.dayKey).getTime();
+      return statTime >= range.start && statTime <= range.end;
+    })
+    .reduce((sum, stat) => sum + stat.reps, 0);
 }
 
 async function rankUsersForPeriod(
@@ -71,6 +73,7 @@ async function rankUsersForPeriod(
     name: string;
     displayName?: string;
     countryCode: string;
+    avatar?: string;
     totalReps: number;
   }>,
   period: LeaderboardPeriod,
@@ -84,6 +87,7 @@ async function rankUsersForPeriod(
         name: user.name,
         displayName: user.displayName,
         countryCode: user.countryCode,
+        avatar: user.avatar,
         totalReps: periodScore ?? user.totalReps,
       };
     })
@@ -116,11 +120,11 @@ export const rankedLeaderboard = query({
       const following = await ctx.db
         .query('follows')
         .withIndex('by_follower', (q) => q.eq('followerUserId', user._id))
-        .collect();
+        .take(1000);
       const followers = await ctx.db
         .query('follows')
         .withIndex('by_following', (q) => q.eq('followingUserId', user._id))
-        .collect();
+        .take(1000);
       const followingIds = new Set(
         following.filter((row) => row.status === 'active').map((row) => row.followingUserId)
       );
@@ -207,11 +211,11 @@ export const friendsLeaderboard = query({
     const following = await ctx.db
       .query('follows')
       .withIndex('by_follower', (q) => q.eq('followerUserId', user._id))
-      .collect();
+      .take(1000);
     const followers = await ctx.db
       .query('follows')
       .withIndex('by_following', (q) => q.eq('followingUserId', user._id))
-      .collect();
+      .take(1000);
 
     const followingIds = new Set(
       following.filter((row) => row.status === 'active').map((row) => row.followingUserId)
@@ -243,7 +247,8 @@ export const countrySnapshot = query({
     const users = await ctx.db
       .query('users')
       .withIndex('by_country_total_reps', (q) => q.eq('countryCode', countryCode))
-      .collect();
+      .order('desc')
+      .take(1000);
 
     const countryAverage =
       users.length === 0
@@ -287,11 +292,11 @@ export const friendComparison = query({
     const following = await ctx.db
       .query('follows')
       .withIndex('by_follower', (q) => q.eq('followerUserId', user._id))
-      .collect();
+      .take(1000);
     const followers = await ctx.db
       .query('follows')
       .withIndex('by_following', (q) => q.eq('followingUserId', user._id))
-      .collect();
+      .take(1000);
     const followingIds = new Set(
       following.filter((row) => row.status === 'active').map((row) => row.followingUserId)
     );
@@ -304,14 +309,16 @@ export const friendComparison = query({
 
     const rows = await Promise.all(ids.map(async (id) => {
       const profile = await ctx.db.get(id);
-      const workouts = await ctx.db
-        .query('workoutResults')
-        .withIndex('by_user_date', (q) => q.eq('userId', id))
-        .order('desc')
-        .take(1000);
-      const score = workouts
-        .filter((workout) => workout.completed && workout.date >= range.start && workout.date <= range.end)
-        .reduce((sum, workout) => sum + workout.reps, 0);
+      const stats = await ctx.db
+        .query('dailyStats')
+        .withIndex('by_user_day', (q) => q.eq('userId', id))
+        .take(365);
+      const score = stats
+        .filter((stat) => {
+          const statTime = new Date(stat.dayKey).getTime();
+          return statTime >= range.start && statTime <= range.end;
+        })
+        .reduce((sum, stat) => sum + stat.reps, 0);
       return profile
         ? {
             clientUserId: profile.clientUserId,

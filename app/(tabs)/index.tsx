@@ -41,7 +41,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!plan) {
-      router.replace('/(stack)/setup/level');
+      router.replace('/setup/level');
     }
   }, [plan, router]);
 
@@ -76,7 +76,7 @@ export default function HomeScreen() {
     });
     updatePlan({ notificationIds });
 
-    router.push('/(stack)/workout-session' as any);
+    router.push('/workout-session' as any);
   };
 
   if (!plan) {
@@ -90,7 +90,7 @@ export default function HomeScreen() {
           </Text>
           <NeonButton
             title="Start setup"
-            onPress={() => router.replace('/(stack)/setup/level' as any)}
+            onPress={() => router.replace('/setup/level' as any)}
             testID="start-plan-setup"
           />
         </View>
@@ -200,7 +200,7 @@ export default function HomeScreen() {
                 trainingDays: plan.trainingDays,
                 preferredTime,
               });
-              router.push('/(stack)/setup/level' as any);
+              router.push('/setup/level' as any);
             }}
           />
         </View>

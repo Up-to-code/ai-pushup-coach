@@ -1,57 +1,90 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CFEView, StackHeader } from '../../../src/components';
-import { colors, spacing, typography, borderRadius } from '../../../src/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StackHeader } from '../../../src/components';
+import { colors, spacing, typography } from '../../../src/theme';
+
+const sections = [
+  {
+    title: 'Fitness guidance',
+    body: 'Push-Up Coach provides training guidance and progress tracking, not medical advice. Stop exercising if you feel pain, dizziness, or unsafe symptoms.',
+  },
+  {
+    title: 'User responsibility',
+    body: 'You are responsible for choosing a safe training environment, using proper form, and selecting a plan that matches your current ability.',
+  },
+  {
+    title: 'Subscriptions',
+    body: 'Paid features, if enabled, are managed through Apple in-app purchase and RevenueCat. You can restore purchases and manage subscription status from Settings.',
+  },
+  {
+    title: 'Availability',
+    body: 'Camera tracking depends on device capability, lighting, framing, and OS permissions. Manual fallback states may appear when tracking is unavailable.',
+  },
+  {
+    title: 'Nexfiy app page',
+    body: 'Website terms copy and app support live at https://nexfiy.com/apps/ai-pushup-coach.',
+  },
+];
 
 export default function TermsScreen() {
   const router = useRouter();
   return (
-    <CFEView>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <StackHeader eyebrow="Legal" title="Terms of Use" subtitle="Training guidance and subscription terms." onBack={() => router.back()} />
+        <StackHeader 
+          eyebrow="Legal" 
+          title="Terms of Use" 
+          subtitle="Training guidance and subscription terms." 
+          onBack={() => router.back()} 
+        />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <TermBlock title="Fitness guidance">
-          Push-Up Coach provides training guidance and progress tracking, not medical advice. Stop exercising if you feel pain, dizziness, or unsafe symptoms.
-        </TermBlock>
-        <TermBlock title="User responsibility">
-          You are responsible for choosing a safe training environment, using proper form, and selecting a plan that matches your current ability.
-        </TermBlock>
-        <TermBlock title="Subscriptions">
-          Paid features, if enabled, are managed through Apple in-app purchase and RevenueCat. You can restore purchases and manage subscription status from Settings.
-        </TermBlock>
-        <TermBlock title="Availability">
-          Camera tracking depends on device capability, lighting, framing, and OS permissions. Manual fallback states may appear when tracking is unavailable.
-        </TermBlock>
-        <TermBlock title="Nexfiy app page">
-          Website terms copy and app support live at https://nexfiy.com/apps/ai-pushup-coach.
-        </TermBlock>
+        {sections.map((section, index) => (
+          <View key={section.title} style={styles.section}>
+            <Text style={styles.title}>{section.title}</Text>
+            <Text style={styles.body}>{section.body}</Text>
+            {index < sections.length - 1 && <View style={styles.divider} />}
+          </View>
+        ))}
       </ScrollView>
-    </CFEView>
-  );
-}
-
-function TermBlock({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.block}>
-      <Text style={styles.blockTitle}>{title}</Text>
-      <Text style={styles.blockText}>{children}</Text>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { paddingHorizontal: spacing.md },
-  content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
-  block: {
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(32, 37, 50, 0.55)',
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.sm,
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
-  blockTitle: { ...typography.bodyBold, color: colors.textPrimary },
-  blockText: { ...typography.bodySmall, color: colors.textSecondary, lineHeight: 21 },
+  header: {
+    paddingHorizontal: spacing.md,
+  },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
+  },
+  section: {
+    gap: spacing.xs,
+  },
+  title: {
+    ...typography.bodyBold,
+    color: colors.textPrimary,
+    fontSize: 18,
+    letterSpacing: -0.3,
+  },
+  body: {
+    ...typography.body,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    fontSize: 15,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.borderLight,
+    marginTop: spacing.md,
+  },
 });

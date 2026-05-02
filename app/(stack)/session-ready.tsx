@@ -11,11 +11,11 @@ export default function SessionReadyScreen() {
 
   useEffect(() => {
     if (currentWorkout?.id) {
-      router.replace('/(stack)/workout-session');
+      router.replace('/workout-session');
       return;
     }
 
-    router.replace('/(tabs)/practice' as any);
+    router.replace('/practice' as any);
   }, [currentWorkout?.id, router]);
 
   return (

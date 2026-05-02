@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as challenges from "../challenges.js";
+import type * as http from "../http.js";
 import type * as leaderboard from "../leaderboard.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as settings from "../settings.js";
@@ -28,6 +29,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   challenges: typeof challenges;
+  http: typeof http;
   leaderboard: typeof leaderboard;
   rateLimit: typeof rateLimit;
   settings: typeof settings;

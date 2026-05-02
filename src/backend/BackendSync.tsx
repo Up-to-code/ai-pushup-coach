@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@clerk/clerk-expo';
-import { useMutation } from 'convex/react';
+import { useConvexAuth, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useSettingsStore, useUserStore, useWorkoutStore, type Workout } from '../store';
 
@@ -26,23 +26,24 @@ function toWorkoutPayload(clientUserId: string, workout: Workout) {
 
 export function BackendSync() {
   const { isLoaded, isSignedIn, userId } = useAuth();
+  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const user = useUserStore((state) => state.user);
   const settings = useSettingsStore((state) => state.settings);
   const workouts = useWorkoutStore((state) => state.workouts);
-  const submittedWorkoutIds = useRef(new Set<string>());
+  const markWorkoutSynced = useWorkoutStore((state) => state.markWorkoutSynced);
 
   const upsertProfile = useMutation(api.users.upsertProfile);
   const upsertSettings = useMutation(api.settings.upsertSettings);
   const submitWorkout = useMutation(api.workouts.submitWorkout);
   const logWorkoutEvent = useMutation(api.telemetry.logWorkoutEvent);
 
-  const completedWorkouts = useMemo(
-    () => workouts.filter((workout) => workout.completed),
+  const unsyncedWorkouts = useMemo(
+    () => workouts.filter((workout) => workout.completed && !workout.synced),
     [workouts]
   );
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !userId) {
+    if (!isLoaded || !isSignedIn || !isConvexAuthenticated || !userId) {
       return;
     }
 
@@ -94,25 +95,20 @@ export function BackendSync() {
     return () => {
       cancelled = true;
     };
-  }, [isLoaded, isSignedIn, settings, upsertProfile, upsertSettings, user, userId]);
+  }, [isConvexAuthenticated, isLoaded, isSignedIn, settings, upsertProfile, upsertSettings, user, userId]);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !userId) {
+    if (!isLoaded || !isSignedIn || !isConvexAuthenticated || !userId) {
       return;
     }
 
     const authenticatedUserId = userId;
 
     async function syncWorkouts() {
-      for (const workout of completedWorkouts) {
-        if (submittedWorkoutIds.current.has(workout.id)) {
-          continue;
-        }
-
+      for (const workout of unsyncedWorkouts) {
         try {
           await submitWorkout(toWorkoutPayload(authenticatedUserId, workout));
-          submittedWorkoutIds.current.add(workout.id);
-
+          
           await logWorkoutEvent({
             clientUserId: authenticatedUserId,
             clientWorkoutId: workout.id,
@@ -122,15 +118,18 @@ export function BackendSync() {
             cameraPresentationState: workout.cameraPresentationState,
             message: `Completed ${workout.reps} reps in ${workout.duration}s`,
           });
+          
+          // Mark as synced locally so we don't try to sync it again on next reload
+          markWorkoutSynced(workout.id);
         } catch (error) {
           console.warn('Convex workout sync failed', error);
-          break;
+          break; // Stop syncing on error (e.g. rate limit, network failure)
         }
       }
     }
 
     void syncWorkouts();
-  }, [completedWorkouts, isLoaded, isSignedIn, logWorkoutEvent, submitWorkout, userId]);
+  }, [unsyncedWorkouts, isConvexAuthenticated, isLoaded, isSignedIn, logWorkoutEvent, submitWorkout, userId, markWorkoutSynced]);
 
   return null;
 }

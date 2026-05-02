@@ -73,7 +73,7 @@ export default function SetupTimeScreen() {
 
       setPlan({ ...plan, notificationIds });
       router.dismissAll();
-      router.replace('/(tabs)');
+      router.replace('/');
     } finally {
       setSaving(false);
     }

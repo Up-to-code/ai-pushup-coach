@@ -23,7 +23,7 @@ export default function SetupLevelScreen() {
     if (!selectedLevel) return;
     debugPlanSetup('level selected', { level: selectedLevel });
     updateSetupDraft({ level: selectedLevel });
-    router.push('/(stack)/setup/days');
+    router.push('/setup/days');
   };
 
   return (

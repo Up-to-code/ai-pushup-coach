@@ -103,11 +103,11 @@ export const counts = query({
     const followers = await ctx.db
       .query('follows')
       .withIndex('by_following', (q) => q.eq('followingUserId', user._id))
-      .collect();
+      .take(1000);
     const following = await ctx.db
       .query('follows')
       .withIndex('by_follower', (q) => q.eq('followerUserId', user._id))
-      .collect();
+      .take(1000);
     const activeFollowers = followers.filter((row) => row.status === 'active');
     const activeFollowing = following.filter((row) => row.status === 'active');
     const followingIds = new Set(activeFollowing.map((row) => row.followingUserId));

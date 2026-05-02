@@ -6,14 +6,20 @@ import { toLocalUserUpdates } from './clerkUserProfile';
 export function ClerkUserSync() {
   const { isLoaded, isSignedIn, user } = useUser();
   const updateUser = useUserStore((state) => state.updateUser);
+  const localAvatar = useUserStore((state) => state.user.avatar);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user) {
       return;
     }
 
-    updateUser(toLocalUserUpdates(user));
-  }, [isLoaded, isSignedIn, updateUser, user]);
+    const updates = toLocalUserUpdates(user);
+    if (localAvatar) {
+      delete updates.avatar;
+    }
+
+    updateUser(updates);
+  }, [isLoaded, isSignedIn, localAvatar, updateUser, user]);
 
   return null;
 }

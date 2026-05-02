@@ -36,7 +36,7 @@ const practiceModes = [
 export default function TrainScreen() {
   const router = useRouter();
   const { horizontalPadding } = useResponsive();
-  const trainingSetupRoute = '/(stack)/training-setup' as any;
+  const trainingSetupRoute = '/training-setup' as any;
 
   const handleModeSelect = (mode: typeof practiceModes[0]) => {
     let goal: number | undefined;
@@ -70,7 +70,7 @@ export default function TrainScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: horizontalPadding }]}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Practice</Text>
+          <Text style={styles.title}>Pushups</Text>
         </View>
 
         <View style={styles.modesGrid}>

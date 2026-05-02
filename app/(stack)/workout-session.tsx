@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@clerk/clerk-expo';
 import * as Haptics from 'expo-haptics';
 import { Camera } from 'expo-camera/legacy';
-import { useMutation } from 'convex/react';
+import { useConvexAuth, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { PushupCameraView, pushupCameraAvailable, type FaceMetricsEvent } from '../../src/components/PushupCameraView';
 import {
@@ -267,11 +267,13 @@ export default function WorkoutSessionScreen() {
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [restRemaining, setRestRemaining] = useState(0);
   const [visibleTrackingProblem, setVisibleTrackingProblem] = useState<VisibleTrackingProblem>('none');
-  const { userId } = useAuth();
+  const { isSignedIn, userId } = useAuth();
+  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const user = useUserStore((state) => state.user);
   const updateUser = useUserStore((state) => state.updateUser);
   const markCurrentDayCompleted = usePlanStore((state) => state.markCurrentDayCompleted);
   const convexUserId = userId ?? user.id;
+  const canSyncConvex = Boolean(isSignedIn && isConvexAuthenticated && userId);
 
   const {
     currentWorkout,
@@ -305,7 +307,7 @@ export default function WorkoutSessionScreen() {
 
   useEffect(() => {
     if (guardArmed && !currentWorkout?.id && !finishStartedRef.current) {
-      router.replace('/(tabs)/practice' as any);
+      router.replace('/practice' as any);
     }
   }, [currentWorkout?.id, guardArmed, router]);
 
@@ -514,7 +516,7 @@ export default function WorkoutSessionScreen() {
       });
       markCurrentDayCompleted();
     }
-    router.replace(`/(stack)/workout-complete?workoutId=${finishedWorkout.id}` as any);
+    router.replace(`/workout-complete?workoutId=${finishedWorkout.id}` as any);
   };
 
   const handleRepCounted = (nextRep: number) => {
@@ -529,7 +531,7 @@ export default function WorkoutSessionScreen() {
     hapticImpact(Haptics.ImpactFeedbackStyle.Light);
     speakCue(String(nextRep));
 
-    if (currentWorkout?.id) {
+    if (currentWorkout?.id && canSyncConvex) {
       void logWorkoutEvent({
         clientUserId: convexUserId,
         clientWorkoutId: currentWorkout.id,
@@ -584,7 +586,7 @@ export default function WorkoutSessionScreen() {
       return;
     }
 
-    if (currentWorkout?.id && now - lastTrackingSyncAtRef.current > 1000) {
+    if (currentWorkout?.id && canSyncConvex && now - lastTrackingSyncAtRef.current > 1000) {
       lastTrackingSyncAtRef.current = now;
       void logFaceTrackingSample({
         clientUserId: convexUserId,
@@ -635,7 +637,7 @@ export default function WorkoutSessionScreen() {
       speakCue('Start');
       hapticNotification(Haptics.NotificationFeedbackType.Success);
 
-      if (currentWorkout?.id) {
+      if (currentWorkout?.id && canSyncConvex) {
         void logWorkoutEvent({
           clientUserId: convexUserId,
           clientWorkoutId: currentWorkout.id,
@@ -676,7 +678,7 @@ export default function WorkoutSessionScreen() {
           style: 'destructive',
           onPress: () => {
             discardWorkout();
-            router.replace('/(tabs)/practice' as any);
+            router.replace('/practice' as any);
           },
         },
         {
@@ -704,7 +706,7 @@ export default function WorkoutSessionScreen() {
   }, [cameraPresentationState, currentWorkout?.id, updateCurrentWorkout]);
 
   useEffect(() => {
-    if (!currentWorkout?.id || draftWorkoutSyncedRef.current) {
+    if (!currentWorkout?.id || draftWorkoutSyncedRef.current || !canSyncConvex) {
       return;
     }
 
@@ -736,7 +738,7 @@ export default function WorkoutSessionScreen() {
     }
 
     void syncWorkoutDraft();
-  }, [cameraPresentationState, convexUserId, currentWorkout, submitWorkout]);
+  }, [cameraPresentationState, canSyncConvex, convexUserId, currentWorkout, submitWorkout]);
 
   const statusLabel = {
     permission: 'Permission needed',

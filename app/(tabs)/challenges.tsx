@@ -47,21 +47,23 @@ export default function ChallengesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: horizontalPadding }]}
       >
         <View style={styles.header}>
           <Text style={styles.title}>Challenges</Text>
-          <Text style={styles.subtitle}>Small comparisons that make showing up feel visible.</Text>
+          <Text style={styles.subtitle}>
+            Small comparisons that make showing up feel visible.
+          </Text>
         </View>
 
         <View style={styles.list}>
           {loading ? (
             <View style={styles.stateBox}>
-              <ActivityIndicator color={colors.accent} />
-              <Text style={styles.stateText}>Loading live challenges...</Text>
+              <ActivityIndicator color={colors.accent} size="large" />
+              <Text style={styles.stateText}>Loading live challenges…</Text>
             </View>
           ) : challenges && challenges.length > 0 ? (
             challenges.map((challenge) => (
@@ -74,8 +76,11 @@ export default function ChallengesScreen() {
             ))
           ) : (
             <View style={styles.stateBox}>
+              <Ionicons name="trophy-outline" size={48} color={colors.textSecondary} />
               <Text style={styles.stateTitle}>No challenges yet</Text>
-              <Text style={styles.stateText}>Check back after your profile finishes syncing.</Text>
+              <Text style={styles.stateText}>
+                Check back after your profile finishes syncing.
+              </Text>
             </View>
           )}
         </View>
@@ -97,36 +102,67 @@ function ChallengeRow({
   const progressLabel = `${challenge.progressReps}/${challenge.goalReps}`;
   const completed = Boolean(challenge.completedAt);
 
+  const pillStyle = completed
+    ? styles.pillDone
+    : challenge.joined
+    ? styles.pillJoined
+    : styles.pillJoin;
+
+  const pillIcon = completed
+    ? 'checkmark-circle'
+    : challenge.joined
+    ? 'remove-circle-outline'
+    : 'add-circle-outline';
+
+  const pillLabel = completed ? 'Done' : challenge.joined ? 'Joined' : 'Join';
+
+  const pillIconColor = completed
+    ? colors.success
+    : challenge.joined
+    ? colors.textSecondary
+    : '#fff';
+
   return (
-    <Pressable style={({ pressed }) => [styles.row, pressed && styles.rowPressed]} onPress={onPress} disabled={busy}>
+    <Pressable
+      style={({ pressed }) => [
+        styles.row,
+        pressed && styles.rowPressed,
+      ]}
+      onPress={onPress}
+      disabled={busy}
+    >
       <View style={styles.rowTop}>
         <View style={styles.rowCopy}>
-          <Text style={styles.rowTitle} numberOfLines={1}>{challenge.title}</Text>
-          <Text style={styles.rowMeta}>{challenge.category}</Text>
+          <Text style={styles.rowTitle} numberOfLines={1}>
+            {challenge.title}
+          </Text>
+          <View style={styles.categoryChip}>
+            <Text style={styles.categoryText}>{challenge.category}</Text>
+          </View>
         </View>
         <Text style={styles.progressValue}>{progressLabel}</Text>
       </View>
 
-      <Text style={styles.description} numberOfLines={2}>{challenge.description}</Text>
+      <Text style={styles.description} numberOfLines={2}>
+        {challenge.description}
+      </Text>
 
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
 
       <View style={styles.rowFooter}>
-        <Text style={styles.rewardText} numberOfLines={1}>{challenge.reward}</Text>
-        <View style={[styles.joinPill, challenge.joined && styles.joinPillActive]}>
+        <Text style={styles.rewardText} numberOfLines={1}>
+          🎁 {challenge.reward}
+        </Text>
+        <View style={[styles.pill, pillStyle]}>
           {busy ? (
-            <ActivityIndicator color={colors.textPrimary} size="small" />
+            <ActivityIndicator size="small" color={pillIconColor} />
           ) : (
             <>
-              <Ionicons
-                name={completed ? 'checkmark-circle' : challenge.joined ? 'remove-circle-outline' : 'add-circle-outline'}
-                size={16}
-                color={challenge.joined ? colors.textPrimary : colors.textInverse}
-              />
-              <Text style={[styles.joinText, challenge.joined && styles.joinTextActive]}>
-                {completed ? 'Done' : challenge.joined ? 'Joined' : 'Join'}
+              <Ionicons name={pillIcon} size={16} color={pillIconColor} />
+              <Text style={[styles.pillLabel, { color: pillIconColor }]}>
+                {pillLabel}
               </Text>
             </>
           )}
@@ -139,64 +175,88 @@ function ChallengeRow({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background, // ensure a light/neutral background
   },
   scrollContent: {
-    paddingVertical: spacing.lg,
-    gap: spacing.lg,
-    paddingBottom: 40,
+    paddingVertical: 32,
+    gap: 24,
+    paddingBottom: 48,
   },
   header: {
-    minHeight: 42,
-    justifyContent: 'center',
-    gap: spacing.xs,
+    gap: 4,
   },
   title: {
-    ...typography.titleLarge,
+    fontSize: 32,
+    fontWeight: '700',
     color: colors.textPrimary,
+    letterSpacing: -0.5,
+    lineHeight: 38,
   },
-  subtitle: { ...typography.caption, color: colors.textSecondary, lineHeight: 18 },
+  subtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
   list: {
-    gap: spacing.sm,
+    gap: 16,
   },
   row: {
-    minHeight: 142,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 20,
     backgroundColor: colors.card,
-    padding: spacing.md,
-    gap: spacing.sm,
+    padding: 20,
+    gap: 14,
+    // modern card shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
   },
   rowPressed: {
-    opacity: 0.72,
+    transform: [{ scale: 0.985 }],
+    opacity: 0.9,
   },
   rowTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: spacing.md,
   },
   rowCopy: {
     flex: 1,
-    minWidth: 0,
+    marginRight: 12,
   },
   rowTitle: {
-    ...typography.bodyBold,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.textPrimary,
+    letterSpacing: -0.3,
   },
-  rowMeta: {
-    ...typography.caption,
+  categoryChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.cardSecondary,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginTop: 6,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '500',
     color: colors.textSecondary,
-    marginTop: 2,
   },
-  description: { ...typography.caption, color: colors.textSecondary, lineHeight: 18 },
+  description: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
   progressValue: {
-    ...typography.captionBold,
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.textPrimary,
+    fontVariant: ['tabular-nums'],
   },
   progressTrack: {
-    height: 5,
+    height: 6,
     borderRadius: 3,
     backgroundColor: colors.cardSecondary,
     overflow: 'hidden',
@@ -210,37 +270,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
   },
   rewardText: {
     flex: 1,
-    ...typography.caption,
+    fontSize: 13,
     color: colors.textSecondary,
   },
-  joinPill: {
-    minWidth: 78,
-    minHeight: 34,
-    borderRadius: 17,
-    backgroundColor: colors.textPrimary,
+  pill: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    minWidth: 80,
   },
-  joinPillActive: {
-    backgroundColor: colors.cardSecondary,
+  pillJoin: {
+    backgroundColor: colors.accent,
+  },
+  pillJoined: {
+    backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: colors.border,
   },
-  joinText: { ...typography.captionBold, color: colors.textInverse },
-  joinTextActive: { color: colors.textPrimary },
+  pillDone: {
+    backgroundColor: '#E8F5E9', // light green background
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+  },
+  pillLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   stateBox: {
-    minHeight: 220,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    paddingVertical: 60,
+    gap: 12,
   },
-  stateTitle: { ...typography.bodyBold, color: colors.textPrimary },
-  stateText: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', lineHeight: 18 },
+  stateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginTop: 8,
+  },
+  stateText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
 });
