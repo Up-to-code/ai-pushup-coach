@@ -16,13 +16,13 @@ Rationale: The current app has no advertising SDK in `package.json` and should n
 
 - Email Address
 - Purpose: App Functionality
-- Source: Clerk sign-in provider data when a user signs in.
+- Source: Better Auth sign-in provider data when a user signs in.
 
 ### Identifiers
 
 - User ID
 - Purpose: App Functionality
-- Source: Clerk user id, Convex client user id, RevenueCat app user id.
+- Source: Better Auth user id, Convex client user id, RevenueCat app user id.
 
 ### Health & Fitness
 

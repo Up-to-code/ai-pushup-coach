@@ -22,9 +22,9 @@ export default function TabLayout() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Tabs
-        sceneContainerStyle={{ backgroundColor: 'transparent' }}
         screenOptions={{
           headerShown: false,
+          sceneStyle: { backgroundColor: 'transparent' },
           tabBarShowLabel: true,
           tabBarActiveTintColor: colors.accent,
           tabBarInactiveTintColor: colors.textSecondary,

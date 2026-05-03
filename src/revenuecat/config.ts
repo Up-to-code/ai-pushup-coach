@@ -1,15 +1,13 @@
-export const REVENUECAT_API_KEY =
-  process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ?? 'test_IikqirdLPxZXRfasXAvObzjofrg';
+export const REVENUECAT_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ?? '';
 
 export const PRO_ENTITLEMENT_ID =
-  process.env.EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID ?? 'pushup-coach Pro';
+  process.env.EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID ?? 'pro';
 
-export const LEGACY_PRO_ENTITLEMENT_ID = 'pushup_coach_pro';
+export const LEGACY_PRO_ENTITLEMENT_ID = 'pushup-coach Pro';
 
 export const PRODUCT_IDENTIFIERS = {
-  lifetime: 'lifetime',
-  yearly: 'yearly',
-  monthly: 'monthly',
+  yearly: 'com.ahmedmansour.pushcounter.pro.yearly',
+  monthly: 'com.ahmedmansour.pushcounter.pro.monthly',
 } as const;
 
 export type ProductIdentifierKey = keyof typeof PRODUCT_IDENTIFIERS;

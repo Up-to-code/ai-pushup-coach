@@ -4,14 +4,12 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { borderRadius, colors, layout, spacing, typography } from '../../../src/theme';
 import { useUserStore } from '../../../src/store';
-import { useUser } from '@clerk/clerk-expo';
 import { getCountryByCode, getFlagEmoji } from '../../../src/data/countries';
 import { CFEView, NeonButton, StackHeader } from '../../../src/components';
 import { pickAndUploadAvatar } from '../../../src/utils/uploadthing';
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user: clerkUser } = useUser();
   const { user, updateUser } = useUserStore();
 
   const [name, setName] = useState(user.displayName || user.name);
@@ -40,17 +38,6 @@ export default function EditProfileScreen() {
     if (isSaving) return;
     setIsSaving(true);
     const displayName = name.trim() || user.name;
-    
-    if (clerkUser) {
-      const parts = displayName.split(' ');
-      const firstName = parts[0] || '';
-      const lastName = parts.slice(1).join(' ') || '';
-      try {
-        await clerkUser.update({ firstName, lastName });
-      } catch (err) {
-        console.warn('Failed to update Clerk identity', err);
-      }
-    }
 
     updateUser({
       name: displayName,

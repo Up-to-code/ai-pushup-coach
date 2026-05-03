@@ -23,7 +23,6 @@ type PurchasesErrorLike = {
 const PRO_ENTITLEMENT_IDS = [PRO_ENTITLEMENT_ID, LEGACY_PRO_ENTITLEMENT_ID];
 
 const PACKAGE_TYPE_BY_PRODUCT_KEY: Record<ProductIdentifierKey, PACKAGE_TYPE> = {
-  lifetime: PACKAGE_TYPE.LIFETIME,
   yearly: PACKAGE_TYPE.ANNUAL,
   monthly: PACKAGE_TYPE.MONTHLY,
 };
@@ -88,7 +87,6 @@ export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
 
 export function getConfiguredPackages(offering: PurchasesOffering | null): Record<ProductIdentifierKey, PurchasesPackage | null> {
   const emptyPackages = {
-    lifetime: null,
     yearly: null,
     monthly: null,
   };

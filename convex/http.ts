@@ -1,8 +1,11 @@
 import { httpRouter } from 'convex/server';
 import { httpAction } from './_generated/server';
 import Sqids, { defaultOptions } from 'sqids';
+import { authComponent, createAuth } from './auth';
 
 const http = httpRouter();
+
+authComponent.registerRoutes(http, createAuth, { cors: true });
 
 type UploadThingToken = {
   apiKey: string;

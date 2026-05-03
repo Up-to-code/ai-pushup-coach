@@ -2,29 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Redirect } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
 import { useConvexAuth, useQuery } from 'convex/react';
 import { api } from '../convex/_generated/api';
+import { useBetterAuth } from '../src/auth';
 import { useSettingsStore } from '../src/store';
 
 export default function AppEntryScreen() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const { userId } = useAuth();
+  const { isLoaded, isSignedIn, userId } = useBetterAuth();
   const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const hasCompletedOnboarding = useSettingsStore((state) => state.hasCompletedOnboarding);
   const allowGuestMode = useSettingsStore((state) => state.settings.allowGuestMode);
-  const [hydrated, setHydrated] = useState(
-    Boolean((useSettingsStore as any).persist?.hasHydrated?.())
-  );
+  const [hydrated, setHydrated] = useState(Boolean(useSettingsStore.persist.hasHydrated()));
 
   useEffect(() => {
-    const persistApi = (useSettingsStore as any).persist;
     const finishHydration = () => setHydrated(true);
 
-    if (!persistApi?.onFinishHydration || persistApi.hasHydrated?.()) {
+    if (useSettingsStore.persist.hasHydrated()) {
       finishHydration();
     } else {
-      persistApi.onFinishHydration(finishHydration);
+      return useSettingsStore.persist.onFinishHydration(finishHydration);
     }
   }, []);
 

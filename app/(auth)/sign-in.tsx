@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   ImageBackground,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -10,25 +11,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { useSSO } from '@clerk/clerk-expo';
-import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import Animated, {
   FadeInDown,
   FadeInUp,
 } from 'react-native-reanimated';
+import { authClient } from '../../src/auth';
+import { privacyUrl, termsUrl } from '../../src/config/links';
 import { colors, spacing, typography } from '../../src/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
-type Provider = 'oauth_google' | 'oauth_apple';
+type Provider = 'google' | 'apple';
 
 export default function SignInScreen() {
-  const { startSSOFlow } = useSSO();
   const router = useRouter();
   const [activeProvider, setActiveProvider] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const openLegalLink = useCallback(async (url: string) => {
+    await Linking.openURL(url);
+  }, []);
 
   useEffect(() => {
     void WebBrowser.warmUpAsync();
@@ -43,22 +47,24 @@ export default function SignInScreen() {
       setError(null);
 
       try {
-        const { createdSessionId, setActive } = await startSSOFlow({
-          strategy,
-          redirectUrl: Linking.createURL('/', { scheme: 'pushcounter' }),
+        const { error } = await authClient.signIn.social({
+          provider: strategy,
+          callbackURL: '/',
         });
 
-        if (createdSessionId) {
-          await setActive?.({ session: createdSessionId });
+        if (error) {
+          console.warn('Better Auth social sign-in error', error);
+          throw new Error(error.message || error.code || 'Social sign-in failed.');
         }
+        router.replace('/' as any);
       } catch (err) {
-        console.warn('Clerk OAuth failed', err);
-        setError('Could not finish sign in. Check that this provider is enabled in Clerk.');
+        console.warn('Better Auth OAuth failed', err);
+        setError('Could not finish sign in. Check that this provider is enabled in Better Auth.');
       } finally {
         setActiveProvider(null);
       }
     },
-    [startSSOFlow]
+    [router]
   );
 
   return (
@@ -92,10 +98,10 @@ export default function SignInScreen() {
                       activeProvider !== null && styles.btnOff,
                     ]}
                     disabled={activeProvider !== null}
-                    onPress={() => signInWith('oauth_apple')}
+                    onPress={() => signInWith('apple')}
                   >
                     <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-                    {activeProvider === 'oauth_apple' ? (
+                    {activeProvider === 'apple' ? (
                       <ActivityIndicator color="#FFF" size="small" />
                     ) : (
                       <Ionicons name="logo-apple" size={19} color="#FFF" />
@@ -111,10 +117,10 @@ export default function SignInScreen() {
                       activeProvider !== null && styles.btnOff,
                     ]}
                     disabled={activeProvider !== null}
-                    onPress={() => signInWith('oauth_google')}
+                    onPress={() => signInWith('google')}
                   >
                     <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-                    {activeProvider === 'oauth_google' ? (
+                    {activeProvider === 'google' ? (
                       <ActivityIndicator color="#FFF" size="small" />
                     ) : (
                       <Ionicons name="logo-google" size={17} color="#FFF" />
@@ -130,11 +136,11 @@ export default function SignInScreen() {
 
                 <View style={styles.legal}>
                   <Text style={styles.legalTxt}>By continuing, you agree to our </Text>
-                  <Pressable onPress={() => router.push('/legal/terms' as any)}>
+                  <Pressable onPress={() => openLegalLink(termsUrl)}>
                     <Text style={styles.legalLink}>Terms</Text>
                   </Pressable>
                   <Text style={styles.legalTxt}> and </Text>
-                  <Pressable onPress={() => router.push('/legal/privacy' as any)}>
+                  <Pressable onPress={() => openLegalLink(privacyUrl)}>
                     <Text style={styles.legalLink}>Privacy</Text>
                   </Pressable>
                 </View>
@@ -146,8 +152,6 @@ export default function SignInScreen() {
     </ImageBackground>
   );
 }
-
-/* ─────────────────────────────────────────────── */
 
 const styles = StyleSheet.create({
   root: {

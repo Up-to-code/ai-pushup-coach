@@ -1,6 +1,6 @@
-import { useAuth } from '@clerk/clerk-expo';
 import { useConvexAuth, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { useBetterAuth } from '../../auth';
 import { useClientUserId } from '../shared/currentUser';
 import { useUserStore } from '../../store';
 import type { TimePeriod } from '../profile/hooks';
@@ -39,13 +39,13 @@ function toRows(rows: Array<{
 
 export function useLeaderboard(scope: LeaderboardScope, period: LeaderboardPeriod = 'W', limit = 50) {
   const clientUserId = useClientUserId();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn } = useBetterAuth();
   const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
   const countryCode = useUserStore((state) => state.user.countryCode);
   const needsAuth = scope === 'friends';
   const skipAuthQuery = needsAuth && (!isSignedIn || !isConvexAuthenticated);
   const rows = useQuery(
-    (api as any).leaderboard.rankedLeaderboard,
+    api.leaderboard.rankedLeaderboard,
     skipAuthQuery
       ? 'skip'
       : {

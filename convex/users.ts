@@ -2,14 +2,19 @@ import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
 import { ACCOUNT_RESTORE_WINDOW_MS, assertActiveUser, isPendingDeletion } from './deletedUsers';
+import type { Doc, TableNames } from './_generated/dataModel';
+import type { MutationCtx } from './_generated/server';
 
-async function deleteRows(ctx: any, rows: Array<{ _id: any }>) {
+async function deleteRows<TableName extends TableNames>(
+  ctx: MutationCtx,
+  rows: Array<Pick<Doc<TableName>, '_id'>>
+) {
   for (const row of rows) {
     await ctx.db.delete(row._id);
   }
 }
 
-async function collectAccountRows(ctx: any, user: { _id: any }) {
+async function collectAccountRows(ctx: MutationCtx, user: Doc<'users'>) {
   const [
     settings,
     workouts,
@@ -22,15 +27,15 @@ async function collectAccountRows(ctx: any, user: { _id: any }) {
     challengeMembers,
     rateLimits,
   ] = await Promise.all([
-    ctx.db.query('userSettings').withIndex('by_user_id', (q: any) => q.eq('userId', user._id)).collect(),
-    ctx.db.query('workoutResults').withIndex('by_user_date', (q: any) => q.eq('userId', user._id)).collect(),
-    ctx.db.query('workoutEvents').withIndex('by_user_time', (q: any) => q.eq('userId', user._id)).collect(),
-    ctx.db.query('faceTrackingSamples').withIndex('by_user_time', (q: any) => q.eq('userId', user._id)).collect(),
-    ctx.db.query('dailyStats').withIndex('by_user_day', (q: any) => q.eq('userId', user._id)).collect(),
-    ctx.db.query('follows').withIndex('by_follower', (q: any) => q.eq('followerUserId', user._id)).collect(),
-    ctx.db.query('follows').withIndex('by_following', (q: any) => q.eq('followingUserId', user._id)).collect(),
+    ctx.db.query('userSettings').withIndex('by_user_id', (q) => q.eq('userId', user._id)).collect(),
+    ctx.db.query('workoutResults').withIndex('by_user_date', (q) => q.eq('userId', user._id)).collect(),
+    ctx.db.query('workoutEvents').withIndex('by_user_time', (q) => q.eq('userId', user._id)).collect(),
+    ctx.db.query('faceTrackingSamples').withIndex('by_user_time', (q) => q.eq('userId', user._id)).collect(),
+    ctx.db.query('dailyStats').withIndex('by_user_day', (q) => q.eq('userId', user._id)).collect(),
+    ctx.db.query('follows').withIndex('by_follower', (q) => q.eq('followerUserId', user._id)).collect(),
+    ctx.db.query('follows').withIndex('by_following', (q) => q.eq('followingUserId', user._id)).collect(),
     ctx.db.query('socialNotifications').collect(),
-    ctx.db.query('challengeMembers').withIndex('by_user', (q: any) => q.eq('userId', user._id)).collect(),
+    ctx.db.query('challengeMembers').withIndex('by_user', (q) => q.eq('userId', user._id)).collect(),
     ctx.db.query('rateLimits').collect(),
   ]);
 
@@ -42,13 +47,13 @@ async function collectAccountRows(ctx: any, user: { _id: any }) {
     dailyStats,
     following,
     followers,
-    notifications: allNotifications.filter((row: any) => row.recipientUserId === user._id || row.actorUserId === user._id),
+    notifications: allNotifications.filter((row) => row.recipientUserId === user._id || row.actorUserId === user._id),
     challengeMembers,
-    rateLimits: rateLimits.filter((row: any) => row.userId === user._id),
+    rateLimits: rateLimits.filter((row) => row.userId === user._id),
   };
 }
 
-async function hardDeleteAccountRows(ctx: any, user: { _id: any }) {
+async function hardDeleteAccountRows(ctx: MutationCtx, user: Doc<'users'>) {
   const rows = await collectAccountRows(ctx, user);
   await deleteRows(ctx, rows.settings);
   await deleteRows(ctx, rows.workouts);
@@ -158,10 +163,10 @@ export const deleteAccount = mutation({
     const rows = await collectAccountRows(ctx, user);
 
     await Promise.all([
-      ...rows.following.map((row: any) => ctx.db.patch(row._id, { status: 'blocked', updatedAt: now })),
-      ...rows.followers.map((row: any) => ctx.db.patch(row._id, { status: 'blocked', updatedAt: now })),
-      ...rows.notifications.map((row: any) => ctx.db.delete(row._id)),
-      ...rows.challengeMembers.map((row: any) => ctx.db.delete(row._id)),
+      ...rows.following.map((row) => ctx.db.patch(row._id, { status: 'blocked', updatedAt: now })),
+      ...rows.followers.map((row) => ctx.db.patch(row._id, { status: 'blocked', updatedAt: now })),
+      ...rows.notifications.map((row) => ctx.db.delete(row._id)),
+      ...rows.challengeMembers.map((row) => ctx.db.delete(row._id)),
     ]);
 
     await ctx.db.patch(user._id, {
@@ -301,6 +306,43 @@ export const publicProfile = query({
               followingRow.followingUserId === follower.followerUserId
           )
       ).length,
+    };
+  },
+});
+
+export const sharedProfile = query({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const profile = await ctx.db
+      .query('users')
+      .withIndex('by_client_user_id', (q) => q.eq('clientUserId', userId))
+      .unique();
+
+    if (!profile || isPendingDeletion(profile)) return null;
+
+    const followers = await ctx.db
+      .query('follows')
+      .withIndex('by_following', (q) => q.eq('followingUserId', profile._id))
+      .take(1000);
+    const followingRows = await ctx.db
+      .query('follows')
+      .withIndex('by_follower', (q) => q.eq('followerUserId', profile._id))
+      .take(1000);
+
+    return {
+      clientUserId: profile.clientUserId,
+      displayName: profile.displayName ?? profile.name,
+      nickname: profile.nickname,
+      bio: profile.bio,
+      countryCode: profile.countryCode,
+      countryName: profile.countryName,
+      avatar: profile.avatar,
+      streak: profile.streak,
+      totalReps: profile.totalReps,
+      bestReps: profile.bestReps,
+      followersCount: followers.filter((row) => row.status === 'active').length,
+      followingCount: followingRows.filter((row) => row.status === 'active').length,
+      updatedAt: profile.updatedAt,
     };
   },
 });

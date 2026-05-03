@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useAuth } from '@clerk/clerk-expo';
 import { useConvexAuth, useQuery } from 'convex/react';
 import { AppState, NativeModules, Platform } from 'react-native';
 import { api } from '../../convex/_generated/api';
+import { useBetterAuth } from '../auth';
 import { useUserStore, useWorkoutStore } from '../store';
 import { buildWidgetPayload, getWidgetPayloadSignature, type WidgetPayload } from './widgetPayload';
 
@@ -13,7 +13,7 @@ type WidgetDataModuleType = {
 const widgetDataModule = NativeModules.WidgetDataModule as WidgetDataModuleType | undefined;
 
 export function WidgetDataSync() {
-  const { isSignedIn, userId } = useAuth();
+  const { isSignedIn, userId } = useBetterAuth();
   const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const user = useUserStore((state) => state.user);
   const workouts = useWorkoutStore((state) => state.workouts);

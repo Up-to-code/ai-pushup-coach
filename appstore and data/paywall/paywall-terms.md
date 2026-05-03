@@ -12,8 +12,8 @@ Deleting your Push Counter account or uninstalling the app does not cancel an ac
 
 Refund requests are handled by Apple according to Apple policies.
 
-Full Terms of Use: https://nexfiy.com/apps/push-counter/terms
+Full Terms of Use: https://pushcounter.online/terms
 
 ## Recommended Paywall Footer
 
-Subscriptions renew unless canceled through your Apple account. Deleting the app or account does not cancel a subscription. Terms: https://nexfiy.com/apps/push-counter/terms
+Subscriptions renew unless canceled through your Apple account. Deleting the app or account does not cancel a subscription. Terms: https://pushcounter.online/terms

@@ -10,8 +10,8 @@ Push Counter does not collect your full payment card number or bank account deta
 
 Workout, account, and app data are handled according to the full Privacy Policy.
 
-Full Privacy Policy: https://nexfiy.com/apps/push-counter/privacy
+Full Privacy Policy: https://pushcounter.online/privacy
 
 ## Recommended Paywall Footer
 
-Payment is handled by Apple. Push Counter receives subscription status only. Full Privacy Policy: https://nexfiy.com/apps/push-counter/privacy
+Payment is handled by Apple. Push Counter receives subscription status only. Full Privacy Policy: https://pushcounter.online/privacy

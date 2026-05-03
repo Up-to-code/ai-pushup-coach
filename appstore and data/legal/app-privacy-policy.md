@@ -2,7 +2,7 @@
 
 Effective date: May 2, 2026
 
-App page: https://nexfiy.com/apps/push-counter
+App page: https://pushcounter.online
 
 Push Counter is provided by Nexfiy. This Privacy Policy explains how Push Counter collects, uses, stores, and shares information when you use the mobile app, website pages, account features, workout features, social features, subscriptions, and related services.
 
@@ -61,7 +61,7 @@ We share information with service providers that help us operate Push Counter. T
 
 Current service categories include:
 
-- Authentication providers for Apple and Google sign-in through Clerk.
+- Authentication providers for Apple and Google sign-in through Better Auth.
 - Backend and database services through Convex.
 - Purchase entitlement and subscription management through RevenueCat and Apple.
 - Profile image upload and hosting services.
@@ -115,6 +115,6 @@ We may update this Privacy Policy from time to time. If changes are material, we
 
 Nexfiy
 
-Support URL: https://nexfiy.com/apps/push-counter
+Support URL: https://pushcounter.online
 
 Privacy Contact: privacy@nexfiy.com

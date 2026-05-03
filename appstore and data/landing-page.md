@@ -1,6 +1,6 @@
 # Push Counter Landing Page
 
-Page URL: https://nexfiy.com/apps/push-counter
+Page URL: https://pushcounter.online
 
 ## Header
 
@@ -37,7 +37,7 @@ Recommended button links:
 
 - GET: App Store product URL when live
 - ANDROID COMING SOON: no external store link until a Play Store listing is live
-- WEB: https://nexfiy.com/apps/push-counter
+- WEB: https://pushcounter.online
 
 ## Store Stats
 
@@ -70,7 +70,7 @@ Push Counter is designed and built by Nexfiy for calm, focused fitness tracking.
 
 Button: Contact Support
 
-Support link: https://nexfiy.com/apps/push-counter
+Support link: https://pushcounter.online
 
 ## Legal And App Store Data
 
@@ -78,8 +78,8 @@ Use these links from the public app page, paywall footer, App Store Connect, and
 
 | Item | Link or file |
 | --- | --- |
-| Public Privacy Policy | https://nexfiy.com/apps/push-counter/privacy |
-| Public Terms of Use | https://nexfiy.com/apps/push-counter/terms |
+| Public Privacy Policy | https://pushcounter.online/privacy |
+| Public Terms of Use | https://pushcounter.online/terms |
 | App Privacy Policy source | `legal/app-privacy-policy.md` |
 | App Terms of Use source | `legal/app-terms-of-use.md` |
 | Paywall privacy source | `paywall/paywall-privacy.md` |
@@ -90,9 +90,9 @@ Use these links from the public app page, paywall footer, App Store Connect, and
 
 ## Footer Links
 
-- Privacy Policy: https://nexfiy.com/apps/push-counter/privacy
-- Terms of Use: https://nexfiy.com/apps/push-counter/terms
-- Support: https://nexfiy.com/apps/push-counter
+- Privacy Policy: https://pushcounter.online/privacy
+- Terms of Use: https://pushcounter.online/terms
+- Support: https://pushcounter.online
 - Security: https://nexfiy.com/security
 - Apple Legal: https://www.apple.com/legal/
 - Google Legal: https://policies.google.com/

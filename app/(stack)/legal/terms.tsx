@@ -28,7 +28,7 @@ const sections = [
   },
   {
     title: 'Nexfiy app page',
-    body: 'Website terms copy and app support live at https://nexfiy.com/apps/push-counter.',
+    body: 'Website terms copy and app support live at https://pushcounter.online.',
   },
 ];
 

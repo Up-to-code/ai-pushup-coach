@@ -1,6 +1,6 @@
 # Push Counter Page Copy
 
-Page URL: https://nexfiy.com/apps/push-counter
+Page URL: https://pushcounter.online
 
 ## Hero
 
@@ -55,13 +55,13 @@ Camera access is requested only for live workout tracking, and workout video is 
 
 Push Counter is designed and built by Nexfiy for calm, focused fitness tracking. The app is meant to support consistent training without turning every workout into noise.
 
-Contact Support: https://nexfiy.com/apps/push-counter
+Contact Support: https://pushcounter.online
 
 ## Footer Links
 
-- Privacy Policy: https://nexfiy.com/apps/push-counter/privacy
-- Terms of Use: https://nexfiy.com/apps/push-counter/terms
-- Support: https://nexfiy.com/apps/push-counter
+- Privacy Policy: https://pushcounter.online/privacy
+- Terms of Use: https://pushcounter.online/terms
+- Support: https://pushcounter.online
 - Apple Legal: https://www.apple.com/legal/
 - Google Legal: https://policies.google.com/
 

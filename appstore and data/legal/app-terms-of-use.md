@@ -2,7 +2,7 @@
 
 Effective date: May 2, 2026
 
-App page: https://nexfiy.com/apps/push-counter
+App page: https://pushcounter.online
 
 These Terms of Use govern your access to and use of Push Counter, including the mobile app, website pages, account features, workout features, social features, subscriptions, and related services provided by Nexfiy.
 
@@ -106,6 +106,6 @@ We may update these Terms from time to time. If changes are material, we may not
 
 Nexfiy
 
-Support URL: https://nexfiy.com/apps/push-counter
+Support URL: https://pushcounter.online
 
 Support Contact: support@nexfiy.com

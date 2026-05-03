@@ -12,31 +12,29 @@ This project is Expo-based, so real purchases require a development build or pro
 
 ## Environment
 
-The app falls back to the supplied test API key, but a checked-in public fallback should only be used for development. Prefer setting:
+Set the RevenueCat public SDK API key in each build environment. Do not use a Test Store key for App Store builds.
 
 ```sh
-EXPO_PUBLIC_REVENUECAT_API_KEY=test_IikqirdLPxZXRfasXAvObzjofrg
-EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID=pushup-coach Pro
+EXPO_PUBLIC_REVENUECAT_API_KEY=appl_...
+EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID=pro
 ```
 
 If the RevenueCat dashboard entitlement identifier is changed later, update `EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID` instead of changing app code.
 
 ## RevenueCat dashboard setup
 
-1. Create or open the AI Push-Up Coach RevenueCat project.
-2. Add the iOS app using bundle identifier `com.aipushupcoach.app`.
+1. Create or open the Push Counter RevenueCat project.
+2. Add the iOS app using bundle identifier `com.ahmedmansour.pushcounter`.
 3. Add the Android app using the package identifier you use for the Play Store build.
-4. Create one entitlement with identifier `pushup-coach Pro`.
+4. Create one entitlement with identifier `pro`.
 5. Add products in each store and import/map them in RevenueCat:
-   - `lifetime`
-   - `yearly`
-   - `monthly`
-6. Attach all three products to the `pushup-coach Pro` entitlement.
+   - `com.ahmedmansour.pushcounter.pro.yearly`
+   - `com.ahmedmansour.pushcounter.pro.monthly`
+6. Attach both products to the `pro` entitlement.
 7. Create an Offering with identifier `default`.
 8. Add packages to the `default` offering:
-   - Lifetime package mapped to product `lifetime`
-   - Annual package mapped to product `yearly`
-   - Monthly package mapped to product `monthly`
+   - Annual package mapped to product `com.ahmedmansour.pushcounter.pro.yearly`
+   - Monthly package mapped to product `com.ahmedmansour.pushcounter.pro.monthly`
 9. Create and attach a RevenueCat Paywall to the `default` offering.
 10. Configure Customer Center in RevenueCat when you want users to self-serve restore, subscription management, refund/help flows, or cancellation feedback.
 

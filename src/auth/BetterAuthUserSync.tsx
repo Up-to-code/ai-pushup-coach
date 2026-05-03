@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { useUser } from '@clerk/clerk-expo';
 import { useUserStore } from '../store';
-import { toLocalUserUpdates } from './clerkUserProfile';
+import { toLocalUserUpdates } from './betterAuthUserProfile';
+import { useBetterAuth } from './useBetterAuth';
 
-export function ClerkUserSync() {
-  const { isLoaded, isSignedIn, user } = useUser();
+export function BetterAuthUserSync() {
+  const { isLoaded, isSignedIn, user } = useBetterAuth();
   const updateUser = useUserStore((state) => state.updateUser);
   const localAvatar = useUserStore((state) => state.user.avatar);
 

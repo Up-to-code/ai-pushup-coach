@@ -31,7 +31,7 @@ Use the existing device helper:
 npm run ios:device
 ```
 
-The script detects a paired physical iPhone, starts Metro on port 8081 if needed, builds the Debug app, installs it, and launches `com.aipushupcoach.app`.
+The script detects a paired physical iPhone, starts Metro on port 8081 if needed, builds the Debug app, installs it, and launches `com.ahmedmansour.pushcounter`.
 
 For physical devices, the script also waits for Metro to report `packager-status:running` and temporarily forces the Debug build to embed `main.jsbundle`. This prevents the app from crashing with "No bundle URL present" when the iPhone cannot reach the Mac's Metro host during startup.
 

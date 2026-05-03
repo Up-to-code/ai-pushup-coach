@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@clerk/clerk-expo';
 import { useMutation, useQuery } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../convex/_generated/api';
+import { useBetterAuth } from '../../src/auth';
 import { cancelPlanNotifications } from '../../src/services/notifications';
 import { usePlanStore, useSettingsStore, useUserStore, useWorkoutStore } from '../../src/store';
 import { borderRadius, colors, spacing, typography } from '../../src/theme';
@@ -21,7 +21,7 @@ function formatDate(timestamp?: number) {
 
 export default function RestoreAccountScreen() {
   const router = useRouter();
-  const { isLoaded, isSignedIn, signOut, userId } = useAuth();
+  const { isLoaded, isSignedIn, signOut, userId } = useBetterAuth();
   const plan = usePlanStore((state) => state.plan);
   const resetPlan = usePlanStore((state) => state.resetPlan);
   const resetSettings = useSettingsStore((state) => state.resetSettings);

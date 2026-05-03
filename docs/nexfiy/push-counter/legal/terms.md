@@ -2,7 +2,7 @@
 
 Effective date: May 1, 2026
 
-App page: https://nexfiy.com/apps/push-counter
+App page: https://pushcounter.online
 
 These terms apply to your use of Push Counter, a fitness tracking app for push-up training, workout history, progress feedback, and optional social ranking features.
 
@@ -52,4 +52,4 @@ These terms may be updated as the app changes. Continued use after updates means
 
 For support or terms questions, use the contact path provided on the Nexfiy app page:
 
-https://nexfiy.com/apps/push-counter
+https://pushcounter.online

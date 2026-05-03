@@ -5,18 +5,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '@clerk/clerk-expo';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { useBetterAuth } from '../../src/auth';
 import { useSubscription } from '../../src/revenuecat';
+import { appWebUrl, privacyUrl, supportUrl, termsUrl } from '../../src/config/links';
 import { usePlanStore, useSettingsStore, useUserStore, useWorkoutStore, type Day } from '../../src/store';
 import { cancelPlanNotifications, requestNotificationPermission, syncNotificationsForPlan } from '../../src/services/notifications';
 import { formatPreferredTime } from '../../src/utils';
 
-const APP_URL = 'https://nexfiy.com/apps/push-counter';
 const APP_STORE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
 
-// ---------- Utility functions (unchanged) ----------
 function cleanTime(value?: string | null) {
   const match = value?.match(/^(\d{1,2})(?::?(\d{0,2}))?$/);
   if (!match) return '07:30';
@@ -41,7 +40,7 @@ function reschedulePlanDays(days: Day[], preferredTime: string) {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { isSignedIn, signOut, userId } = useAuth();
+  const { isSignedIn, signOut, userId } = useBetterAuth();
   const { activeProductIdentifier, error: subscriptionError, isPro, restore, showCustomerCenter, showPaywall } = useSubscription();
   const user = useUserStore((state) => state.user);
   const resetUser = useUserStore((state) => state.resetUser);
@@ -149,9 +148,15 @@ export default function SettingsScreen() {
   };
 
   const openAppWebsite = async () => {
-    const canOpen = await Linking.canOpenURL(APP_URL);
-    if (canOpen) await Linking.openURL(APP_URL);
-    else Alert.alert('Link unavailable', APP_URL);
+    const canOpen = await Linking.canOpenURL(appWebUrl);
+    if (canOpen) await Linking.openURL(appWebUrl);
+    else Alert.alert('Link unavailable', appWebUrl);
+  };
+
+  const openWebUrl = async (url: string) => {
+    const canOpen = await Linking.canOpenURL(url);
+    if (canOpen) await Linking.openURL(url);
+    else Alert.alert('Link unavailable', url);
   };
 
   const clearLocalAccountData = async () => {
@@ -302,11 +307,13 @@ export default function SettingsScreen() {
           <Section title="Privacy and legal">
             <NavRow icon="camera-outline" label="Camera and workout data" onPress={() => router.push('/legal/data-camera' as any)} />
             <Divider />
-            <NavRow icon="document-text-outline" label="Privacy Policy" onPress={() => router.push('/legal/privacy' as any)} />
+            <ActionRow icon="document-text-outline" label="Privacy Policy" onPress={() => openWebUrl(privacyUrl)} />
             <Divider />
-            <NavRow icon="reader-outline" label="Terms of Use" onPress={() => router.push('/legal/terms' as any)} />
+            <ActionRow icon="reader-outline" label="Terms of Use" onPress={() => openWebUrl(termsUrl)} />
             <Divider />
-            <ActionRow icon="open-outline" label="Open Nexfiy app page" onPress={openAppWebsite} />
+            <ActionRow icon="help-circle-outline" label="Support" onPress={() => openWebUrl(supportUrl)} />
+            <Divider />
+            <ActionRow icon="open-outline" label="Open Push Counter web" onPress={openAppWebsite} />
           </Section>
 
           <Section title="Data control">
@@ -339,7 +346,6 @@ export default function SettingsScreen() {
   );
 }
 
-// ---------- Reusable Components (modern redesign) ----------
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <View style={styles.section}>
     <Text style={styles.sectionTitle}>{title}</Text>

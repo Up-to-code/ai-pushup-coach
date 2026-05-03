@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useAuth } from '@clerk/clerk-expo';
 import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useRouter } from 'expo-router';
+import { useBetterAuth } from '../auth';
 import { useSettingsStore, useUserStore, useWorkoutStore, type Workout } from '../store';
 
 function toWorkoutPayload(clientUserId: string, workout: Workout) {
@@ -26,7 +26,7 @@ function toWorkoutPayload(clientUserId: string, workout: Workout) {
 }
 
 export function BackendSync() {
-  const { isLoaded, isSignedIn, userId } = useAuth();
+  const { isLoaded, isSignedIn, userId } = useBetterAuth();
   const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const router = useRouter();
   const user = useUserStore((state) => state.user);

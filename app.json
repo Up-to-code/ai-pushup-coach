@@ -14,11 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aipushupcoach.app",
+      "bundleIdentifier": "com.ahmedmansour.pushcounter",
       "entitlements": {
         "com.apple.security.application-groups": [
-          "group.com.aipushupcoach.app"
-        ]
+          "group.com.ahmedmansour.pushcounter"
+        ],
+        "com.apple.developer.applesignin": ["Default"]
       },
       "infoPlist": {
         "CFBundleDisplayName": "Push Counter",
@@ -40,12 +41,13 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.aipushupcoach.app"
+      "package": "com.ahmedmansour.pushcounter"
     },
     "plugins": [
       "expo-router",
       "expo-notifications",
       "expo-secure-store",
+      "expo-apple-authentication",
       [
         "expo-image-picker",
         {

@@ -21,4 +21,4 @@ These files are copied from the app repo so the website and App Store preparatio
 - Use `favicon.png` only for browser favicon contexts.
 - Use `home_bg.png`, `onboarding_camera.png`, and `onboarding_compete.png` as website visuals or supporting app-page media.
 - Use Apple's official App Store badge from Apple marketing tools instead of recreating it from app assets.
-- Keep all public copy aligned with the Push Counter name and the `https://nexfiy.com/apps/push-counter` URL set.
+- Keep all public copy aligned with the Push Counter name and the `https://pushcounter.online` URL set.

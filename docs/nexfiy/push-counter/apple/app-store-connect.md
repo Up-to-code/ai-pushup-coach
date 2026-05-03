@@ -36,15 +36,15 @@ pushup,push-up,push ups,fitness,workout,calisthenics,rep counter,training,home w
 
 Support URL:
 
-https://nexfiy.com/apps/push-counter
+https://pushcounter.online
 
 Privacy Policy URL:
 
-https://nexfiy.com/apps/push-counter/privacy
+https://pushcounter.online/privacy
 
 Terms of Use URL:
 
-https://nexfiy.com/apps/push-counter/terms
+https://pushcounter.online/terms
 
 ## Review Notes
 
@@ -69,7 +69,7 @@ Restore purchases and Manage subscription are available from Settings > Subscrip
 
 ## Pre-Submission Checks
 
-- Use production Clerk, Convex, RevenueCat, and UploadThing credentials.
+- Use production Better Auth, Convex, RevenueCat, and UploadThing credentials.
 - Confirm the privacy policy URL loads publicly without authentication.
 - Confirm the support URL loads publicly and provides a contact path.
 - Confirm account deletion works with a test signed-in account.

@@ -49,7 +49,7 @@ Buttons:
 
 - GET: link to the App Store product page after launch.
 - ANDROID COMING SOON: disabled or informational until a Play Store listing is live.
-- WEB: link to https://nexfiy.com/apps/push-counter or a web preview if one exists.
+- WEB: link to https://pushcounter.online or a web preview if one exists.
 
 ## Store Stats
 
@@ -77,14 +77,14 @@ Button:
 
 Link:
 
-- https://nexfiy.com/apps/push-counter
+- https://pushcounter.online
 
 ## Footer
 
 Footer links:
 
-- Privacy Policy: https://nexfiy.com/apps/push-counter/privacy
-- Terms of Use: https://nexfiy.com/apps/push-counter/terms
+- Privacy Policy: https://pushcounter.online/privacy
+- Terms of Use: https://pushcounter.online/terms
 - Security: https://nexfiy.com/security
 - Apple Legal: https://www.apple.com/legal/
 - Google Legal: https://policies.google.com/

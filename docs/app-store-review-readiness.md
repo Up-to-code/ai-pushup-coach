@@ -22,8 +22,8 @@ Official references:
 
 Declare data collected by the app and third-party SDKs if it is transmitted off-device and retained beyond servicing the request.
 
-- Contact Info: email address may be processed by Clerk sign-in.
-- User ID: Clerk user id, Convex client user id, RevenueCat app user id.
+- Contact Info: email address may be processed by Better Auth sign-in.
+- User ID: Better Auth user id, Convex client user id, RevenueCat app user id.
 - Fitness: workout reps, duration, calories, workout dates, goals, sets, form feedback, camera tracking state, quality score.
 - User Content: profile display name, nickname, bio, country, avatar image, social links if provided.
 - Photos or Videos: selected profile avatar image only.
@@ -52,7 +52,7 @@ Tracking:
 
 ## Before Submission
 
-- Use production Clerk, Convex, RevenueCat, and UploadThing credentials.
+- Use production Better Auth, Convex, RevenueCat, and UploadThing credentials.
 - Verify RevenueCat offerings and App Store Connect products are ready for review and visible in the review build.
 - Upload current Privacy Policy and Terms URLs from the Nexfiy app page in App Store Connect.
 - Submit any in-app purchases/subscriptions with the app build if they are new.

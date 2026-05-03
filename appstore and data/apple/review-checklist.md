@@ -37,8 +37,8 @@ Use this checklist before submitting Push Counter to App Review.
 
 ## Privacy And Legal
 
-- Privacy Policy URL is public: https://nexfiy.com/apps/push-counter/privacy
-- Terms URL is public: https://nexfiy.com/apps/push-counter/terms
+- Privacy Policy URL is public: https://pushcounter.online/privacy
+- Terms URL is public: https://pushcounter.online/terms
 - Privacy labels match the actual app and SDK behavior.
 - Public copy discloses account/profile data, workouts, camera-derived tracking states, purchases, avatar uploads, notifications, social/challenges, diagnostics, local storage, sync, and account deletion.
 - The app does not claim to collect contacts, precise location, saved workout video, or payment card numbers.

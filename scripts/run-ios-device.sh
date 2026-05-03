@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IOS_DIR="$ROOT_DIR/ios"
-BUNDLE_ID="${IOS_BUNDLE_ID:-com.aipushupcoach.app}"
+BUNDLE_ID="${IOS_BUNDLE_ID:-com.ahmedmansour.pushcounter}"
 DEVICE_ID="${IOS_DEVICE_ID:-}"
 DERIVED_DATA_PATH="$IOS_DIR/build/device-derived-data"
 XCODE_ENV_UPDATES="$IOS_DIR/.xcode.env.updates"

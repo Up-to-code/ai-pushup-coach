@@ -1,7 +1,7 @@
 import React, { PropsWithChildren, useMemo } from 'react';
-import { useAuth } from '@clerk/clerk-expo';
 import { ConvexReactClient } from 'convex/react';
-import { ConvexProviderWithClerk } from 'convex/react-clerk';
+import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react';
+import { authClient } from '../auth';
 import { BackendSync } from './BackendSync';
 
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
@@ -20,9 +20,9 @@ export function ConvexBackendProvider({ children }: PropsWithChildren) {
   }
 
   return (
-    <ConvexProviderWithClerk client={client} useAuth={useAuth}>
+    <ConvexBetterAuthProvider client={client} authClient={authClient}>
       <BackendSync />
       {children}
-    </ConvexProviderWithClerk>
+    </ConvexBetterAuthProvider>
   );
 }

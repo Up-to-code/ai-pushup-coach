@@ -61,7 +61,6 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [productPackages, setProductPackages] = useState<Record<ProductIdentifierKey, PurchasesPackage | null>>({
-    lifetime: null,
     yearly: null,
     monthly: null,
   });

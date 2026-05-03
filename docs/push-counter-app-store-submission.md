@@ -72,15 +72,15 @@ Sports
 
 ### Support URL
 
-https://nexfiy.com/apps/push-counter
+https://pushcounter.online
 
 ### Privacy Policy URL
 
-https://nexfiy.com/apps/push-counter/privacy
+https://pushcounter.online/privacy
 
 ### Terms of Use URL
 
-https://nexfiy.com/apps/push-counter/terms
+https://pushcounter.online/terms
 
 ## App Store Description
 
@@ -184,7 +184,7 @@ We share information with service providers that help us operate Push Counter. T
 
 Current service categories include:
 
-- Authentication providers for Apple and Google sign-in through Clerk.
+- Authentication providers for Apple and Google sign-in through Better Auth.
 - Backend and database services through Convex.
 - Purchase entitlement and subscription management through RevenueCat and Apple.
 - Profile image upload and hosting services.
@@ -238,7 +238,7 @@ We may update this Privacy Policy from time to time. If changes are material, we
 
 Nexfiy
 
-Support URL: https://nexfiy.com/apps/push-counter
+Support URL: https://pushcounter.online
 
 Privacy Contact: privacy@nexfiy.com
 
@@ -348,7 +348,7 @@ We may update these Terms from time to time. If changes are material, we may not
 
 Nexfiy
 
-Support URL: https://nexfiy.com/apps/push-counter
+Support URL: https://pushcounter.online
 
 Support Contact: support@nexfiy.com
 
@@ -398,9 +398,9 @@ Optional but useful. If used, create a short portrait preview showing plan setup
 - Promotional text: Build a stronger push-up habit with guided plans, live rep counting, workout reminders, challenges, and progress history.
 - Description: Use the description above.
 - Keywords: Use the 100-character keyword string above.
-- Support URL: https://nexfiy.com/apps/push-counter
-- Privacy Policy URL: https://nexfiy.com/apps/push-counter/privacy
-- Terms URL: https://nexfiy.com/apps/push-counter/terms
+- Support URL: https://pushcounter.online
+- Privacy Policy URL: https://pushcounter.online/privacy
+- Terms URL: https://pushcounter.online/terms
 - Category: Health & Fitness
 - Secondary category: Sports
 - Age rating: likely 4+ or 9+, depending on final questionnaire answers. The code does not show objectionable content, medical treatment, unrestricted web access, gambling, alcohol, tobacco, or mature themes.

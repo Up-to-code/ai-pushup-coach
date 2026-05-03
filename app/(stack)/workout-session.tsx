@@ -3,11 +3,11 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@clerk/clerk-expo';
 import * as Haptics from 'expo-haptics';
 import { Camera, CameraView } from 'expo-camera';
 import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { useBetterAuth } from '../../src/auth';
 import { PushupCameraView, pushupCameraAvailable, type FaceMetricsEvent } from '../../src/components/PushupCameraView';
 import {
   useSettingsStore,
@@ -267,7 +267,7 @@ export default function WorkoutSessionScreen() {
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [restRemaining, setRestRemaining] = useState(0);
   const [visibleTrackingProblem, setVisibleTrackingProblem] = useState<VisibleTrackingProblem>('none');
-  const { isSignedIn, userId } = useAuth();
+  const { isSignedIn, userId } = useBetterAuth();
   const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const user = useUserStore((state) => state.user);
   const updateUser = useUserStore((state) => state.updateUser);

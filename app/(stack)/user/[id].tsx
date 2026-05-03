@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  Share,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,13 +12,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { usePublicUserProfile, useWorkoutHistory, computeWorkoutStats } from '../../../src/features/profile/hooks';
+import { usePublicUserProfile, useWorkoutHistory, computeWorkoutStats, type ProfileWorkoutRow } from '../../../src/features/profile/hooks';
 import { useFollowActions } from '../../../src/features/social/hooks';
+import { profileShareUrl } from '../../../src/config/links';
 import { borderRadius, colors, spacing, typography } from '../../../src/theme';
 import { formatDuration } from '../../../src/utils';
 import type { Workout } from '../../../src/store';
 
-function toWorkout(row: any): Workout {
+type UserWorkoutRow = Omit<ProfileWorkoutRow, 'id'> & Pick<Workout, 'goal' | 'sets' | 'restTime'>;
+
+function toWorkout(row: UserWorkoutRow): Workout {
   return {
     id: row.clientWorkoutId,
     date: new Date(row.date).toISOString(),
@@ -94,6 +98,15 @@ export default function UserProfileScreen() {
     }
   };
 
+  const shareProfile = async () => {
+    const url = profileShareUrl(targetUserId);
+    await Share.share({
+      title: `${displayName} on Push Counter`,
+      message: `See ${displayName}'s Push Counter profile: ${url}`,
+      url,
+    });
+  };
+
   const visibleSessions = showAllSessions ? history : history.slice(0, 5);
   const hasMore = history.length > 5 && !showAllSessions;
 
@@ -163,6 +176,11 @@ export default function UserProfileScreen() {
             )}
           </Pressable>
         )}
+
+        <Pressable style={[styles.button, styles.buttonSecondary]} onPress={shareProfile}>
+          <Ionicons name="share-outline" size={18} color={colors.textPrimary} />
+          <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Share profile</Text>
+        </Pressable>
 
         {/* Bio */}
         {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
@@ -261,7 +279,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: spacing.xxl,
   },
-  // ... rest of styles unchanged (header, avatar, identity, etc.)
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',

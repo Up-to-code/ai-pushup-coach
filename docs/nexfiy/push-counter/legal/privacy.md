@@ -2,7 +2,7 @@
 
 Effective date: May 1, 2026
 
-App page: https://nexfiy.com/apps/push-counter
+App page: https://pushcounter.online
 
 Push Counter helps users track push-up workouts, training plans, progress history, and optional social ranking features. This policy explains the practical data the app uses for those features.
 
@@ -53,4 +53,4 @@ Workout reminders and missed-workout follow-ups are scheduled locally based on y
 
 For privacy questions, use the contact path provided on the Nexfiy app page:
 
-https://nexfiy.com/apps/push-counter
+https://pushcounter.online

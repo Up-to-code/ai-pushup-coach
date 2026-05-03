@@ -149,7 +149,7 @@ async function uploadAvatarFile(file: ReactNativeUploadFile): Promise<string | n
     uri: file.uri,
     name: file.name,
     type: file.type,
-  } as any);
+  } as unknown as Blob);
 
   const uploadRes = await fetch(uploadTarget.url, {
     method: 'PUT',
@@ -235,9 +235,9 @@ export async function pickAndUploadAvatar(): Promise<string | null> {
   try {
     const file = await toUploadFile(result.assets[0]);
     return await uploadAvatarFile(file);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Avatar upload error:', error);
-    Alert.alert('Upload Failed', error.message || 'Something went wrong.');
+    Alert.alert('Upload Failed', error instanceof Error ? error.message : 'Something went wrong.');
     return null;
   }
 }

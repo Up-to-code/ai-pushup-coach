@@ -4,9 +4,9 @@ This folder is a self-contained publishing bundle for Push Counter. It is intend
 
 ## Public URLs
 
-- App page: https://nexfiy.com/apps/push-counter
-- Privacy Policy: https://nexfiy.com/apps/push-counter/privacy
-- Terms of Use: https://nexfiy.com/apps/push-counter/terms
+- App page: https://pushcounter.online
+- Privacy Policy: https://pushcounter.online/privacy
+- Terms of Use: https://pushcounter.online/terms
 
 ## Folder Contents
 

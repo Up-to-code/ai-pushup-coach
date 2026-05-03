@@ -54,15 +54,15 @@ pushup,push-up,push ups,rep counter,fitness,workout,calisthenics,home workout,ex
 
 Support URL:
 
-https://nexfiy.com/apps/push-counter
+https://pushcounter.online
 
 Privacy Policy URL:
 
-https://nexfiy.com/apps/push-counter/privacy
+https://pushcounter.online/privacy
 
 Terms of Use URL:
 
-https://nexfiy.com/apps/push-counter/terms
+https://pushcounter.online/terms
 
 ## Review Notes
 

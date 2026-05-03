@@ -18,6 +18,8 @@ function getNotifications() {
     cachedNotifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
       }),
@@ -35,10 +37,10 @@ export async function requestNotificationPermission() {
   if (!Notifications) return false;
 
   const current = await Notifications.getPermissionsAsync();
-  if (current.granted) return true;
+  if (current.status === 'granted') return true;
 
   const next = await Notifications.requestPermissionsAsync();
-  return next.granted;
+  return next.status === 'granted';
 }
 
 export async function cancelPlanNotifications(notificationIds: string[] = []) {
@@ -78,7 +80,7 @@ export async function scheduleMissedWorkoutReminder(input: {
       body: input.body,
       data: { kind: 'missedWorkout' },
     },
-    trigger: { seconds: secondsUntil(scheduled.toISOString()) },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: secondsUntil(scheduled.toISOString()) },
   });
 }
 
@@ -109,7 +111,7 @@ export async function schedulePlanNotifications(input: {
           body: getCoachMessage('dueNow', input.user, input.plan),
           data: { kind: 'workoutReminder', planId: input.plan.id, day: day.day },
         },
-        trigger: { seconds: secondsUntil(day.scheduledAt) },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: secondsUntil(day.scheduledAt) },
       });
       ids.push(reminderId);
     }
