@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@clerk/clerk-expo';
 import * as Haptics from 'expo-haptics';
-import { Camera } from 'expo-camera/legacy';
+import { Camera, CameraView } from 'expo-camera';
 import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { PushupCameraView, pushupCameraAvailable, type FaceMetricsEvent } from '../../src/components/PushupCameraView';
@@ -850,9 +850,9 @@ export default function WorkoutSessionScreen() {
       ) : null}
 
       {shouldRenderNativeCamera && cameraPresentationState === 'manualFallback' ? (
-        <Camera
+        <CameraView
           style={StyleSheet.absoluteFillObject}
-          type={'front' as any}
+          facing="front"
           {...(!isFullMirror ? { ratio: '1:1' } : {})}
           onMountError={() => setExpoCameraFailed(true)}
         />
