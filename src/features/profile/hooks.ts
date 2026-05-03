@@ -2,7 +2,7 @@ import { useQuery } from 'convex/react';
 import { useMemo } from 'react';
 import { api } from '../../../convex/_generated/api';
 import { useWorkoutStore } from '../../store';
-import { useClientUserId, useIsGuestMode } from '../shared/currentUser';
+import { useAuthenticatedBackendState, useClientUserId, useIsGuestMode } from '../shared/currentUser';
 export {
   buildDailySeries,
   computeWorkoutStats,
@@ -26,42 +26,44 @@ import {
 
 export function useCurrentUserProfile() {
   const clientUserId = useClientUserId();
-  const isGuestMode = useIsGuestMode();
-  const profile = useQuery(api.users.me, isGuestMode ? 'skip' : { clientUserId });
-  return { profile, loading: !isGuestMode && profile === undefined, clientUserId };
+  const { authLoading, canUseAuthenticatedBackend } = useAuthenticatedBackendState();
+  const profile = useQuery(api.users.me, canUseAuthenticatedBackend ? { clientUserId } : 'skip');
+  return { profile, loading: authLoading || (canUseAuthenticatedBackend && profile === undefined), clientUserId };
 }
 
 export function usePublicUserProfile(targetClientUserId: string) {
   const viewerClientUserId = useClientUserId();
-  const profile = useQuery(api.users.publicProfile, {
-    viewerClientUserId,
-    userId: targetClientUserId,
-  });
-  return { profile, loading: profile === undefined, viewerClientUserId };
+  const { authLoading, canUseAuthenticatedBackend } = useAuthenticatedBackendState();
+  const profile = useQuery(
+    api.users.publicProfile,
+    canUseAuthenticatedBackend ? { viewerClientUserId, userId: targetClientUserId } : 'skip'
+  );
+  return { profile, loading: authLoading || (canUseAuthenticatedBackend && profile === undefined), viewerClientUserId };
 }
 
 export function useWorkoutHistory(targetClientUserId?: string, limit = 100) {
   const viewerClientUserId = useClientUserId();
-  const isGuestMode = useIsGuestMode();
+  const { authLoading, canUseAuthenticatedBackend } = useAuthenticatedBackendState();
   const history = useQuery(
     api.workouts.historyForUser,
-    targetClientUserId && !isGuestMode ? { viewerClientUserId, targetClientUserId, limit } : 'skip'
+    targetClientUserId && canUseAuthenticatedBackend ? { viewerClientUserId, targetClientUserId, limit } : 'skip'
   );
-  return { workouts: history, loading: targetClientUserId && !isGuestMode ? history === undefined : false };
+  return { workouts: history, loading: authLoading || (targetClientUserId && canUseAuthenticatedBackend ? history === undefined : false) };
 }
 
 export function useProfileRange(period: TimePeriod, offset = 0) {
   const clientUserId = useClientUserId();
   const isGuestMode = useIsGuestMode();
+  const { authLoading, canUseAuthenticatedBackend } = useAuthenticatedBackendState();
   
   const range = useQuery(
     api.workouts.profileRange,
-    isGuestMode ? 'skip' : { clientUserId, period, offset }
+    canUseAuthenticatedBackend ? { clientUserId, period, offset } : 'skip'
   );
 
   return {
     range,
-    loading: !isGuestMode && range === undefined,
+    loading: authLoading || (!isGuestMode && canUseAuthenticatedBackend && range === undefined),
     clientUserId,
   };
 }
@@ -69,7 +71,8 @@ export function useProfileRange(period: TimePeriod, offset = 0) {
 export function useFriendComparison(period: Exclude<TimePeriod, 'ALL'> = 'W', offset = 0) {
   const clientUserId = useClientUserId();
   const isGuestMode = useIsGuestMode();
-  const comparison = useQuery(api.leaderboard.friendComparison, isGuestMode ? 'skip' : { clientUserId, period, offset });
+  const { authLoading, canUseAuthenticatedBackend } = useAuthenticatedBackendState();
+  const comparison = useQuery(api.leaderboard.friendComparison, canUseAuthenticatedBackend ? { clientUserId, period, offset } : 'skip');
   return {
     comparison: comparison ?? {
       rank: 1,
@@ -78,6 +81,6 @@ export function useFriendComparison(period: Exclude<TimePeriod, 'ALL'> = 'W', of
       friendAverage: 0,
       deltaToNext: 0,
     },
-    loading: !isGuestMode && comparison === undefined,
+    loading: authLoading || (!isGuestMode && canUseAuthenticatedBackend && comparison === undefined),
   };
 }

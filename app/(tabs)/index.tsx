@@ -41,7 +41,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!plan) {
-      router.replace('/setup/level');
+      router.replace('/onboarding');
     }
   }, [plan, router]);
 
@@ -90,7 +90,7 @@ export default function HomeScreen() {
           </Text>
           <NeonButton
             title="Start setup"
-            onPress={() => router.replace('/setup/level' as any)}
+            onPress={() => router.replace('/onboarding' as any)}
             testID="start-plan-setup"
           />
         </View>
@@ -200,7 +200,7 @@ export default function HomeScreen() {
                 trainingDays: plan.trainingDays,
                 preferredTime,
               });
-              router.push('/setup/level' as any);
+              router.push('/onboarding' as any);
             }}
           />
         </View>

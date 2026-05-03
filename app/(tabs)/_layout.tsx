@@ -1,10 +1,24 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Image, View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { borderRadius, colors, typography } from '../../src/theme';
+import { useSettingsStore } from '../../src/store';
 
 export default function TabLayout() {
+  const hasCompletedOnboarding = useSettingsStore((state) => state.hasCompletedOnboarding);
+  const hydrated = useSettingsStore.persist.hasHydrated();
+
+  // Wait for hydration to avoid flickering redirects
+  if (!hydrated) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]} />
+    );
+  }
+
+  if (!hasCompletedOnboarding) {
+    return <Redirect href="/onboarding" />;
+  }
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Tabs

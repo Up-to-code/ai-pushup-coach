@@ -55,7 +55,7 @@ cleanup_xcode_env_updates() {
 }
 
 if ! lsof -nP -iTCP:8081 -sTCP:LISTEN >/dev/null 2>&1; then
-  (cd "$ROOT_DIR" && npx expo start --dev-client >/tmp/ai-pushup-coach-metro.log 2>&1 &)
+  (cd "$ROOT_DIR" && nohup npx expo start --dev-client </dev/null >/tmp/ai-pushup-coach-metro.log 2>&1 &)
   echo "Started Metro on port 8081. Logs: /tmp/ai-pushup-coach-metro.log"
 fi
 

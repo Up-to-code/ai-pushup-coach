@@ -142,15 +142,18 @@ export const useWorkoutStore = create<WorkoutState>()(
           synced: false,
         } as Workout;
 
-        const newWorkouts = [...s.workouts.filter((workout) => workout.id !== completedWorkout.id), completedWorkout];
-        
-        set((s) => ({
+        const newWorkouts = [
+          ...state.workouts.filter((workout) => workout.id !== completedWorkout.id),
+          completedWorkout,
+        ];
+
+        set({
           workouts: newWorkouts.slice(-50),
           currentWorkout: null,
           lastCompletedWorkout: completedWorkout,
           isActive: false,
           isPaused: false,
-        }));
+        });
 
         return completedWorkout;
       },
@@ -192,7 +195,14 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       pauseWorkout: () => set({ isPaused: true }),
       resumeWorkout: () => set({ isPaused: false }),
-      clearWorkouts: () => set({ workouts: [] }),
+      clearWorkouts: () =>
+        set({
+          workouts: [],
+          currentWorkout: null,
+          lastCompletedWorkout: null,
+          isActive: false,
+          isPaused: false,
+        }),
       markWorkoutSynced: (id) =>
         set((state) => ({
           workouts: state.workouts.map((w) =>

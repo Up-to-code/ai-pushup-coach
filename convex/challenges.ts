@@ -3,6 +3,7 @@ import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
 import { assertRateLimit } from './rateLimit';
 import type { Id } from './_generated/dataModel';
+import { assertActiveUser, isPendingDeletion } from './deletedUsers';
 
 const seedChallenges = [
   {
@@ -72,6 +73,7 @@ export const seedDefaults = mutation({
     await requireMatchingIdentity(ctx, clientUserId);
     const user = await getUser(ctx, clientUserId);
     if (!user) throw new Error('User must exist before seeding challenges.');
+    assertActiveUser(user);
     await assertRateLimit(ctx, { userId: user._id, bucket: 'seedChallenges', limit: 3, windowMs: 60 * 60 * 1000 });
     await ensureSeedChallenges(ctx);
     return { ok: true };
@@ -88,6 +90,7 @@ export const list = query({
 
     const user = await getUser(ctx, clientUserId);
     if (!user) return [];
+    if (isPendingDeletion(user)) return [];
 
     const rows = await ctx.db.query('challenges').order('desc').take(Math.min(limit ?? 25, 50));
     const memberships = await ctx.db
@@ -120,6 +123,7 @@ export const join = mutation({
     const user = await getUser(ctx, clientUserId);
     const challenge = await ctx.db.get(challengeId);
     if (!user || !challenge) throw new Error('Challenge not found.');
+    assertActiveUser(user);
     await assertRateLimit(ctx, { userId: user._id, bucket: 'joinChallenge', limit: 10, windowMs: 60 * 60 * 1000 });
 
     const existing = await ctx.db
@@ -149,6 +153,7 @@ export const leave = mutation({
 
     const user = await getUser(ctx, clientUserId);
     if (!user) throw new Error('User not found.');
+    assertActiveUser(user);
     const existing = await ctx.db
       .query('challengeMembers')
       .withIndex('by_challenge_user', (q) => q.eq('challengeId', challengeId).eq('userId', user._id))

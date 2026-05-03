@@ -2,6 +2,7 @@ import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
 import { assertRateLimit } from './rateLimit';
+import { assertActiveUser } from './deletedUsers';
 
 export const logWorkoutEvent = mutation({
   args: {
@@ -34,6 +35,7 @@ export const logWorkoutEvent = mutation({
     if (!user) {
       throw new Error('User must exist before telemetry submission.');
     }
+    assertActiveUser(user);
     
     await assertRateLimit(ctx, {
       userId: user._id,
@@ -86,6 +88,7 @@ export const logFaceTrackingSample = mutation({
     if (!user) {
       throw new Error('User must exist before tracking sample submission.');
     }
+    assertActiveUser(user);
 
     await assertRateLimit(ctx, {
       userId: user._id,

@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { colors, typography, spacing, borderRadius, layout, shadows } from '../theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'white';
@@ -63,6 +64,9 @@ export const NeonButton: React.FC<NeonButtonProps> = ({
         style,
       ]}
     >
+      {(variant === 'white' || variant === 'secondary') && (
+        <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+      )}
       <Text
         style={[
           styles.text,
@@ -88,6 +92,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: layout.hairline,
+    overflow: 'hidden',
   },
   buttonPrimary: {
     backgroundColor: colors.accent,
@@ -103,8 +108,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   buttonWhite: {
-    backgroundColor: colors.textPrimary,
-    borderColor: colors.textPrimary,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -122,7 +127,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   textWhite: {
-    color: colors.background,
+    color: '#FFF',
   },
   textDisabled: {
     color: colors.textMuted,

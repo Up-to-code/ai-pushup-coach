@@ -116,7 +116,7 @@ async function uploadAvatarFile(file: ReactNativeUploadFile): Promise<string | n
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-uploadthing-package': 'ai-pushup-coach',
+      'x-uploadthing-package': 'push-counter',
       'x-uploadthing-version': '7.7.4',
       b3: traceHeaders.b3,
       traceparent: traceHeaders.traceparent,

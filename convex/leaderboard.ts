@@ -2,6 +2,7 @@ import { query, type QueryCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
 import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
+import { isPendingDeletion, isPublicUser } from './deletedUsers';
 
 const comparisonPeriod = v.union(v.literal('W'), v.literal('M'), v.literal('Y'));
 const leaderboardPeriod = v.union(v.literal('W'), v.literal('M'), v.literal('Y'), v.literal('ALL'));
@@ -75,12 +76,13 @@ async function rankUsersForPeriod(
     countryCode: string;
     avatar?: string;
     totalReps: number;
+    deletionStatus?: 'active' | 'pendingDeletion';
   }>,
   period: LeaderboardPeriod,
   limit?: number
 ) {
   const rows = await Promise.all(
-    users.map(async (user) => {
+    users.filter(isPublicUser).map(async (user) => {
       const periodScore = await scoreUserForPeriod(ctx, user._id, period);
       return {
         clientUserId: user.clientUserId,
@@ -115,7 +117,7 @@ export const rankedLeaderboard = query({
         .query('users')
         .withIndex('by_client_user_id', (q) => q.eq('clientUserId', clientUserId))
         .unique();
-      if (!user) return [];
+      if (!user || isPendingDeletion(user)) return [];
 
       const following = await ctx.db
         .query('follows')
@@ -135,7 +137,7 @@ export const rankedLeaderboard = query({
       const users = await Promise.all([user._id, ...friendIds].map((id) => ctx.db.get(id)));
       return rankUsersForPeriod(
         ctx,
-        users.filter((row): row is NonNullable<typeof row> => row !== null),
+        users.filter((row): row is NonNullable<typeof row> => row !== null && isPublicUser(row)),
         period,
         limit
       );
@@ -143,18 +145,20 @@ export const rankedLeaderboard = query({
 
     if (period === 'ALL') {
       if (scope === 'country' && countryCode && countryCode !== 'GLOBAL') {
-        return await ctx.db
+        const rows = await ctx.db
           .query('users')
           .withIndex('by_country_total_reps', (q) => q.eq('countryCode', countryCode))
           .order('desc')
-          .take(Math.min(limit ?? 25, 100));
+          .take(500);
+        return rows.filter(isPublicUser).slice(0, Math.min(limit ?? 25, 100));
       }
 
-      return await ctx.db
+      const rows = await ctx.db
         .query('users')
         .withIndex('by_total_reps')
         .order('desc')
-        .take(Math.min(limit ?? 25, 100));
+        .take(500);
+      return rows.filter(isPublicUser).slice(0, Math.min(limit ?? 25, 100));
     }
 
     const users =
@@ -165,18 +169,19 @@ export const rankedLeaderboard = query({
             .take(500)
         : await ctx.db.query('users').take(500);
 
-    return rankUsersForPeriod(ctx, users, period, limit);
+    return rankUsersForPeriod(ctx, users.filter(isPublicUser), period, limit);
   },
 });
 
 export const globalLeaderboard = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }) => {
-    return await ctx.db
+    const rows = await ctx.db
       .query('users')
       .withIndex('by_total_reps')
       .order('desc')
-      .take(Math.min(limit ?? 25, 100));
+      .take(500);
+    return rows.filter(isPublicUser).slice(0, Math.min(limit ?? 25, 100));
   },
 });
 
@@ -186,11 +191,12 @@ export const countryLeaderboard = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { countryCode, limit }) => {
-    return await ctx.db
+    const rows = await ctx.db
       .query('users')
       .withIndex('by_country_total_reps', (q) => q.eq('countryCode', countryCode))
       .order('desc')
-      .take(Math.min(limit ?? 25, 100));
+      .take(500);
+    return rows.filter(isPublicUser).slice(0, Math.min(limit ?? 25, 100));
   },
 });
 
@@ -206,7 +212,7 @@ export const friendsLeaderboard = query({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', clientUserId))
       .unique();
-    if (!user) return [];
+    if (!user || isPendingDeletion(user)) return [];
 
     const following = await ctx.db
       .query('follows')
@@ -226,7 +232,7 @@ export const friendsLeaderboard = query({
 
     const rows = await Promise.all([user._id, ...friendIds].map((id) => ctx.db.get(id)));
     return rows
-      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .filter((row): row is NonNullable<typeof row> => row !== null && isPublicUser(row))
       .sort((a, b) => b.totalReps - a.totalReps)
       .slice(0, Math.min(limit ?? 25, 100));
   },
@@ -244,11 +250,11 @@ export const countrySnapshot = query({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', clientUserId))
       .unique();
-    const users = await ctx.db
+    const users = (await ctx.db
       .query('users')
       .withIndex('by_country_total_reps', (q) => q.eq('countryCode', countryCode))
       .order('desc')
-      .take(1000);
+      .take(1000)).filter(isPublicUser);
 
     const countryAverage =
       users.length === 0
@@ -278,7 +284,7 @@ export const friendComparison = query({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', clientUserId))
       .unique();
-    if (!user) {
+    if (!user || isPendingDeletion(user)) {
       return {
         rank: 0,
         score: 0,
@@ -309,6 +315,7 @@ export const friendComparison = query({
 
     const rows = await Promise.all(ids.map(async (id) => {
       const profile = await ctx.db.get(id);
+      if (!profile || isPendingDeletion(profile)) return null;
       const stats = await ctx.db
         .query('dailyStats')
         .withIndex('by_user_day', (q) => q.eq('userId', id))
@@ -319,15 +326,13 @@ export const friendComparison = query({
           return statTime >= range.start && statTime <= range.end;
         })
         .reduce((sum, stat) => sum + stat.reps, 0);
-      return profile
-        ? {
+      return {
             clientUserId: profile.clientUserId,
             name: profile.displayName ?? profile.name,
             countryCode: profile.countryCode,
             score,
             isCurrentUser: profile._id === user._id,
-          }
-        : null;
+          };
     }));
 
     const rankedRows = rows

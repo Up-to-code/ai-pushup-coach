@@ -29,7 +29,13 @@ export default function TrainingSetupScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const startWorkout = useWorkoutStore((state) => state.startWorkout);
-  const settings = useSettingsStore((state) => state.settings);
+  const { settings, hasCompletedOnboarding } = useSettingsStore();
+
+  React.useEffect(() => {
+    if (!hasCompletedOnboarding) {
+      router.replace('/onboarding' as any);
+    }
+  }, [hasCompletedOnboarding, router]);
 
   const type = (Array.isArray(params.type) ? params.type[0] : params.type || 'open') as WorkoutType;
   const title = (Array.isArray(params.title) ? params.title[0] : params.title) || 'Start session';

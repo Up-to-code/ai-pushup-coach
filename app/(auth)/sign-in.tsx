@@ -8,19 +8,17 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useSSO } from '@clerk/clerk-expo';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import Animated, {
-  FadeIn,
   FadeInDown,
   FadeInUp,
 } from 'react-native-reanimated';
-import { BrandLogo } from '../../src/components';
-import { borderRadius, colors, spacing, typography } from '../../src/theme';
-import { useSettingsStore } from '../../src/store';
+import { colors, spacing, typography } from '../../src/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -29,7 +27,6 @@ type Provider = 'oauth_google' | 'oauth_apple';
 export default function SignInScreen() {
   const { startSSOFlow } = useSSO();
   const router = useRouter();
-  const setAllowGuestMode = useSettingsStore((state) => state.setAllowGuestMode);
   const [activeProvider, setActiveProvider] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +45,7 @@ export default function SignInScreen() {
       try {
         const { createdSessionId, setActive } = await startSSOFlow({
           strategy,
-          redirectUrl: Linking.createURL('/', { scheme: 'aipushupcoach' }),
+          redirectUrl: Linking.createURL('/', { scheme: 'pushcounter' }),
         });
 
         if (createdSessionId) {
@@ -64,14 +61,9 @@ export default function SignInScreen() {
     [startSSOFlow]
   );
 
-  const continueAsGuest = useCallback(() => {
-    setAllowGuestMode(true);
-    router.replace('/');
-  }, [router, setAllowGuestMode]);
-
   return (
-    <View style={styles.root}>
-      {/* Black Canvas */}
+    <ImageBackground source={require('../../assets/bg.png')} style={styles.root}>
+      <View style={styles.overlay} />
       
       <SafeAreaView style={styles.safe}>
         <View style={styles.page}>
@@ -102,10 +94,11 @@ export default function SignInScreen() {
                     disabled={activeProvider !== null}
                     onPress={() => signInWith('oauth_apple')}
                   >
+                    <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
                     {activeProvider === 'oauth_apple' ? (
-                      <ActivityIndicator color="#000" size="small" />
+                      <ActivityIndicator color="#FFF" size="small" />
                     ) : (
-                      <Ionicons name="logo-apple" size={19} color="#000" />
+                      <Ionicons name="logo-apple" size={19} color="#FFF" />
                     )}
                     <Text style={styles.btnLabel}>Continue with Apple</Text>
                   </Pressable>
@@ -120,27 +113,15 @@ export default function SignInScreen() {
                     disabled={activeProvider !== null}
                     onPress={() => signInWith('oauth_google')}
                   >
+                    <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
                     {activeProvider === 'oauth_google' ? (
                       <ActivityIndicator color="#FFF" size="small" />
                     ) : (
                       <Ionicons name="logo-google" size={17} color="#FFF" />
                     )}
-                    <Text style={[styles.btnLabel, styles.btnLabelSec]}>Continue with Google</Text>
+                    <Text style={styles.btnLabel}>Continue with Google</Text>
                   </Pressable>
 
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.btn,
-                      styles.btnGuest,
-                      pressed && styles.btnPressed,
-                      activeProvider !== null && styles.btnOff,
-                    ]}
-                    disabled={activeProvider !== null}
-                    onPress={continueAsGuest}
-                  >
-                    <Ionicons name="phone-portrait-outline" size={17} color="#FFF" />
-                    <Text style={[styles.btnLabel, styles.btnLabelSec]}>Continue without sign in</Text>
-                  </Pressable>
                 </View>
 
                 {error ? (
@@ -162,7 +143,7 @@ export default function SignInScreen() {
           </View>
         </View>
       </SafeAreaView>
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -171,7 +152,10 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#000',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   safe: {
     flex: 1,
@@ -232,19 +216,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
+    overflow: 'hidden',
   },
   btnApple: {
-    backgroundColor: '#FFF',
-  },
-  btnGoogle: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  btnGuest: {
-    backgroundColor: 'transparent',
+  btnGoogle: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   btnPressed: {
     opacity: 0.8,
@@ -255,11 +237,8 @@ const styles = StyleSheet.create({
   btnLabel: {
     ...typography.bodyBold,
     fontSize: 16,
-    color: '#000',
-    letterSpacing: -0.2,
-  },
-  btnLabelSec: {
     color: '#FFF',
+    letterSpacing: -0.2,
   },
 
   /* Error */

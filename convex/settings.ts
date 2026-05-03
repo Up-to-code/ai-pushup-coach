@@ -1,6 +1,7 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
+import { assertActiveUser } from './deletedUsers';
 
 export const upsertSettings = mutation({
   args: {
@@ -25,6 +26,7 @@ export const upsertSettings = mutation({
     if (!user) {
       throw new Error('User must be synced before settings.');
     }
+    assertActiveUser(user);
 
     const existing = await ctx.db
       .query('userSettings')

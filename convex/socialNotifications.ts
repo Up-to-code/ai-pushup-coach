@@ -2,6 +2,7 @@ import { mutation, query, type MutationCtx, type QueryCtx } from './_generated/s
 import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
 import { assertRateLimit } from './rateLimit';
+import { assertActiveUser, isPendingDeletion } from './deletedUsers';
 
 async function getUser(ctx: QueryCtx | MutationCtx, clientUserId: string) {
   return await ctx.db
@@ -20,6 +21,7 @@ export const inbox = query({
 
     const user = await getUser(ctx, clientUserId);
     if (!user) return { unreadCount: 0, items: [] };
+    if (isPendingDeletion(user)) return { unreadCount: 0, items: [] };
 
     const rows = await ctx.db
       .query('socialNotifications')
@@ -53,7 +55,7 @@ export const inbox = query({
         const youFollowActorActive = youFollowActor?.status === 'active';
 
         return {
-          actor,
+          actor: actor && !isPendingDeletion(actor) ? actor : null,
           actorFollowsYou: actorFollowsYouActive,
           youFollowActor: youFollowActorActive,
           isFriend: actorFollowsYouActive && youFollowActorActive,
@@ -93,6 +95,7 @@ export const markRead = mutation({
     if (!user || !notification || notification.recipientUserId !== user._id) {
       throw new Error('Notification not found.');
     }
+    assertActiveUser(user);
 
     await ctx.db.patch(notificationId, { readAt: Date.now() });
     return { ok: true };
@@ -106,6 +109,7 @@ export const markAllRead = mutation({
 
     const user = await getUser(ctx, clientUserId);
     if (!user) return { ok: true };
+    assertActiveUser(user);
 
     const rows = await ctx.db
       .query('socialNotifications')
@@ -134,6 +138,7 @@ export const followBack = mutation({
     if (notification.type !== 'followedYou' && notification.type !== 'followBack') {
       throw new Error('This notification cannot be used for follow back.');
     }
+    assertActiveUser(user);
 
     await assertRateLimit(ctx, {
       userId: user._id,

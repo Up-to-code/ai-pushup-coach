@@ -8,7 +8,7 @@ import { colors, spacing, typography } from '../../../src/theme';
 const sections = [
   {
     title: 'Camera access',
-    body: 'Used during a live workout to estimate movement and count push‑up reps. The permission prompt clearly mentions rep tracking.',
+    body: 'Used during a live workout to estimate movement and count push-up reps. The permission prompt clearly mentions rep tracking, and video is not saved to the photo library by default.',
   },
   {
     title: 'Workout telemetry',
@@ -20,7 +20,7 @@ const sections = [
   },
   {
     title: 'Release checklist',
-    body: 'App Store Connect privacy labels include profile, fitness/workout, purchase, diagnostics, and camera‑related usage as applicable.',
+    body: 'App Store Connect privacy labels should include profile, fitness/workout, purchase history, diagnostics, photo avatar, social, and camera-related usage as applicable.',
   },
 ];
 

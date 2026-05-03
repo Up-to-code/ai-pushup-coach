@@ -5,12 +5,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '@clerk/clerk-expo';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useSubscription } from '../../src/revenuecat';
-import { usePlanStore, useSettingsStore, useUserStore, type Day } from '../../src/store';
+import { usePlanStore, useSettingsStore, useUserStore, useWorkoutStore, type Day } from '../../src/store';
 import { cancelPlanNotifications, requestNotificationPermission, syncNotificationsForPlan } from '../../src/services/notifications';
 import { formatPreferredTime } from '../../src/utils';
 
-const APP_URL = 'https://nexfiy.com/apps/ai-pushup-coach';
+const APP_URL = 'https://nexfiy.com/apps/push-counter';
 const APP_STORE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
 
 // ---------- Utility functions (unchanged) ----------
@@ -38,15 +41,23 @@ function reschedulePlanDays(days: Day[], preferredTime: string) {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { isSignedIn, signOut, userId } = useAuth();
   const { activeProductIdentifier, error: subscriptionError, isPro, restore, showCustomerCenter, showPaywall } = useSubscription();
   const user = useUserStore((state) => state.user);
+  const resetUser = useUserStore((state) => state.resetUser);
   const settings = useSettingsStore((state) => state.settings);
   const updateSettings = useSettingsStore((state) => state.updateSettings);
   const setAllowGuestMode = useSettingsStore((state) => state.setAllowGuestMode);
+  const resetSettings = useSettingsStore((state) => state.resetSettings);
+  const resetOnboarding = useSettingsStore((state) => state.resetOnboarding);
   const plan = usePlanStore((state) => state.plan);
   const updatePlan = usePlanStore((state) => state.updatePlan);
+  const resetPlan = usePlanStore((state) => state.resetPlan);
+  const clearWorkouts = useWorkoutStore((state) => state.clearWorkouts);
+  const deleteAccount = useMutation(api.users.deleteAccount);
   const [timeDraft, setTimeDraft] = useState(cleanTime(plan?.preferredTime ?? settings.defaultWorkoutTime));
   const [timeSaving, setTimeSaving] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const resyncNotifications = async (nextSettings = settings, nextPlan = plan) => {
     if (!nextPlan) return [];
@@ -143,6 +154,50 @@ export default function SettingsScreen() {
     else Alert.alert('Link unavailable', APP_URL);
   };
 
+  const clearLocalAccountData = async () => {
+    if (plan) await cancelPlanNotifications(plan.notificationIds);
+    clearWorkouts();
+    resetPlan();
+    resetOnboarding();
+    resetSettings();
+    resetUser();
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      isSignedIn ? 'Delete account and data?' : 'Clear local data?',
+      isSignedIn
+        ? 'Your profile will be hidden immediately and your local data will be cleared. Synced data can be restored for 30 days. Active App Store subscriptions must still be managed from your Apple account.'
+        : 'This clears workout history, settings, onboarding, and local app data on this device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isSignedIn ? 'Delete account' : 'Clear data',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingAccount(true);
+            try {
+              if (isSignedIn && userId) {
+                await deleteAccount({ clientUserId: userId });
+              }
+              await clearLocalAccountData();
+              if (isSignedIn) await signOut();
+              router.replace('/sign-in' as any);
+            } catch (error) {
+              console.warn('Account deletion failed', error);
+              Alert.alert(
+                'Could not delete account',
+                'Check your connection and try again. If it still fails, use the support link on the Nexfiy app page.'
+              );
+            } finally {
+              setDeletingAccount(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <LinearGradient colors={['#0a0a0a', '#000']} style={styles.gradient}>
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -185,7 +240,7 @@ export default function SettingsScreen() {
               onSave={saveWorkoutTime}
             />
             <Divider />
-            <NavRow icon="calendar-outline" label="Rebuild plan" onPress={() => router.push('/setup/level' as any)} />
+            <NavRow icon="calendar-outline" label="Rebuild plan" onPress={() => router.push('/onboarding' as any)} />
           </Section>
 
           <Section title="Reminders">
@@ -252,6 +307,16 @@ export default function SettingsScreen() {
             <NavRow icon="reader-outline" label="Terms of Use" onPress={() => router.push('/legal/terms' as any)} />
             <Divider />
             <ActionRow icon="open-outline" label="Open Nexfiy app page" onPress={openAppWebsite} />
+          </Section>
+
+          <Section title="Data control">
+            <ActionRow
+              destructive
+              disabled={deletingAccount}
+              icon="trash-outline"
+              label={deletingAccount ? 'Deleting...' : isSignedIn ? 'Delete account and data' : 'Clear local data'}
+              onPress={confirmDeleteAccount}
+            />
           </Section>
 
           {__DEV__ && (
@@ -346,11 +411,21 @@ const NavRow = ({ icon, label, value, onPress }: { icon: string; label: string; 
   </Pressable>
 );
 
-const ActionRow = ({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) => (
-  <Pressable style={({ pressed }) => [styles.navRow, pressed && styles.rowPressed]} onPress={onPress}>
+const ActionRow = ({ disabled, destructive, icon, label, onPress }: {
+  disabled?: boolean;
+  destructive?: boolean;
+  icon: string;
+  label: string;
+  onPress: () => void;
+}) => (
+  <Pressable
+    disabled={disabled}
+    style={({ pressed }) => [styles.navRow, pressed && styles.rowPressed, disabled && styles.disabledRow]}
+    onPress={onPress}
+  >
     <View style={styles.navLabel}>
-      <Ionicons name={icon as any} size={20} color="rgba(255,255,255,0.6)" />
-      <Text style={styles.rowLabel}>{label}</Text>
+      <Ionicons name={icon as any} size={20} color={destructive ? '#fb7185' : 'rgba(255,255,255,0.6)'} />
+      <Text style={[styles.rowLabel, destructive && styles.destructiveText]}>{label}</Text>
     </View>
     <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.3)" />
   </Pressable>
@@ -444,6 +519,7 @@ const styles = StyleSheet.create({
   navLabel: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   navValue: { flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: '50%' },
   rowLabel: { fontSize: 16, fontWeight: '500', color: '#fff' },
+  destructiveText: { color: '#fb7185' },
   rowValue: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.6)' },
   rowDescription: { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.5)', marginTop: 2, lineHeight: 16 },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginLeft: 16 },

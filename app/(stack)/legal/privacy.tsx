@@ -8,7 +8,7 @@ import { colors, spacing, typography } from '../../../src/theme';
 const sections = [
   {
     title: 'Data we use',
-    body: 'We store your profile, training schedule, workout results, camera tracking state, settings, and subscription status so the app can create plans, track progress, and sync your account.',
+    body: 'We store your account profile, training schedule, workout results, camera tracking state, settings, subscription status, and optional social data so the app can create plans, track progress, and sync your account.',
   },
   {
     title: 'Camera',
@@ -16,7 +16,11 @@ const sections = [
   },
   {
     title: 'Sync and purchases',
-    body: 'Convex may receive profile, settings, workout, and telemetry records. RevenueCat handles subscription status and purchase management.',
+    body: 'Convex may receive profile, settings, workout, social, challenge, and telemetry records. RevenueCat and the App Store handle subscription status, purchase history, renewals, cancellation, and payment processing.',
+  },
+  {
+    title: 'Photos',
+    body: 'Photo library access is used only when you choose a profile avatar. The app does not scan your library or upload photos unless you select one.',
   },
   {
     title: 'Notifications',
@@ -24,11 +28,11 @@ const sections = [
   },
   {
     title: 'Control',
-    body: 'You can edit your profile, disable reminders, rebuild your plan, restore purchases, and manage subscriptions from Settings.',
+    body: 'You can edit your profile, disable reminders, rebuild your plan, restore purchases, manage subscriptions, clear local data, and delete your synced account data from Settings.',
   },
   {
     title: 'Nexfiy app page',
-    body: 'Website privacy copy and app support live at https://nexfiy.com/apps/ai-pushup-coach.',
+    body: 'Website privacy copy and app support live at https://nexfiy.com/apps/push-counter.',
   },
 ];
 

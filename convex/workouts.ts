@@ -3,6 +3,7 @@ import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
 import { assertRateLimit } from './rateLimit';
 import { applyWorkoutToChallenges } from './challenges';
+import { assertActiveUser, isPendingDeletion } from './deletedUsers';
 
 const workoutArgs = {
   clientUserId: v.string(),
@@ -145,6 +146,7 @@ export const submitWorkout = mutation({
     if (!user) {
       throw new Error('User must be synced before workout submission.');
     }
+    assertActiveUser(user);
 
     await assertRateLimit(ctx, {
       userId: user._id,
@@ -265,7 +267,7 @@ export const historyForUser = query({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', targetClientUserId))
       .unique();
-    if (!target) return [];
+    if (!target || isPendingDeletion(target)) return [];
 
     return await ctx.db
       .query('workoutResults')

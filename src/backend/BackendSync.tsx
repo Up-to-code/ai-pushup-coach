@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@clerk/clerk-expo';
-import { useConvexAuth, useMutation } from 'convex/react';
+import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { useRouter } from 'expo-router';
 import { useSettingsStore, useUserStore, useWorkoutStore, type Workout } from '../store';
 
 function toWorkoutPayload(clientUserId: string, workout: Workout) {
@@ -27,6 +28,7 @@ function toWorkoutPayload(clientUserId: string, workout: Workout) {
 export function BackendSync() {
   const { isLoaded, isSignedIn, userId } = useAuth();
   const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
+  const router = useRouter();
   const user = useUserStore((state) => state.user);
   const settings = useSettingsStore((state) => state.settings);
   const workouts = useWorkoutStore((state) => state.workouts);
@@ -36,6 +38,10 @@ export function BackendSync() {
   const upsertSettings = useMutation(api.settings.upsertSettings);
   const submitWorkout = useMutation(api.workouts.submitWorkout);
   const logWorkoutEvent = useMutation(api.telemetry.logWorkoutEvent);
+  const deletionState = useQuery(
+    api.users.deletionStatus,
+    isLoaded && isSignedIn && isConvexAuthenticated && userId ? { clientUserId: userId } : 'skip'
+  );
 
   const unsyncedWorkouts = useMemo(
     () => workouts.filter((workout) => workout.completed && !workout.synced),
@@ -43,7 +49,17 @@ export function BackendSync() {
   );
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !isConvexAuthenticated || !userId) {
+    if (deletionState?.status === 'pendingDeletion') {
+      router.replace('/restore-account' as any);
+    }
+  }, [deletionState, router]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !isConvexAuthenticated || !userId || !deletionState) {
+      return;
+    }
+
+    if (deletionState.status === 'pendingDeletion') {
       return;
     }
 
@@ -95,10 +111,14 @@ export function BackendSync() {
     return () => {
       cancelled = true;
     };
-  }, [isConvexAuthenticated, isLoaded, isSignedIn, settings, upsertProfile, upsertSettings, user, userId]);
+  }, [deletionState, isConvexAuthenticated, isLoaded, isSignedIn, settings, upsertProfile, upsertSettings, user, userId]);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !isConvexAuthenticated || !userId) {
+    if (!isLoaded || !isSignedIn || !isConvexAuthenticated || !userId || !deletionState) {
+      return;
+    }
+
+    if (deletionState.status === 'pendingDeletion') {
       return;
     }
 
@@ -129,7 +149,7 @@ export function BackendSync() {
     }
 
     void syncWorkouts();
-  }, [unsyncedWorkouts, isConvexAuthenticated, isLoaded, isSignedIn, logWorkoutEvent, submitWorkout, userId, markWorkoutSynced]);
+  }, [unsyncedWorkouts, deletionState, isConvexAuthenticated, isLoaded, isSignedIn, logWorkoutEvent, submitWorkout, userId, markWorkoutSynced]);
 
   return null;
 }

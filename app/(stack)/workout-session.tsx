@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@clerk/clerk-expo';
 import * as Haptics from 'expo-haptics';
 import { Camera } from 'expo-camera/legacy';
-import { useConvexAuth, useMutation } from 'convex/react';
+import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { PushupCameraView, pushupCameraAvailable, type FaceMetricsEvent } from '../../src/components/PushupCameraView';
 import {
@@ -273,7 +273,24 @@ export default function WorkoutSessionScreen() {
   const updateUser = useUserStore((state) => state.updateUser);
   const markCurrentDayCompleted = usePlanStore((state) => state.markCurrentDayCompleted);
   const convexUserId = userId ?? user.id;
-  const canSyncConvex = Boolean(isSignedIn && isConvexAuthenticated && userId);
+
+  const deletionState = useQuery(
+    api.users.deletionStatus,
+    isSignedIn && userId ? { clientUserId: userId } : 'skip'
+  );
+
+  const canSyncConvex = Boolean(
+    isSignedIn && 
+    isConvexAuthenticated && 
+    userId && 
+    deletionState?.status !== 'pendingDeletion'
+  );
+
+  useEffect(() => {
+    if (isSignedIn && deletionState?.status === 'pendingDeletion') {
+      router.replace('/restore-account' as any);
+    }
+  }, [isSignedIn, deletionState, router]);
 
   const {
     currentWorkout,
@@ -305,11 +322,19 @@ export default function WorkoutSessionScreen() {
     return () => clearTimeout(timer);
   }, []);
 
+  const hasCompletedOnboarding = useSettingsStore((state) => state.hasCompletedOnboarding);
+
   useEffect(() => {
-    if (guardArmed && !currentWorkout?.id && !finishStartedRef.current) {
+    if (!hasCompletedOnboarding) {
+      router.replace('/onboarding' as any);
+    }
+  }, [hasCompletedOnboarding, router]);
+
+  useEffect(() => {
+    if (guardArmed && !currentWorkout?.id && !finishStartedRef.current && hasCompletedOnboarding) {
       router.replace('/practice' as any);
     }
-  }, [currentWorkout?.id, guardArmed, router]);
+  }, [currentWorkout?.id, guardArmed, router, hasCompletedOnboarding]);
 
   useEffect(() => {
     if (!currentWorkout?.id) {

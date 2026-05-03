@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Pushup Tracking App",
-    "slug": "ai-pushup-coach",
-    "scheme": "aipushupcoach",
+    "name": "Push Counter",
+    "slug": "push-counter",
+    "scheme": "pushcounter",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,18 +15,18 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aipushupcoach.app",
-      "appleTeamId": "U7JF269T76",
       "entitlements": {
         "com.apple.security.application-groups": [
           "group.com.aipushupcoach.app"
         ]
       },
       "infoPlist": {
-        "CFBundleDisplayName": "Pushup Tracking App",
-        "NSCameraUsageDescription": "Pushup Tracking App uses the camera during live workouts to track push-up movement and count reps.",
-        "NSMicrophoneUsageDescription": "Microphone access is not used for workout tracking.",
-        "NSPhotoLibraryUsageDescription": "Allow access to your photo library to set a profile picture.",
-        "NSPhotoLibraryAddUsageDescription": "Allow saving selected profile pictures when needed."
+        "CFBundleDisplayName": "Push Counter",
+        "NSCameraUsageDescription": "Push Counter uses the camera during live workouts to track push-up movement and count reps. Workout video is not saved to your photo library.",
+        "NSMicrophoneUsageDescription": "Push Counter does not use microphone audio for workout tracking.",
+        "NSPhotoLibraryUsageDescription": "Allow photo library access only when you choose a profile picture.",
+        "NSPhotoLibraryAddUsageDescription": "Allow saving selected profile pictures only when you choose to update your avatar.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -37,8 +37,10 @@
       "permissions": [
         "com.android.vending.BILLING",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_EXTERNAL_STORAGE"
-      ]
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.aipushupcoach.app"
     },
     "plugins": [
       "expo-router",
@@ -49,10 +51,26 @@
         {
           "photosPermission": "Allow access to your photo library to set a profile picture."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24
+          }
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "385ed64f-21ec-41f3-a753-3ddcfc5cd6e8"
+      }
     }
   }
 }

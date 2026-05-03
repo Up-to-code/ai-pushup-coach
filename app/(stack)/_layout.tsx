@@ -87,13 +87,10 @@ export default function StackLayout() {
           animation: 'fade',
         }}
       />
-      <Stack.Screen name="setup/level" />
-      <Stack.Screen name="setup/days" />
-      <Stack.Screen name="setup/goal" />
-      <Stack.Screen name="setup/time" />
       <Stack.Screen name="legal/privacy" />
       <Stack.Screen name="legal/terms" />
       <Stack.Screen name="legal/data-camera" />
+      <Stack.Screen name="restore-account" />
     </Stack>
   );
 }

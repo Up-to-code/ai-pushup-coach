@@ -16,7 +16,11 @@ const sections = [
   },
   {
     title: 'Subscriptions',
-    body: 'Paid features, if enabled, are managed through Apple in-app purchase and RevenueCat. You can restore purchases and manage subscription status from Settings.',
+    body: 'Paid features, if enabled, are managed through Apple in-app purchase and RevenueCat. The purchase flow shows available product, price, duration, and renewal terms before purchase. You can restore purchases and manage subscription status from Settings.',
+  },
+  {
+    title: 'Account deletion',
+    body: 'You can delete your synced account and app data from Settings. Account deletion does not cancel an active App Store subscription; manage cancellation from your Apple account.',
   },
   {
     title: 'Availability',
@@ -24,7 +28,7 @@ const sections = [
   },
   {
     title: 'Nexfiy app page',
-    body: 'Website terms copy and app support live at https://nexfiy.com/apps/ai-pushup-coach.',
+    body: 'Website terms copy and app support live at https://nexfiy.com/apps/push-counter.',
   },
 ];
 

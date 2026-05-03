@@ -30,7 +30,7 @@ export const CFEView: React.FC<CFEViewProps> = ({
   withBackground = true 
 }) => {
   const content = (
-    <SafeAreaView style={[styles.container, style]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safeArea, style]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[styles.keyboardView, contentStyle]}
@@ -46,8 +46,15 @@ export const CFEView: React.FC<CFEViewProps> = ({
 
   if (withBackground) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {content}
+      <View style={styles.container}>
+        <ImageBackground 
+          source={require('../../assets/bg.png')} 
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        >
+          <View style={styles.overlay} />
+          {content}
+        </ImageBackground>
       </View>
     );
   }
@@ -58,6 +65,15 @@ export const CFEView: React.FC<CFEViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
   keyboardView: {
     flex: 1,

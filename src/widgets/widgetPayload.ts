@@ -30,7 +30,7 @@ export type FriendComparisonInput = Partial<FriendWidgetSummary> | null | undefi
 
 export function buildWidgetPayload(
   input: {
-    user: Pick<User, 'streak' | 'displayName' | 'name' | 'totalReps' | 'bestReps'>;
+    user: Pick<User, 'streak' | 'displayName' | 'name'> & Partial<Pick<User, 'totalReps' | 'bestReps'>>;
     workouts: Workout[];
     friendComparison?: FriendComparisonInput;
     now?: Date;
@@ -40,12 +40,14 @@ export function buildWidgetPayload(
   const weeklyReps = buildWeeklyReps(input.workouts, now);
   const localWeekScore = weeklyReps.reduce((sum, point) => sum + point.reps, 0);
   const completedWorkouts = input.workouts.filter((workout) => workout.completed);
+  const localTotalReps = completedWorkouts.reduce((sum, workout) => sum + safeReps(workout.reps), 0);
+  const localBestReps = completedWorkouts.reduce((best, workout) => Math.max(best, safeReps(workout.reps)), 0);
   const lastCompletedWorkout = getLastCompletedWorkout(completedWorkouts);
 
   return {
     streak: input.user.streak ?? 0,
-    totalReps: input.user.totalReps ?? 0,
-    bestReps: input.user.bestReps ?? 0,
+    totalReps: completedWorkouts.length > 0 ? localTotalReps : input.user.totalReps ?? 0,
+    bestReps: completedWorkouts.length > 0 ? localBestReps : input.user.bestReps ?? 0,
     lastWorkoutReps: lastCompletedWorkout ? safeReps(lastCompletedWorkout.reps) : 0,
     lastWorkoutDate: lastCompletedWorkout?.date ?? '',
     displayName: input.user.displayName || input.user.name || 'Athlete',
