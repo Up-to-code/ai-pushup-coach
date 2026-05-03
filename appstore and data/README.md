@@ -10,7 +10,7 @@ This folder is a self-contained publishing bundle for Push Counter. It is intend
 
 ## Folder Contents
 
-- `landing-page.md`: Website copy formatted to match the Nexfiy app page layout shown in the reference screenshot.
+- `landing-page.md`: Website copy formatted to match the Push Counter website layout shown in the reference screenshot.
 - `legal/app-privacy-policy.md`: Full public app Privacy Policy.
 - `legal/app-terms-of-use.md`: Full public app Terms of Use.
 - `paywall/paywall-privacy.md`: Short privacy text for RevenueCat or paywall legal links.

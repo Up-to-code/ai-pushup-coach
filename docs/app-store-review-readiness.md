@@ -14,7 +14,7 @@ Official references:
 - Account deletion: Settings includes a destructive "Delete account and data" flow for signed-in users and "Clear local data" for guest users.
 - Sign-in access: The sign-in screen includes Continue with Apple, Continue with Google, and Continue without sign in.
 - Purchase recovery: Settings includes Restore purchases and Manage subscription.
-- Privacy access: Settings links to Camera and workout data, Privacy Policy, Terms of Use, and the public Nexfiy app page.
+- Privacy access: Settings links to Camera and workout data, Privacy Policy, Terms of Use, and the public Push Counter website.
 - Camera purpose: The iOS camera permission string explains live workout rep tracking and states that workout video is not saved to the photo library.
 - Photo purpose: Photo library permission copy is limited to choosing a profile picture.
 
@@ -54,6 +54,6 @@ Tracking:
 
 - Use production Better Auth, Convex, RevenueCat, and UploadThing credentials.
 - Verify RevenueCat offerings and App Store Connect products are ready for review and visible in the review build.
-- Upload current Privacy Policy and Terms URLs from the Nexfiy app page in App Store Connect.
+- Upload current Privacy Policy and Terms URLs from the Push Counter website in App Store Connect.
 - Submit any in-app purchases/subscriptions with the app build if they are new.
 - Use a compatible Xcode for Expo SDK 51 or upgrade Expo SDK before final archive.

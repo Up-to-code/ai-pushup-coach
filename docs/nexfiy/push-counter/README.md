@@ -6,7 +6,7 @@ This folder contains the copy, App Store review material, legal pages, and asset
 
 ## Folder Map
 
-- `web/page-copy.md`: Nexfiy app page copy.
+- `web/page-copy.md`: Push Counter website copy.
 - `apple/app-store-connect.md`: App Store Connect metadata, review notes, and subscription reminders.
 - `apple/privacy-labels.md`: App privacy label draft.
 - `legal/privacy.md`: Public privacy policy page copy.

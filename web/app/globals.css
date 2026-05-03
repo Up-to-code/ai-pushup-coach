@@ -305,6 +305,9 @@ h3 {
 }
 
 .feature,
+.benefit,
+.step-card,
+.trust-card,
 .profile-card,
 .legal-card {
   border: 1px solid var(--line);
@@ -314,16 +317,63 @@ h3 {
 }
 
 .feature svg,
+.step-card svg,
+.trust-card svg,
 .profile-card svg {
   color: var(--accent);
 }
 
 .feature p,
+.benefit p,
+.step-card p,
+.trust-card p,
 .legal-card p,
 .legal-card li,
 .profile-card p {
   color: var(--muted);
   line-height: 1.65;
+}
+
+.marketing-band {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.benefit-grid,
+.steps-grid,
+.trust-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.benefit-number {
+  display: block;
+  margin-bottom: 28px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.steps-grid {
+  counter-reset: steps;
+}
+
+.step-card {
+  position: relative;
+  min-height: 230px;
+}
+
+.step-card::after {
+  counter-increment: steps;
+  content: "0" counter(steps);
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  color: rgba(255, 255, 255, 0.06);
+  font-size: 70px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .split {
@@ -345,6 +395,49 @@ h3 {
   display: block;
   width: 100%;
   height: 660px;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.spotlight-section {
+  padding-top: 34px;
+  padding-bottom: 34px;
+}
+
+.spotlight {
+  grid-template-columns: minmax(0, 0.9fr) minmax(260px, 0.58fr);
+  min-height: 620px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 34px;
+  background:
+    linear-gradient(135deg, rgba(225, 29, 72, 0.1), rgba(255, 255, 255, 0.025)),
+    var(--panel);
+}
+
+.spotlight.reverse {
+  grid-template-columns: minmax(260px, 0.58fr) minmax(0, 0.9fr);
+}
+
+.spotlight.reverse > div:first-child {
+  order: 2;
+}
+
+.spotlight-phone {
+  justify-self: center;
+  width: min(300px, 74vw);
+  max-height: 560px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 34px;
+  background: #050505;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.44);
+}
+
+.spotlight-phone img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 853 / 1844;
   object-fit: cover;
   object-position: top center;
 }
@@ -423,6 +516,21 @@ h3 {
   background:
     linear-gradient(135deg, rgba(225, 29, 72, 0.16), rgba(255, 255, 255, 0.04)),
     var(--panel);
+}
+
+.proof-band {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: 34px;
+}
+
+.proof-copy {
+  max-width: 560px;
+}
+
+.trust-card {
+  min-height: 190px;
 }
 
 .legal-page {
@@ -516,6 +624,7 @@ h3 {
   .hero,
   .split,
   .profile-page,
+  .proof-band,
   .final-cta {
     grid-template-columns: 1fr;
   }
@@ -535,8 +644,26 @@ h3 {
 
   .feature-grid,
   .stat-strip,
-  .screenshot-rail {
+  .screenshot-rail,
+  .benefit-grid,
+  .steps-grid,
+  .trust-grid {
     grid-template-columns: 1fr;
+  }
+
+  .spotlight,
+  .spotlight.reverse {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding: 24px;
+  }
+
+  .spotlight.reverse > div:first-child {
+    order: 0;
+  }
+
+  .spotlight-phone {
+    max-height: none;
   }
 
   .screenshot-card,

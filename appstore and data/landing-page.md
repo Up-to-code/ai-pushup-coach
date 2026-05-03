@@ -93,7 +93,7 @@ Use these links from the public app page, paywall footer, App Store Connect, and
 - Privacy Policy: https://pushcounter.online/privacy
 - Terms of Use: https://pushcounter.online/terms
 - Support: https://pushcounter.online
-- Security: https://nexfiy.com/security
+- Security: https://pushcounter.online/support
 - Apple Legal: https://www.apple.com/legal/
 - Google Legal: https://policies.google.com/
 

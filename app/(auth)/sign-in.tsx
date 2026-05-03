@@ -49,6 +49,8 @@ export default function SignInScreen() {
       try {
         const { error } = await authClient.signIn.social({
           provider: strategy,
+          // Better Auth uses the public web domain for provider callbacks.
+          // The Expo plugin converts this app callback into pushcounter:// so the session returns to the app.
           callbackURL: '/',
         });
 

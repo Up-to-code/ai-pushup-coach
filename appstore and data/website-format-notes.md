@@ -1,6 +1,6 @@
 # Website Format Notes
 
-Use `landing-page.md` as the content source for the Nexfiy app page format shown in the reference screenshot.
+Use `landing-page.md` as the content source for the Push Counter website format shown in the reference screenshot.
 
 ## Page Structure
 
@@ -85,7 +85,7 @@ Footer links:
 
 - Privacy Policy: https://pushcounter.online/privacy
 - Terms of Use: https://pushcounter.online/terms
-- Security: https://nexfiy.com/security
+- Security: https://pushcounter.online/support
 - Apple Legal: https://www.apple.com/legal/
 - Google Legal: https://policies.google.com/
 

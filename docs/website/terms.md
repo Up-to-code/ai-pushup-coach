@@ -50,6 +50,6 @@ These terms may be updated as the app changes. Continued use after updates means
 
 ## Contact
 
-For support or terms questions, use the contact path provided on the Nexfiy app page:
+For support or terms questions, use the contact path provided on the Push Counter website:
 
 https://pushcounter.online

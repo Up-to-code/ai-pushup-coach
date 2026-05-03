@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Activity, ArrowRight, BarChart3, Camera, Crown, ShieldCheck, Sparkles, Trophy, Users } from 'lucide-react';
+import { Activity, ArrowRight, BarChart3, Bell, Camera, Crown, Dumbbell, Medal, Repeat2, ShieldCheck, Sparkles, Trophy, Users } from 'lucide-react';
 import { appStoreUrl } from '@/lib/config';
 
 const features = [
@@ -63,6 +63,48 @@ const screenshots = [
   },
 ];
 
+const steps = [
+  {
+    title: 'Choose the workout',
+    body: 'Start an open session, timer, limit, or sets workout depending on how you want to train today.',
+    icon: Dumbbell,
+  },
+  {
+    title: 'Track the set',
+    body: 'Use camera-assisted counting when conditions are good, or keep moving with manual fallback.',
+    icon: Camera,
+  },
+  {
+    title: 'Build the streak',
+    body: 'Save workouts, follow progress, and return with reminders that fit your routine.',
+    icon: Repeat2,
+  },
+];
+
+const spotlights = [
+  {
+    eyebrow: 'Workout',
+    title: 'Start fast, stay focused.',
+    body: 'The workout screen keeps the choices simple: mode, target, camera flow, and the next set. Less setup, more training.',
+    image: '/images/appleSotre/workoutminscreen.PNG',
+    alt: 'Push Counter workout mode screen',
+  },
+  {
+    eyebrow: 'Competition',
+    title: 'Ranks and challenges without the noise.',
+    body: 'Leaderboards, country rank, friends, and challenges give the habit a little pressure without turning training into clutter.',
+    image: '/images/appleSotre/rank.PNG',
+    alt: 'Push Counter leaderboard screen',
+  },
+  {
+    eyebrow: 'Profile',
+    title: 'Share progress when it matters.',
+    body: 'Public profile links show safe summary stats so athletes can share progress with friends while private account data stays protected.',
+    image: '/images/appleSotre/porfile.PNG',
+    alt: 'Push Counter profile screen',
+  },
+];
+
 export default function HomePage() {
   return (
     <main>
@@ -116,6 +158,33 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="page section marketing-band">
+        <div className="section-heading">
+          <p className="eyebrow">Why it exists</p>
+          <h2>Most push-up trackers either feel too manual or too noisy.</h2>
+          <p className="lede">
+            Push Counter keeps the workout centered: count the reps, save the progress, and give just enough motivation to come back tomorrow.
+          </p>
+        </div>
+        <div className="benefit-grid">
+          <article className="benefit">
+            <span className="benefit-number">01</span>
+            <h3>Train without losing rhythm</h3>
+            <p>Quick workout modes and camera-aware counting keep setup out of the way.</p>
+          </article>
+          <article className="benefit">
+            <span className="benefit-number">02</span>
+            <h3>Know what improved</h3>
+            <p>Reps, streaks, best sets, history, and rankings turn effort into visible progress.</p>
+          </article>
+          <article className="benefit">
+            <span className="benefit-number">03</span>
+            <h3>Keep privacy practical</h3>
+            <p>Guest mode works locally, camera video is not saved by default, and profile sharing is limited.</p>
+          </article>
+        </div>
+      </section>
+
       <section className="page section">
         <div className="section-heading">
           <p className="eyebrow">Inside the app</p>
@@ -131,6 +200,25 @@ export default function HomePage() {
               <figcaption>{screenshot.label}</figcaption>
             </figure>
           ))}
+        </div>
+      </section>
+
+      <section className="page section">
+        <div className="section-heading">
+          <p className="eyebrow">How it works</p>
+          <h2>Three steps, every session.</h2>
+        </div>
+        <div className="steps-grid">
+          {steps.map((step) => {
+            const Icon = step.icon;
+            return (
+              <article className="step-card" key={step.title}>
+                <Icon size={24} aria-hidden="true" />
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -154,6 +242,21 @@ export default function HomePage() {
         </div>
       </section>
 
+      {spotlights.map((spotlight, index) => (
+        <section className="page section spotlight-section" key={spotlight.title}>
+          <div className={`split spotlight ${index % 2 === 1 ? 'reverse' : ''}`}>
+            <div>
+              <p className="eyebrow">{spotlight.eyebrow}</p>
+              <h2>{spotlight.title}</h2>
+              <p className="lede">{spotlight.body}</p>
+            </div>
+            <div className="spotlight-phone">
+              <img src={spotlight.image} alt={spotlight.alt} />
+            </div>
+          </div>
+        </section>
+      ))}
+
       <section className="page section">
         <div className="section-heading">
           <p className="eyebrow">Built for consistency</p>
@@ -170,6 +273,33 @@ export default function HomePage() {
               </article>
             );
           })}
+        </div>
+      </section>
+
+      <section className="page section proof-band">
+        <div className="proof-copy">
+          <p className="eyebrow">Trust built in</p>
+          <h2>Designed for real workouts, not vanity metrics.</h2>
+          <p className="lede">
+            Push Counter keeps sensitive flows obvious: camera access is requested only for live tracking, guest mode stays useful, and web profiles expose only safe public summaries.
+          </p>
+        </div>
+        <div className="trust-grid">
+          <article className="trust-card">
+            <ShieldCheck size={24} aria-hidden="true" />
+            <h3>Privacy-aware camera use</h3>
+            <p>Workout video is not saved to the photo library by default.</p>
+          </article>
+          <article className="trust-card">
+            <Bell size={24} aria-hidden="true" />
+            <h3>Local reminders</h3>
+            <p>Workout reminders are scheduled from your chosen plan and settings.</p>
+          </article>
+          <article className="trust-card">
+            <Medal size={24} aria-hidden="true" />
+            <h3>Progress with context</h3>
+            <p>Best reps, streaks, ranks, and challenges support consistency.</p>
+          </article>
         </div>
       </section>
 

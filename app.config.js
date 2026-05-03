@@ -7,7 +7,7 @@ function webHost() {
   try {
     return new URL(process.env.EXPO_PUBLIC_WEB_URL ?? 'https://pushcounter.online').host;
   } catch {
-    return 'nexfiy.com';
+    return 'pushcounter.online';
   }
 }
 

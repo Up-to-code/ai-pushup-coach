@@ -148,15 +148,11 @@ export default function SettingsScreen() {
   };
 
   const openAppWebsite = async () => {
-    const canOpen = await Linking.canOpenURL(appWebUrl);
-    if (canOpen) await Linking.openURL(appWebUrl);
-    else Alert.alert('Link unavailable', appWebUrl);
+    await Linking.openURL(appWebUrl);
   };
 
   const openWebUrl = async (url: string) => {
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) await Linking.openURL(url);
-    else Alert.alert('Link unavailable', url);
+    await Linking.openURL(url);
   };
 
   const clearLocalAccountData = async () => {
@@ -192,7 +188,7 @@ export default function SettingsScreen() {
               console.warn('Account deletion failed', error);
               Alert.alert(
                 'Could not delete account',
-                'Check your connection and try again. If it still fails, use the support link on the Nexfiy app page.'
+                'Check your connection and try again. If it still fails, use the support link on the Push Counter website.'
               );
             } finally {
               setDeletingAccount(false);
@@ -313,7 +309,7 @@ export default function SettingsScreen() {
             <Divider />
             <ActionRow icon="help-circle-outline" label="Support" onPress={() => openWebUrl(supportUrl)} />
             <Divider />
-            <ActionRow icon="open-outline" label="Open Push Counter web" onPress={openAppWebsite} />
+            <ActionRow icon="open-outline" label="Open Push Counter website" onPress={openAppWebsite} />
           </Section>
 
           <Section title="Data control">

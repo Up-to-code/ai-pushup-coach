@@ -87,8 +87,6 @@ export default function StackLayout() {
           animation: 'fade',
         }}
       />
-      <Stack.Screen name="legal/privacy" />
-      <Stack.Screen name="legal/terms" />
       <Stack.Screen name="legal/data-camera" />
       <Stack.Screen name="restore-account" />
     </Stack>

@@ -51,6 +51,6 @@ Workout reminders and missed-workout follow-ups are scheduled locally based on y
 
 ## Contact
 
-For privacy questions, use the contact path provided on the Nexfiy app page:
+For privacy questions, use the contact path provided on the Push Counter website:
 
 https://pushcounter.online
