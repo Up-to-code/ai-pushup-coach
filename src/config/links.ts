@@ -1,4 +1,4 @@
-const fallbackWebUrl = 'https://pushcounter.online';
+const fallbackWebUrl = 'https://www.pushcounter.online';
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, '');

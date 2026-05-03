@@ -1,7 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Outfit } from 'next/font/google';
 import './globals.css';
 import { webUrl } from '@/lib/config';
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(webUrl),
@@ -19,8 +26,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className={outfit.variable}>
+      <body className="font-sans antialiased">
         <div className="shell">
           <header className="site-header">
             <nav className="nav" aria-label="Main navigation">

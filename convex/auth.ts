@@ -19,12 +19,17 @@ function getHost(value?: string) {
   }
 }
 
+function hostVariants(value?: string | null) {
+  if (!value) return [];
+  return value.startsWith('www.') ? [value, value.slice(4)] : [value, `www.${value}`];
+}
+
 function getAuthBaseURL(): BetterAuthOptions['baseURL'] {
   const allowedHosts = [
-    getHost(process.env.WEB_URL),
-    getHost(process.env.NEXT_PUBLIC_WEB_URL),
-    getHost(process.env.AUTH_BASE_URL),
-    getHost(siteUrl),
+    ...hostVariants(getHost(process.env.WEB_URL)),
+    ...hostVariants(getHost(process.env.NEXT_PUBLIC_WEB_URL)),
+    ...hostVariants(getHost(process.env.AUTH_BASE_URL)),
+    ...hostVariants(getHost(siteUrl)),
     process.env.NODE_ENV === 'development' ? 'localhost:3000' : null,
   ].filter((host): host is string => Boolean(host));
 

@@ -1,4 +1,4 @@
-export const webUrl = (process.env.NEXT_PUBLIC_WEB_URL ?? 'https://pushcounter.online').replace(/\/+$/, '');
+export const webUrl = (process.env.NEXT_PUBLIC_WEB_URL ?? 'https://www.pushcounter.online').replace(/\/+$/, '');
 export const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.CONVEX_URL ?? '';
 export const convexSiteUrl = process.env.CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? '';
 
