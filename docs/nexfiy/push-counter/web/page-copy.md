@@ -63,7 +63,6 @@ Contact Support: https://pushcounter.online
 - Terms of Use: https://pushcounter.online/terms
 - Support: https://pushcounter.online
 - Apple Legal: https://www.apple.com/legal/
-- Google Legal: https://policies.google.com/
 
 ## Page Notes
 

@@ -41,7 +41,16 @@ function reschedulePlanDays(days: Day[], preferredTime: string) {
 export default function SettingsScreen() {
   const router = useRouter();
   const { isSignedIn, signOut, userId } = useBetterAuth();
-  const { activeProductIdentifier, error: subscriptionError, isPro, restore, showCustomerCenter, showPaywall } = useSubscription();
+  const {
+    activeProductIdentifier,
+    configured: subscriptionConfigured,
+    error: subscriptionError,
+    isPro,
+    loading: subscriptionLoading,
+    restore,
+    showCustomerCenter,
+    showPaywall,
+  } = useSubscription();
   const user = useUserStore((state) => state.user);
   const resetUser = useUserStore((state) => state.resetUser);
   const settings = useSettingsStore((state) => state.settings);
@@ -57,6 +66,7 @@ export default function SettingsScreen() {
   const [timeDraft, setTimeDraft] = useState(cleanTime(plan?.preferredTime ?? settings.defaultWorkoutTime));
   const [timeSaving, setTimeSaving] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const resyncNotifications = async (nextSettings = settings, nextPlan = plan) => {
     if (!nextPlan) return [];
@@ -122,6 +132,8 @@ export default function SettingsScreen() {
   const timeChanged = cleanTime(timeDraft) !== preferredTime;
 
   const restoreSubscription = async () => {
+    if (subscriptionLoading || !subscriptionConfigured) return;
+
     try {
       await restore();
       Alert.alert('Restore complete', 'Your subscription status has been refreshed.');
@@ -131,11 +143,32 @@ export default function SettingsScreen() {
   };
 
   const openPaywall = async () => {
-    const unlocked = await showPaywall();
-    if (unlocked) Alert.alert('Pro unlocked', 'Your subscription status has been refreshed.');
+    if (subscriptionLoading || !subscriptionConfigured) return;
+
+    try {
+      const unlocked = await showPaywall();
+      if (unlocked) Alert.alert('Pro unlocked', 'Your subscription status has been refreshed.');
+    } catch (error) {
+      console.warn('Paywall failed', error);
+      Alert.alert(
+        'Could not open paywall',
+        error instanceof Error ? error.message : 'Check your connection and RevenueCat setup, then try again.'
+      );
+    }
   };
 
   const openAppStoreSubscriptions = async () => {
+    if (subscriptionLoading) return;
+
+    if (!subscriptionConfigured) {
+      try {
+        await Linking.openURL(APP_STORE_SUBSCRIPTIONS_URL);
+      } catch {
+        Alert.alert('Could not open subscriptions', 'Open iOS Settings, tap your Apple ID, then Subscriptions to manage your plan.');
+      }
+      return;
+    }
+
     try {
       await showCustomerCenter();
     } catch {
@@ -162,6 +195,22 @@ export default function SettingsScreen() {
     resetOnboarding();
     resetSettings();
     resetUser();
+  };
+
+  const logOut = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      if (plan) await cancelPlanNotifications(plan.notificationIds);
+      await signOut();
+      setAllowGuestMode(false);
+      router.replace('/sign-in' as any);
+    } catch (error) {
+      console.warn('Logout failed', error);
+      Alert.alert('Could not log out', 'Check your connection and try again.');
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   const confirmDeleteAccount = () => {
@@ -281,23 +330,47 @@ export default function SettingsScreen() {
           </Section>
 
           <Section title="Subscription">
-            <InfoRow label="Plan" value={isPro ? activeProductIdentifier ?? 'Pro' : 'Free'} />
+            <InfoRow
+              label="Plan"
+              value={subscriptionLoading ? 'Checking...' : isPro ? activeProductIdentifier ?? 'Pro' : 'Free'}
+            />
             {subscriptionError && (
               <>
                 <Divider />
-                <InfoRow label="Status" value="Offline safe mode" />
+                <InfoRow label="Status" value={subscriptionConfigured ? 'Offline safe mode' : 'Not configured'} />
               </>
             )}
             {!isPro && (
               <>
                 <Divider />
-                <ActionRow icon="sparkles-outline" label="Upgrade to Pro" onPress={openPaywall} />
+                <ActionRow
+                  disabled={subscriptionLoading || !subscriptionConfigured}
+                  icon="sparkles-outline"
+                  label={
+                    subscriptionLoading
+                      ? 'Loading paywall...'
+                      : subscriptionConfigured
+                        ? 'Upgrade to Pro'
+                        : 'Upgrade unavailable'
+                  }
+                  onPress={openPaywall}
+                />
               </>
             )}
             <Divider />
-            <ActionRow icon="refresh-outline" label="Restore purchases" onPress={restoreSubscription} />
+            <ActionRow
+              disabled={subscriptionLoading || !subscriptionConfigured}
+              icon="refresh-outline"
+              label="Restore purchases"
+              onPress={restoreSubscription}
+            />
             <Divider />
-            <ActionRow icon="card-outline" label="Manage subscription" onPress={openAppStoreSubscriptions} />
+            <ActionRow
+              disabled={subscriptionLoading}
+              icon="card-outline"
+              label="Manage subscription"
+              onPress={openAppStoreSubscriptions}
+            />
           </Section>
 
           <Section title="Privacy and legal">
@@ -307,12 +380,25 @@ export default function SettingsScreen() {
             <Divider />
             <ActionRow icon="reader-outline" label="Terms of Use" onPress={() => openWebUrl(termsUrl)} />
             <Divider />
+            <NavRow icon="chatbubbles-outline" label="Feature requests and bugs" onPress={() => router.push('/settings/feedback' as any)} />
+            <Divider />
             <ActionRow icon="help-circle-outline" label="Support" onPress={() => openWebUrl(supportUrl)} />
             <Divider />
             <ActionRow icon="open-outline" label="Open Push Counter website" onPress={openAppWebsite} />
           </Section>
 
           <Section title="Data control">
+            {isSignedIn && (
+              <>
+                <ActionRow
+                  disabled={loggingOut}
+                  icon="log-out-outline"
+                  label={loggingOut ? 'Logging out...' : 'Log out'}
+                  onPress={logOut}
+                />
+                <Divider />
+              </>
+            )}
             <ActionRow
               destructive
               disabled={deletingAccount}

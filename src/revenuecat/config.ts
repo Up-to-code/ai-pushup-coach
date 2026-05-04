@@ -1,4 +1,5 @@
 export const REVENUECAT_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY ?? '';
+export const IS_REVENUECAT_CONFIGURED = REVENUECAT_API_KEY.length > 0;
 
 export const PRO_ENTITLEMENT_ID =
   process.env.EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID ?? 'pro';

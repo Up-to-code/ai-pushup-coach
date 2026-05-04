@@ -49,11 +49,22 @@ export function isUserCancelledPurchase(error: unknown): boolean {
 
 export function getRevenueCatErrorMessage(error: unknown, fallback: string): string {
   const purchaseError = error as PurchasesErrorLike;
+  const message = purchaseError?.message ?? (error instanceof Error ? error.message : null);
+
+  if (message?.toLowerCase().includes('singleton instance')) {
+    return 'Subscriptions are still starting up. Please try again in a moment.';
+  }
+
+  if (message?.toLowerCase().includes('api key is missing')) {
+    return 'Subscriptions are unavailable in this build.';
+  }
+
   return purchaseError?.message ?? (error instanceof Error ? error.message : fallback);
 }
 
-export async function configureRevenueCat(appUserID?: string): Promise<CustomerInfo> {
+export async function configureRevenueCat(appUserID?: string | null): Promise<CustomerInfo> {
   const isConfigured = await Purchases.isConfigured();
+  const normalizedAppUserID = appUserID || undefined;
 
   if (!isConfigured) {
     if (!REVENUECAT_API_KEY) {
@@ -63,13 +74,18 @@ export async function configureRevenueCat(appUserID?: string): Promise<CustomerI
     await Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.INFO);
     Purchases.configure({
       apiKey: REVENUECAT_API_KEY,
-      appUserID,
+      appUserID: normalizedAppUserID,
     });
-  } else if (appUserID) {
+  } else if (normalizedAppUserID) {
     const currentAppUserID = await Purchases.getAppUserID();
-    if (currentAppUserID !== appUserID) {
-      const { customerInfo } = await Purchases.logIn(appUserID);
+    if (currentAppUserID !== normalizedAppUserID) {
+      const { customerInfo } = await Purchases.logIn(normalizedAppUserID);
       return customerInfo;
+    }
+  } else {
+    const isAnonymous = await Purchases.isAnonymous();
+    if (!isAnonymous) {
+      return await Purchases.logOut();
     }
   }
 

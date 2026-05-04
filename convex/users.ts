@@ -25,6 +25,8 @@ async function collectAccountRows(ctx: MutationCtx, user: Doc<'users'>) {
     followers,
     allNotifications,
     challengeMembers,
+    feedbackRequests,
+    allFeedbackVotes,
     rateLimits,
   ] = await Promise.all([
     ctx.db.query('userSettings').withIndex('by_user_id', (q) => q.eq('userId', user._id)).collect(),
@@ -36,8 +38,11 @@ async function collectAccountRows(ctx: MutationCtx, user: Doc<'users'>) {
     ctx.db.query('follows').withIndex('by_following', (q) => q.eq('followingUserId', user._id)).collect(),
     ctx.db.query('socialNotifications').collect(),
     ctx.db.query('challengeMembers').withIndex('by_user', (q) => q.eq('userId', user._id)).collect(),
+    ctx.db.query('feedbackRequests').withIndex('by_author', (q) => q.eq('authorUserId', user._id)).collect(),
+    ctx.db.query('feedbackVotes').collect(),
     ctx.db.query('rateLimits').collect(),
   ]);
+  const feedbackRequestIds = new Set(feedbackRequests.map((row) => row._id));
 
   return {
     settings,
@@ -49,6 +54,8 @@ async function collectAccountRows(ctx: MutationCtx, user: Doc<'users'>) {
     followers,
     notifications: allNotifications.filter((row) => row.recipientUserId === user._id || row.actorUserId === user._id),
     challengeMembers,
+    feedbackRequests,
+    feedbackVotes: allFeedbackVotes.filter((row) => row.userId === user._id || feedbackRequestIds.has(row.requestId)),
     rateLimits: rateLimits.filter((row) => row.userId === user._id),
   };
 }
@@ -64,8 +71,19 @@ async function hardDeleteAccountRows(ctx: MutationCtx, user: Doc<'users'>) {
   await deleteRows(ctx, rows.followers);
   await deleteRows(ctx, rows.notifications);
   await deleteRows(ctx, rows.challengeMembers);
+  await deleteRows(ctx, rows.feedbackRequests);
+  await deleteRows(ctx, rows.feedbackVotes);
   await deleteRows(ctx, rows.rateLimits);
   await ctx.db.delete(user._id);
+}
+
+function normalizeCreatedAt(createdAt: string | number, fallback: number) {
+  if (typeof createdAt === 'number') {
+    return Number.isFinite(createdAt) ? createdAt : fallback;
+  }
+
+  const parsed = Date.parse(createdAt);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 export const upsertProfile = mutation({
@@ -81,7 +99,7 @@ export const upsertProfile = mutation({
     countryName: v.string(),
     avatar: v.optional(v.string()),
     proStatus: v.union(v.literal('free'), v.literal('pro')),
-    createdAt: v.string(),
+    createdAt: v.union(v.string(), v.number()),
     streak: v.number(),
     energy: v.number(),
     totalReps: v.number(),
@@ -108,7 +126,7 @@ export const upsertProfile = mutation({
       countryName: args.countryName,
       avatar: args.avatar,
       proStatus: args.proStatus,
-      createdAt: Date.parse(args.createdAt) || now,
+      createdAt: normalizeCreatedAt(args.createdAt, now),
       updatedAt: now,
       streak: args.streak,
       energy: args.energy,
@@ -161,12 +179,26 @@ export const deleteAccount = mutation({
     const now = Date.now();
     const deleteAfter = now + ACCOUNT_RESTORE_WINDOW_MS;
     const rows = await collectAccountRows(ctx, user);
+    const feedbackRequestIds = new Set(rows.feedbackRequests.map((row) => row._id));
 
     await Promise.all([
       ...rows.following.map((row) => ctx.db.patch(row._id, { status: 'blocked', updatedAt: now })),
       ...rows.followers.map((row) => ctx.db.patch(row._id, { status: 'blocked', updatedAt: now })),
       ...rows.notifications.map((row) => ctx.db.delete(row._id)),
       ...rows.challengeMembers.map((row) => ctx.db.delete(row._id)),
+      ...rows.feedbackRequests.map((row) => ctx.db.patch(row._id, { status: 'closed' as const, voteCount: 0, updatedAt: now })),
+      ...rows.feedbackVotes
+        .filter((row) => !feedbackRequestIds.has(row.requestId))
+        .map(async (row) => {
+          const request = await ctx.db.get(row.requestId);
+          if (request) {
+            await ctx.db.patch(row.requestId, {
+              voteCount: Math.max(0, request.voteCount - 1),
+              updatedAt: now,
+            });
+          }
+        }),
+      ...rows.feedbackVotes.map((row) => ctx.db.delete(row._id)),
     ]);
 
     await ctx.db.patch(user._id, {

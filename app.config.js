@@ -11,15 +11,21 @@ function webHost() {
   }
 }
 
+function shouldUseAssociatedDomains() {
+  return process.env.EXPO_PUBLIC_ENABLE_ASSOCIATED_DOMAINS === 'true';
+}
+
 module.exports = () => {
   const config = appJson.expo;
-  const associatedDomain = `applinks:${webHost()}`;
+  const ios = { ...config.ios };
+
+  if (shouldUseAssociatedDomains()) {
+    const associatedDomain = `applinks:${webHost()}`;
+    ios.associatedDomains = Array.from(new Set([...(ios.associatedDomains ?? []), associatedDomain]));
+  }
 
   return {
     ...config,
-    ios: {
-      ...config.ios,
-      associatedDomains: Array.from(new Set([...(config.ios.associatedDomains ?? []), associatedDomain])),
-    },
+    ios,
   };
 };

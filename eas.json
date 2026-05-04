@@ -17,7 +17,7 @@
         "EXPO_PUBLIC_CONVEX_URL": "https://mellow-gerbil-151.convex.cloud",
         "EXPO_PUBLIC_CONVEX_SITE_URL": "https://mellow-gerbil-151.convex.site",
         "EXPO_PUBLIC_WEB_URL": "https://www.pushcounter.online",
-        "EXPO_PUBLIC_AUTH_BASE_URL": "https://www.pushcounter.online",
+        "EXPO_PUBLIC_AUTH_BASE_URL": "https://mellow-gerbil-151.convex.site",
         "EXPO_PUBLIC_ASSOCIATED_DOMAIN": "pushcounter.online",
         "EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID": "pro"
       }

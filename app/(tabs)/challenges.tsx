@@ -21,14 +21,14 @@ type ChallengeRowData = {
 
 export default function ChallengesScreen() {
   const { horizontalPadding } = useResponsive();
-  const { challenges, loading, seedDefaults, join, leave } = useChallenges(30);
+  const { challenges, loading, canSeedDefaults, seedDefaults, join, leave } = useChallenges(30);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (challenges && challenges.length === 0) {
+    if (!loading && canSeedDefaults && challenges?.length === 0) {
       void seedDefaults().catch((error) => console.warn('Challenge seed failed', error));
     }
-  }, [challenges, seedDefaults]);
+  }, [canSeedDefaults, challenges, loading, seedDefaults]);
 
   const toggleJoin = async (challenge: ChallengeRowData) => {
     if (busyId) return;

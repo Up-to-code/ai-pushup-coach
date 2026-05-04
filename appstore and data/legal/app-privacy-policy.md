@@ -61,7 +61,7 @@ We share information with service providers that help us operate Push Counter. T
 
 Current service categories include:
 
-- Authentication providers for Apple and Google sign-in through Better Auth.
+- Authentication provider for Apple sign-in through Better Auth.
 - Backend and database services through Convex.
 - Purchase entitlement and subscription management through RevenueCat and Apple.
 - Profile image upload and hosting services.

@@ -81,11 +81,21 @@ export const useUserStore = create<UserState>()(
           persistedUser?.id === 'user-ahmed' ||
           persistedUser?.nickname === 'Ahmed Flex' ||
           (persistedUser?.totalReps === 248 && persistedUser?.bestReps === 78);
+        const nextUser = hasLegacySeedUser
+          ? currentState.user
+          : { ...currentState.user, ...persistedUser };
+        const persistedCreatedAt = (nextUser as { createdAt?: unknown }).createdAt;
+
+        if (typeof persistedCreatedAt === 'number') {
+          nextUser.createdAt = new Date(persistedCreatedAt).toISOString();
+        } else if (typeof persistedCreatedAt !== 'string') {
+          nextUser.createdAt = currentState.user.createdAt;
+        }
 
         return {
           ...currentState,
           ...persisted,
-          user: hasLegacySeedUser ? currentState.user : { ...currentState.user, ...persistedUser },
+          user: nextUser,
         };
       },
     }

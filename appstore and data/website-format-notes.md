@@ -87,7 +87,6 @@ Footer links:
 - Terms of Use: https://pushcounter.online/terms
 - Security: https://pushcounter.online/support
 - Apple Legal: https://www.apple.com/legal/
-- Google Legal: https://policies.google.com/
 
 ## Asset Mapping
 

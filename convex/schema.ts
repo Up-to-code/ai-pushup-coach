@@ -180,6 +180,29 @@ export default defineSchema({
     .index('by_user', ['userId'])
     .index('by_challenge_progress', ['challengeId', 'progressReps']),
 
+  feedbackRequests: defineTable({
+    authorUserId: v.id('users'),
+    kind: v.union(v.literal('feature'), v.literal('bug')),
+    title: v.string(),
+    details: v.optional(v.string()),
+    fingerprint: v.string(),
+    status: v.union(v.literal('open'), v.literal('planned'), v.literal('done'), v.literal('closed')),
+    voteCount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_created_at', ['createdAt'])
+    .index('by_vote_count', ['voteCount'])
+    .index('by_author', ['authorUserId'])
+    .index('by_author_fingerprint', ['authorUserId', 'fingerprint']),
+
+  feedbackVotes: defineTable({
+    requestId: v.id('feedbackRequests'),
+    userId: v.id('users'),
+    createdAt: v.number(),
+  }).index('by_request_user', ['requestId', 'userId'])
+    .index('by_user', ['userId'])
+    .index('by_request', ['requestId']),
+
   rateLimits: defineTable({
     userId: v.id('users'),
     bucket: v.string(),

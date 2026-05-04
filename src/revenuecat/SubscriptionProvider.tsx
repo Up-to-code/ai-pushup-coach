@@ -5,17 +5,13 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Purchases, {
   CustomerInfo,
   CustomerInfoUpdateListener,
   PurchasesPackage,
 } from 'react-native-purchases';
-import RevenueCatUI from 'react-native-purchases-ui';
 import {
   configureRevenueCat,
   getActiveProductIdentifier,
@@ -25,11 +21,12 @@ import {
   isPushupCoachPro,
   isUserCancelledPurchase,
   presentCustomerCenter,
+  presentProPaywall,
   purchaseProPackage,
   restorePurchases,
 } from './revenueCat';
-import { ProductIdentifierKey } from './config';
-import { colors } from '../theme';
+import { IS_REVENUECAT_CONFIGURED, ProductIdentifierKey } from './config';
+import { useBetterAuth } from '../auth';
 import { useUserStore } from '../store';
 
 type SubscriptionContextValue = {
@@ -38,6 +35,7 @@ type SubscriptionContextValue = {
   activeProductIdentifier: string | null;
   packages: PurchasesPackage[];
   productPackages: Record<ProductIdentifierKey, PurchasesPackage | null>;
+  configured: boolean;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -51,12 +49,9 @@ type SubscriptionContextValue = {
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
 
-type PaywallPromise = {
-  resolve: (unlocked: boolean) => void;
-};
-
 export function SubscriptionProvider({ children }: PropsWithChildren) {
-  const appUserID = useUserStore((state) => state.user.id);
+  const { isLoaded: authLoaded, isSignedIn, userId } = useBetterAuth();
+  const appUserID = isSignedIn && userId ? userId : null;
   const updateProStatus = useUserStore((state) => state.updateProStatus);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -64,10 +59,8 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     yearly: null,
     monthly: null,
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(IS_REVENUECAT_CONFIGURED);
   const [error, setError] = useState<string | null>(null);
-  const [paywallVisible, setPaywallVisible] = useState(false);
-  const paywallPromiseRef = useRef<PaywallPromise | null>(null);
 
   const applyCustomerInfo = useCallback(
     (info: CustomerInfo) => {
@@ -81,10 +74,8 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     setError(null);
 
     try {
-      const [offering, info] = await Promise.all([
-        getCurrentOffering(),
-        Purchases.getCustomerInfo(),
-      ]);
+      const info = await configureRevenueCat(appUserID);
+      const offering = await getCurrentOffering();
 
       setPackages(offering?.availablePackages ?? []);
       setProductPackages(getConfiguredPackages(offering));
@@ -92,7 +83,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     } catch (refreshError) {
       setError(getRevenueCatErrorMessage(refreshError, 'Unable to refresh subscription status.'));
     }
-  }, [applyCustomerInfo]);
+  }, [appUserID, applyCustomerInfo]);
 
   useEffect(() => {
     const listener: CustomerInfoUpdateListener = (info) => {
@@ -100,6 +91,20 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     };
 
     async function initializeSubscriptions() {
+      if (!authLoaded) {
+        return;
+      }
+
+      if (!IS_REVENUECAT_CONFIGURED) {
+        setCustomerInfo(null);
+        setPackages([]);
+        setProductPackages(getConfiguredPackages(null));
+        setError('Subscriptions are unavailable in this build.');
+        setLoading(false);
+        updateProStatus('free');
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -119,18 +124,19 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       }
     }
 
-    initializeSubscriptions();
+    void initializeSubscriptions();
 
     return () => {
       Purchases.removeCustomerInfoUpdateListener(listener);
     };
-  }, [appUserID, applyCustomerInfo]);
+  }, [appUserID, applyCustomerInfo, authLoaded]);
 
   const buyPackage = useCallback(
     async (pkg: PurchasesPackage) => {
       setError(null);
 
       try {
+        await configureRevenueCat(appUserID);
         const info = await purchaseProPackage(pkg);
         applyCustomerInfo(info);
       } catch (purchaseError) {
@@ -143,7 +149,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         throw purchaseError;
       }
     },
-    [applyCustomerInfo],
+    [appUserID, applyCustomerInfo],
   );
 
   const buyProduct = useCallback(
@@ -164,64 +170,57 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     setError(null);
 
     try {
+      await configureRevenueCat(appUserID);
       const info = await restorePurchases();
       applyCustomerInfo(info);
     } catch (restoreError) {
       setError(getRevenueCatErrorMessage(restoreError, 'Unable to restore purchases.'));
       throw restoreError;
     }
-  }, [applyCustomerInfo]);
-
-  const finishPaywall = useCallback(
-    (unlocked: boolean, info?: CustomerInfo) => {
-      if (info) {
-        applyCustomerInfo(info);
-      }
-
-      setPaywallVisible(false);
-      paywallPromiseRef.current?.resolve(unlocked);
-      paywallPromiseRef.current = null;
-    },
-    [applyCustomerInfo],
-  );
+  }, [appUserID, applyCustomerInfo]);
 
   const showPaywall = useCallback(async () => {
     setError(null);
 
     try {
-      const info = await Purchases.getCustomerInfo();
+      const info = await configureRevenueCat(appUserID);
+      const offering = await getCurrentOffering();
       applyCustomerInfo(info);
+      setPackages(offering?.availablePackages ?? []);
+      setProductPackages(getConfiguredPackages(offering));
 
       if (isPushupCoachPro(info)) {
         return true;
       }
 
-      if (paywallPromiseRef.current) {
-        return false;
+      if (!offering) {
+        throw new Error('No RevenueCat offering is available. Check that the default offering is configured and published.');
       }
 
-      setPaywallVisible(true);
+      const unlocked = await presentProPaywall();
+      const refreshedInfo = await Purchases.getCustomerInfo();
+      applyCustomerInfo(refreshedInfo);
 
-      return await new Promise<boolean>((resolve) => {
-        paywallPromiseRef.current = { resolve };
-      });
+      return unlocked || isPushupCoachPro(refreshedInfo);
     } catch (paywallError) {
-      setError(getRevenueCatErrorMessage(paywallError, 'Unable to open the paywall.'));
-      return false;
+      const message = getRevenueCatErrorMessage(paywallError, 'Unable to open the paywall.');
+      setError(message);
+      throw new Error(message);
     }
-  }, [applyCustomerInfo]);
+  }, [appUserID, applyCustomerInfo]);
 
   const showCustomerCenter = useCallback(async () => {
     setError(null);
 
     try {
+      await configureRevenueCat(appUserID);
       await presentCustomerCenter(applyCustomerInfo);
       await refresh();
     } catch (customerCenterError) {
       setError(getRevenueCatErrorMessage(customerCenterError, 'Unable to open Customer Center.'));
       throw customerCenterError;
     }
-  }, [applyCustomerInfo, refresh]);
+  }, [appUserID, applyCustomerInfo, refresh]);
 
   const value = useMemo(
     () => ({
@@ -230,6 +229,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       activeProductIdentifier: getActiveProductIdentifier(customerInfo),
       packages,
       productPackages,
+      configured: IS_REVENUECAT_CONFIGURED,
       loading,
       error,
       refresh,
@@ -258,47 +258,6 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   return (
     <SubscriptionContext.Provider value={value}>
       {children}
-      <Modal
-        animationType="slide"
-        onRequestClose={() => finishPaywall(false)}
-        presentationStyle="fullScreen"
-        statusBarTranslucent
-        visible={paywallVisible}
-      >
-        <View style={styles.paywallModal}>
-          <RevenueCatUI.Paywall
-            style={styles.paywall}
-            options={{ displayCloseButton: false }}
-            onDismiss={() => finishPaywall(false)}
-            onPurchaseCompleted={({ customerInfo: purchasedCustomerInfo }) => {
-              finishPaywall(isPushupCoachPro(purchasedCustomerInfo), purchasedCustomerInfo);
-            }}
-            onPurchaseError={({ error: purchaseError }) => {
-              setError(getRevenueCatErrorMessage(purchaseError, 'Purchase failed. Please try again.'));
-            }}
-            onPurchaseCancelled={() => {
-              setError(null);
-            }}
-            onRestoreCompleted={({ customerInfo: restoredCustomerInfo }) => {
-              finishPaywall(isPushupCoachPro(restoredCustomerInfo), restoredCustomerInfo);
-            }}
-            onRestoreError={({ error: restoreError }) => {
-              setError(getRevenueCatErrorMessage(restoreError, 'Unable to restore purchases.'));
-            }}
-          />
-          <SafeAreaView pointerEvents="box-none" style={styles.closeLayer} edges={['top']}>
-            <Pressable
-              accessibilityLabel="Close paywall"
-              accessibilityRole="button"
-              hitSlop={12}
-              onPress={() => finishPaywall(false)}
-              style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
-            >
-              <Text style={styles.closeButtonText}>X</Text>
-            </Pressable>
-          </SafeAreaView>
-        </View>
-      </Modal>
     </SubscriptionContext.Provider>
   );
 }
@@ -312,39 +271,3 @@ export function useSubscription() {
 
   return context;
 }
-
-const styles = StyleSheet.create({
-  paywallModal: {
-    flex: 1,
-    backgroundColor: colors.backgroundCanvas,
-  },
-  paywall: {
-    flex: 1,
-  },
-  closeLayer: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'flex-end',
-    pointerEvents: 'box-none',
-  },
-  closeButton: {
-    width: 40,
-    height: 40,
-    marginTop: 50,
-    marginRight: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: 'rgba(10, 10, 10, 0.42)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-  },
-  closeButtonPressed: {
-    opacity: 0.72,
-  },
-  closeButtonText: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-});

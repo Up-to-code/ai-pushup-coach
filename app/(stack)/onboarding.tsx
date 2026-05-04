@@ -103,7 +103,7 @@ const launchBackground = require('../../assets/bg.png');
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { showPaywall, loading } = useSubscription();
+  const { configured: subscriptionConfigured, showPaywall, loading } = useSubscription();
   const { user } = useUserStore();
   const { setPlan } = usePlanStore();
   const { settings, updateSettings, completeOnboarding, updateOnboardingProfile, setNotificationsEnabled } = useSettingsStore();
@@ -225,6 +225,12 @@ export default function OnboardingScreen() {
     try {
       await showPaywall();
       await finish();
+    } catch (error) {
+      console.warn('Paywall failed', error);
+      Alert.alert(
+        'Could not open paywall',
+        error instanceof Error ? error.message : 'Check your connection and try again.'
+      );
     } finally {
       setBusy(false);
     }
@@ -351,9 +357,11 @@ export default function OnboardingScreen() {
           ) : step.id === 'ready' ? (
             <>
               <PrimaryButton label={getButtonLabel()} icon="sparkles-outline" onPress={finish} loading={busy || loading || finishing} />
-              <Pressable onPress={unlockAndFinish} disabled={busy || loading} style={styles.secondaryButton}>
-                <Text style={styles.secondaryText}>View Pro →</Text>
-              </Pressable>
+              {subscriptionConfigured && (
+                <Pressable onPress={unlockAndFinish} disabled={busy || loading} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryText}>View Pro →</Text>
+                </Pressable>
+              )}
             </>
           ) : (
             <PrimaryButton label={getButtonLabel()} icon="arrow-forward" onPress={goNext} disabled={!canContinue || busy} />

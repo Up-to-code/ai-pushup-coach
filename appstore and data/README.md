@@ -38,7 +38,7 @@ This bundle describes the current Push Counter app behavior:
 - Workout reminders and missed-workout follow-ups.
 - Workout history, streaks, charts, and badges.
 - Profiles, social links, follows, challenges, and leaderboards.
-- Apple and Google sign-in, plus guest mode.
+- Apple sign-in, plus guest mode.
 - RevenueCat and App Store purchases for Pro access.
 - Restore purchases, subscription management, account deletion, and local data clearing.
 

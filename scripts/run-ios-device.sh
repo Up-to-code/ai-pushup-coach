@@ -87,17 +87,19 @@ unset SKIP_BUNDLING
 export FORCE_BUNDLING=1
 EOF
 
+"$ROOT_DIR/scripts/generate-ios-codegen.sh"
+
 cd "$IOS_DIR"
 xcodebuild \
-  -workspace AIPushUpCoach.xcworkspace \
-  -scheme AIPushUpCoach \
+  -workspace PushCounter.xcworkspace \
+  -scheme PushCounter \
   -configuration Debug \
   -destination 'generic/platform=iOS' \
   -derivedDataPath "$DERIVED_DATA_PATH" \
   -allowProvisioningUpdates \
   build
 
-APP_PATH="$DERIVED_DATA_PATH/Build/Products/Debug-iphoneos/AIPushUpCoach.app"
+APP_PATH="$DERIVED_DATA_PATH/Build/Products/Debug-iphoneos/PushCounter.app"
 
 if [[ ! -d "$APP_PATH" ]]; then
   echo "Built app was not found in DerivedData."

@@ -50,7 +50,7 @@ https://pushcounter.online/terms
 
 Push Counter can be reviewed without creating an account by selecting "Continue without sign in" on the sign-in screen. Guest mode supports onboarding, local planning, workout sessions, settings, legal screens, and local workout history.
 
-Apple and Google sign-in are provided for account sync, social features, challenges, leaderboards, and cross-device continuity. Apple sign-in is available wherever third-party sign-in is offered.
+Apple sign-in is provided for account sync, social features, challenges, leaderboards, and cross-device continuity.
 
 Camera permission is requested when entering camera workout flows. The camera is used to estimate push-up movement and count reps during live workouts. Workout video is not saved to the user's photo library by default. Manual fallback states are available when camera access is denied or unavailable.
 

@@ -11,7 +11,7 @@
     "web:start": "cd web && npm run start",
     "web:typecheck": "cd web && npm run typecheck",
     "android": "expo run:android",
-    "ios": "expo run:ios",
+    "ios": "bash scripts/generate-ios-codegen.sh && expo run:ios",
     "ios:device": "bash scripts/run-ios-device.sh",
     "e2e:maestro": "maestro test .maestro/plan-setup.yaml",
     "test": "vitest run",

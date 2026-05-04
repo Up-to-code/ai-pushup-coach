@@ -62,15 +62,8 @@ function getTrustedOrigins() {
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
-function getSocialProviders(): BetterAuthOptions['socialProviders'] {
+export function getSocialProviders(): BetterAuthOptions['socialProviders'] {
   const socialProviders: BetterAuthOptions['socialProviders'] = {};
-
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    socialProviders.google = {
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    };
-  }
 
   if (process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET) {
     socialProviders.apple = {
@@ -83,6 +76,14 @@ function getSocialProviders(): BetterAuthOptions['socialProviders'] {
   return socialProviders;
 }
 
+export function getAccountOptions(): BetterAuthOptions['account'] {
+  return {
+    accountLinking: {
+      disableImplicitLinking: true,
+    },
+  };
+}
+
 export const createAuth = (ctx: GenericCtx<DataModel>) =>
   betterAuth({
     appName: 'Push Counter',
@@ -91,6 +92,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
     database: authComponent.adapter(ctx),
     trustedOrigins: getTrustedOrigins(),
     socialProviders: getSocialProviders(),
+    account: getAccountOptions(),
     plugins: [expo(), convex({ authConfig })],
   });
 

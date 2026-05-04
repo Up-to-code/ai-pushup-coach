@@ -3,31 +3,30 @@ import {
   ActivityIndicator,
   ImageBackground,
   Linking,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
-import { useRouter } from 'expo-router';
-import Animated, {
-  FadeInDown,
-  FadeInUp,
-} from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { authClient } from '../../src/auth';
 import { privacyUrl, termsUrl } from '../../src/config/links';
 import { colors, spacing, typography } from '../../src/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
-type Provider = 'google' | 'apple';
+function isAuthCancel(error: unknown) {
+  return error instanceof Error && 'code' in error && error.code === 'ERR_REQUEST_CANCELED';
+}
 
 export default function SignInScreen() {
-  const router = useRouter();
-  const [activeProvider, setActiveProvider] = useState<Provider | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const openLegalLink = useCallback(async (url: string) => {
@@ -41,41 +40,65 @@ export default function SignInScreen() {
     };
   }, []);
 
-  const signInWith = useCallback(
-    async (strategy: Provider) => {
-      setActiveProvider(strategy);
-      setError(null);
+  const signInWithApple = useCallback(async () => {
+    if (Platform.OS !== 'ios' || !(await AppleAuthentication.isAvailableAsync())) {
+      return authClient.signIn.social({ provider: 'apple', callbackURL: '/' });
+    }
 
-      try {
-        const { error } = await authClient.signIn.social({
-          provider: strategy,
-          // Better Auth uses the public web domain for provider callbacks.
-          // The Expo plugin converts this app callback into pushcounter:// so the session returns to the app.
-          callbackURL: '/',
-        });
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
 
-        if (error) {
-          console.warn('Better Auth social sign-in error', error);
-          throw new Error(error.message || error.code || 'Social sign-in failed.');
-        }
-        router.replace('/' as any);
-      } catch (err) {
-        console.warn('Better Auth OAuth failed', err);
-        setError('Could not finish sign in. Check that this provider is enabled in Better Auth.');
-      } finally {
-        setActiveProvider(null);
+    if (!credential.identityToken) {
+      throw new Error('Apple did not return an identity token.');
+    }
+
+    return authClient.signIn.social({
+      provider: 'apple',
+      idToken: {
+        token: credential.identityToken,
+        user: {
+          email: credential.email ?? undefined,
+          name: {
+            firstName: credential.fullName?.givenName ?? undefined,
+            lastName: credential.fullName?.familyName ?? undefined,
+          },
+        },
+      },
+      callbackURL: '/',
+    });
+  }, []);
+
+  const signInWithAppleOnly = useCallback(async () => {
+    setIsSigningIn(true);
+    setError(null);
+
+    try {
+      const { error } = await signInWithApple();
+
+      if (error) {
+        console.warn('Better Auth social sign-in error', error);
+        throw new Error(error.message || error.code || 'Social sign-in failed.');
       }
-    },
-    [router]
-  );
+    } catch (err) {
+      if (!isAuthCancel(err)) {
+        console.warn('Better Auth OAuth failed', err);
+        setError('Could not finish sign in. Please try again.');
+      }
+    } finally {
+      setIsSigningIn(false);
+    }
+  }, [signInWithApple]);
 
   return (
     <ImageBackground source={require('../../assets/bg.png')} style={styles.root}>
       <View style={styles.overlay} />
-      
+
       <SafeAreaView style={styles.safe}>
         <View style={styles.page}>
-          {/* ── Hero ── */}
           <View style={styles.hero}>
             <View style={styles.titleBlock}>
               <Animated.Text entering={FadeInDown.delay(200).duration(500)} style={styles.headline}>
@@ -87,7 +110,6 @@ export default function SignInScreen() {
             </View>
           </View>
 
-          {/* ── Bottom Section ── */}
           <View style={styles.bottomContainer}>
             <View style={styles.bottomContent}>
               <Animated.View entering={FadeInUp.delay(500).duration(600)} style={styles.bottom}>
@@ -97,44 +119,22 @@ export default function SignInScreen() {
                       styles.btn,
                       styles.btnApple,
                       pressed && styles.btnPressed,
-                      activeProvider !== null && styles.btnOff,
+                      isSigningIn && styles.btnOff,
                     ]}
-                    disabled={activeProvider !== null}
-                    onPress={() => signInWith('apple')}
+                    disabled={isSigningIn}
+                    onPress={signInWithAppleOnly}
                   >
                     <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-                    {activeProvider === 'apple' ? (
+                    {isSigningIn ? (
                       <ActivityIndicator color="#FFF" size="small" />
                     ) : (
                       <Ionicons name="logo-apple" size={19} color="#FFF" />
                     )}
                     <Text style={styles.btnLabel}>Continue with Apple</Text>
                   </Pressable>
-
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.btn,
-                      styles.btnGoogle,
-                      pressed && styles.btnPressed,
-                      activeProvider !== null && styles.btnOff,
-                    ]}
-                    disabled={activeProvider !== null}
-                    onPress={() => signInWith('google')}
-                  >
-                    <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-                    {activeProvider === 'google' ? (
-                      <ActivityIndicator color="#FFF" size="small" />
-                    ) : (
-                      <Ionicons name="logo-google" size={17} color="#FFF" />
-                    )}
-                    <Text style={styles.btnLabel}>Continue with Google</Text>
-                  </Pressable>
-
                 </View>
 
-                {error ? (
-                  <Text style={styles.error}>{error}</Text>
-                ) : null}
+                {error ? <Text style={styles.error}>{error}</Text> : null}
 
                 <View style={styles.legal}>
                   <Text style={styles.legalTxt}>By continuing, you agree to our </Text>
@@ -170,8 +170,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
   },
-
-  /* ── Hero ── */
   hero: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -197,8 +195,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
   },
-
-  /* ── Bottom Section ── */
   bottomContainer: {
     width: '100%',
   },
@@ -213,8 +209,6 @@ const styles = StyleSheet.create({
   buttons: {
     gap: spacing.md,
   },
-
-  /* Buttons */
   btn: {
     height: 56,
     borderRadius: 14,
@@ -225,11 +219,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   btnApple: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  btnGoogle: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
@@ -246,15 +235,11 @@ const styles = StyleSheet.create({
     color: '#FFF',
     letterSpacing: -0.2,
   },
-
-  /* Error */
   error: {
     ...typography.caption,
     color: colors.error,
     textAlign: 'center',
   },
-
-  /* Legal */
   legal: {
     flexDirection: 'row',
     justifyContent: 'center',

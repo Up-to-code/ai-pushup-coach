@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Outfit } from 'next/font/google';
 import './globals.css';
 import { webUrl } from '@/lib/config';
+import MobileNav from './MobileNav';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -35,11 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <img src="/images/logo-push-up.png" alt="" />
                 <span>Push Counter</span>
               </Link>
-              <div className="nav-links">
+              <div className="nav-links desktop-only">
                 <Link href="/privacy">Privacy</Link>
                 <Link href="/terms">Terms</Link>
                 <Link href="/support">Support</Link>
               </div>
+              <MobileNav />
             </nav>
           </header>
           {children}

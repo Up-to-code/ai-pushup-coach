@@ -12,7 +12,7 @@ Official references:
 ## In-App Review Risks Covered
 
 - Account deletion: Settings includes a destructive "Delete account and data" flow for signed-in users and "Clear local data" for guest users.
-- Sign-in access: The sign-in screen includes Continue with Apple, Continue with Google, and Continue without sign in.
+- Sign-in access: The sign-in screen includes Continue with Apple and Continue without sign in.
 - Purchase recovery: Settings includes Restore purchases and Manage subscription.
 - Privacy access: Settings links to Camera and workout data, Privacy Policy, Terms of Use, and the public Push Counter website.
 - Camera purpose: The iOS camera permission string explains live workout rep tracking and states that workout video is not saved to the photo library.
@@ -44,7 +44,7 @@ Tracking:
 ## Review Notes To Provide
 
 - A reviewer can use Continue without sign in for local workout flows.
-- Signed-in social, leaderboard, and cross-device sync features require Apple or Google sign-in.
+- Signed-in social, leaderboard, and cross-device sync features require Apple sign-in.
 - Camera permission is requested when entering camera workout flows; manual fallback remains available if camera access is denied.
 - Account deletion is available from Settings > Data control.
 - Restore purchases and Manage subscription are available from Settings > Subscription.

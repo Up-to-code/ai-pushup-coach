@@ -5,7 +5,7 @@ Generated from the current React Native codebase on May 2, 2026.
 ## Current App Features Found In Code
 
 - Push-up training onboarding with goals, blockers, preferred training style, camera prompt, and first-session preview.
-- Account options: Continue with Apple, Continue with Google, or continue without sign-in.
+- Account options: Continue with Apple or continue without sign-in.
 - Four-week push-up plan generation based on level, goal, selected training days, and preferred workout time.
 - Plan goals: First 25, Road to 50, and Road to 100.
 - Level options: Beginner, Intermediate, and Advanced.
@@ -104,7 +104,7 @@ Key features:
 - Progress charts, streaks, best sessions, and achievement badges
 - Global, country, and friends leaderboards
 - Challenges with progress tracking and rewards
-- Apple and Google sign-in, plus guest mode
+- Apple sign-in, plus guest mode
 - Pro access with restore purchases and subscription management
 
 Push Counter is fitness guidance only and is not medical advice. Stop exercising if you feel pain, dizziness, shortness of breath, or any unsafe symptoms. Consult a qualified health professional before starting a new exercise program if you have any medical condition, injury, or concern.
@@ -113,7 +113,7 @@ Push Counter is fitness guidance only and is not medical advice. Stop exercising
 
 Reviewers can use Continue without sign in to test onboarding, plan setup, local workout sessions, settings, legal screens, and local workout history.
 
-Apple and Google sign-in are available for account sync, social features, challenges, leaderboards, and cross-device continuity. Continue with Apple is available wherever third-party sign-in is offered.
+Apple sign-in is available for account sync, social features, challenges, leaderboards, and cross-device continuity.
 
 Camera permission is requested for camera-assisted workout sessions. The camera is used during live workouts to estimate movement and count reps. Workout video is not saved to the user photo library by default.
 
@@ -184,7 +184,7 @@ We share information with service providers that help us operate Push Counter. T
 
 Current service categories include:
 
-- Authentication providers for Apple and Google sign-in through Better Auth.
+- Authentication provider for Apple sign-in through Better Auth.
 - Backend and database services through Convex.
 - Purchase entitlement and subscription management through RevenueCat and Apple.
 - Profile image upload and hosting services.

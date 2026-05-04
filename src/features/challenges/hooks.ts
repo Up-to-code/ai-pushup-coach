@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
@@ -10,13 +11,28 @@ export function useChallenges(limit = 25) {
   const seedMutation = useMutation(api.challenges.seedDefaults);
   const joinMutation = useMutation(api.challenges.join);
   const leaveMutation = useMutation(api.challenges.leave);
+  const requireAuthenticatedBackend = useCallback(() => {
+    if (!canUseAuthenticatedBackend) {
+      throw new Error('Authenticated backend is not ready.');
+    }
+  }, [canUseAuthenticatedBackend]);
 
   return {
-    challenges: canUseAuthenticatedBackend ? rows : [],
+    challenges: canUseAuthenticatedBackend ? rows : undefined,
     loading: authLoading || (canUseAuthenticatedBackend && rows === undefined),
-    seedDefaults: () => seedMutation({ clientUserId }),
-    join: (challengeId: Id<'challenges'>) => joinMutation({ clientUserId, challengeId }),
-    leave: (challengeId: Id<'challenges'>) => leaveMutation({ clientUserId, challengeId }),
+    canSeedDefaults: canUseAuthenticatedBackend,
+    seedDefaults: useCallback(() => {
+      requireAuthenticatedBackend();
+      return seedMutation({ clientUserId });
+    }, [clientUserId, requireAuthenticatedBackend, seedMutation]),
+    join: useCallback((challengeId: Id<'challenges'>) => {
+      requireAuthenticatedBackend();
+      return joinMutation({ clientUserId, challengeId });
+    }, [clientUserId, joinMutation, requireAuthenticatedBackend]),
+    leave: useCallback((challengeId: Id<'challenges'>) => {
+      requireAuthenticatedBackend();
+      return leaveMutation({ clientUserId, challengeId });
+    }, [clientUserId, leaveMutation, requireAuthenticatedBackend]),
   };
 }
 

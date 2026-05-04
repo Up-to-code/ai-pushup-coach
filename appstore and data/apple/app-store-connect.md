@@ -43,7 +43,7 @@ Key features:
 - Progress charts, streaks, best sessions, and achievement badges
 - Global, country, and friends leaderboards
 - Challenges with progress tracking and rewards
-- Apple and Google sign-in, plus guest mode
+- Apple sign-in, plus guest mode
 - Pro access with restore purchases and subscription management
 
 Push Counter is fitness guidance only and is not medical advice. Stop exercising if you feel pain, dizziness, shortness of breath, or any unsafe symptoms. Consult a qualified health professional before starting a new exercise program if you have any medical condition, injury, or concern.
@@ -68,7 +68,7 @@ https://pushcounter.online/terms
 
 Push Counter can be reviewed without creating an account by selecting Continue without sign in on the sign-in screen. Guest mode supports onboarding, local planning, workout sessions, settings, legal screens, and local workout history.
 
-Apple and Google sign-in are provided for account sync, social features, challenges, leaderboards, and cross-device continuity. Continue with Apple is available wherever third-party sign-in is offered.
+Apple sign-in is provided for account sync, social features, challenges, leaderboards, and cross-device continuity.
 
 Camera permission is requested when entering camera-assisted workout flows. The camera is used to estimate push-up movement and count reps during live workouts. Workout video is not saved to the user's photo library by default. Manual fallback states are available when camera access is denied or unavailable.
 

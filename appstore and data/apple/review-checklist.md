@@ -19,7 +19,7 @@ Use this checklist before submitting Push Counter to App Review.
 
 ## Sign-In And Account Access
 
-- Continue with Apple is available anywhere Google sign-in is offered.
+- Continue with Apple is the only third-party sign-in option offered.
 - Guest mode is available for review and supports core local training flows.
 - Review notes explain that reviewers can use Continue without sign in.
 - Account deletion is available for signed-in users.

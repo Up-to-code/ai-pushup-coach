@@ -95,7 +95,6 @@ Use these links from the public app page, paywall footer, App Store Connect, and
 - Support: https://pushcounter.online
 - Security: https://pushcounter.online/support
 - Apple Legal: https://www.apple.com/legal/
-- Google Legal: https://policies.google.com/
 
 ## Suggested Page Assets
 

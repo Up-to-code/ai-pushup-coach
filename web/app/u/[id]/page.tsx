@@ -49,15 +49,47 @@ export default async function SharedProfilePage({ params }: Props) {
   const appUrl = `pushcounter://user/${encodeURIComponent(profile.clientUserId)}`;
 
   return (
-    <main className="page profile-page">
-      <section className="profile-hero">
-        <div className="avatar">
-          {profile.avatar ? <img src={profile.avatar} alt="" /> : <span>{initial}</span>}
+    <main className="apple-section" style={{ minHeight: 'calc(100vh - 120px)' }}>
+      <div className="apple-section-inner" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+        
+        <div className="apple-profile-avatar">
+          {profile.avatar ? <img src={profile.avatar} alt={profile.displayName} /> : <span>{initial}</span>}
         </div>
-        <p className="eyebrow">{profile.countryName || 'Push Counter athlete'}</p>
-        <h1 className="profile-title">{profile.displayName}</h1>
-        {profile.bio ? <p className="lede">{profile.bio}</p> : <p className="lede">Training progress shared from Push Counter.</p>}
-        <div className="action-row">
+        
+        <p className="apple-eyebrow" style={{ marginTop: '24px' }}>
+          {profile.countryName || 'Push Counter athlete'}
+        </p>
+        
+        <h1 className="apple-heading" style={{ marginBottom: '12px' }}>{profile.displayName}</h1>
+        
+        <p className="hero-v3-sub" style={{ marginBottom: '40px' }}>
+          {profile.bio || 'Training progress shared from Push Counter.'}
+        </p>
+
+        <div className="apple-grid" style={{ maxWidth: '480px', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', width: '100%' }}>
+          <div className="apple-stat-card">
+            <Trophy size={24} aria-hidden="true" style={{ color: 'var(--accent)' }} />
+            <strong>{formatNumber(profile.totalReps)}</strong>
+            <span>Total reps</span>
+          </div>
+          <div className="apple-stat-card">
+            <Medal size={24} aria-hidden="true" style={{ color: 'var(--accent)' }} />
+            <strong>{formatNumber(profile.bestReps)}</strong>
+            <span>Best set</span>
+          </div>
+          <div className="apple-stat-card">
+            <Repeat2 size={24} aria-hidden="true" style={{ color: 'var(--accent)' }} />
+            <strong>{formatNumber(profile.streak)}</strong>
+            <span>Day streak</span>
+          </div>
+          <div className="apple-stat-card">
+            <Users size={24} aria-hidden="true" style={{ color: 'var(--accent)' }} />
+            <strong>{formatNumber(profile.followersCount)}</strong>
+            <span>Followers</span>
+          </div>
+        </div>
+
+        <div className="action-row" style={{ marginTop: '40px', justifyContent: 'center' }}>
           <a className="button primary" href={appUrl}>
             Open in app <ArrowRight size={18} aria-hidden="true" />
           </a>
@@ -65,39 +97,15 @@ export default async function SharedProfilePage({ params }: Props) {
             Share <Share2 size={18} aria-hidden="true" />
           </a>
         </div>
-      </section>
-
-      <aside className="profile-card">
-        <h2>Public stats</h2>
-        <div className="profile-grid">
-          <div className="stat">
-            <Trophy size={20} aria-hidden="true" />
-            <strong>{formatNumber(profile.totalReps)}</strong>
-            <span>Total reps</span>
-          </div>
-          <div className="stat">
-            <Medal size={20} aria-hidden="true" />
-            <strong>{formatNumber(profile.bestReps)}</strong>
-            <span>Best set</span>
-          </div>
-          <div className="stat">
-            <Repeat2 size={20} aria-hidden="true" />
-            <strong>{formatNumber(profile.streak)}</strong>
-            <span>Streak</span>
-          </div>
-          <div className="stat">
-            <Users size={20} aria-hidden="true" />
-            <strong>{formatNumber(profile.followersCount)}</strong>
-            <span>Followers</span>
-          </div>
-        </div>
-        <p>
-          Only public summary fields are shown here. Friend state, private workout history, account metadata, and pending-deletion profiles are not exposed.
+        
+        <p style={{ marginTop: '40px', color: 'var(--soft)', fontSize: '14px' }}>
+          Only public summary fields are shown. Private data is protected.
         </p>
-        <Link className="button secondary" href="/">
-          Learn about Push Counter
+        
+        <Link href="/" style={{ marginTop: '12px', color: 'var(--muted)', fontSize: '14px' }}>
+          Learn about Push Counter &rarr;
         </Link>
-      </aside>
+      </div>
     </main>
   );
 }
