@@ -72,6 +72,55 @@ describe('buildWidgetPayload', () => {
     });
   });
 
+  it('sanitizes invalid user and friend numbers before sending data to WidgetKit', () => {
+    const payload = buildWidgetPayload({
+      user: {
+        streak: Number.NaN,
+        displayName: '  Very Long Athlete Name That Should Not Blow Up The Widget  ',
+        name: 'Athlete',
+        totalReps: Infinity,
+        bestReps: -10,
+      },
+      now: new Date('2026-05-02T12:00:00Z'),
+      workouts: [],
+      friendComparison: {
+        rank: Number.NaN,
+        score: Infinity,
+        friendAverage: -3,
+        deltaToNext: Number.NaN,
+        friendsCount: Infinity,
+      },
+    });
+
+    expect(payload).toMatchObject({
+      streak: 0,
+      totalReps: 0,
+      bestReps: 0,
+      friendsThisWeek: {
+        rank: 0,
+        score: 0,
+        friendAverage: 0,
+        deltaToNext: 0,
+        friendsCount: 0,
+      },
+    });
+    expect(payload.displayName).toBe('Very Long Athlete Name T');
+    expect(JSON.stringify(payload)).not.toMatch(/NaN|Infinity/);
+  });
+
+  it('keeps the widget useful with local stats when no friend comparison is available', () => {
+    const payload = buildWidgetPayload({
+      user,
+      now: new Date('2026-05-02T12:00:00Z'),
+      workouts: [workout('saturday', '2026-05-02T10:00:00Z', 18)],
+      friendComparison: undefined,
+    });
+
+    expect(payload.displayName).toBe('Ahmed');
+    expect(payload.totalReps).toBe(18);
+    expect(payload.friendsThisWeek.score).toBe(18);
+  });
+
   it('ignores updatedAt when detecting duplicate payloads', () => {
     const first = buildWidgetPayload({
       user,

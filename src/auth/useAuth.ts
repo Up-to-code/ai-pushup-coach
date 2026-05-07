@@ -12,7 +12,7 @@ import { resetBetterAuthClientSession } from './resetBetterAuthClientSession';
 import { useBetterAuth } from './useBetterAuth';
 import { useSettingsHydrated } from './useSettingsHydrated';
 import { authCallbackUrl } from '../config/links';
-import { useSettingsStore, useUserStore } from '../store';
+import { usePlanStore, useSettingsStore, useUserStore } from '../store';
 
 function isAppleAuthCancel(error: unknown) {
   return (
@@ -58,6 +58,7 @@ export function useAuth() {
   const settingsHydrated = useSettingsHydrated();
   const allowGuestMode = useSettingsStore((state) => state.settings.allowGuestMode);
   const setAllowGuestMode = useSettingsStore((state) => state.setAllowGuestMode);
+  const hasLocalPlan = usePlanStore((state) => Boolean(state.plan));
   const localUser = useUserStore((state) => state.user);
 
   const deletionState = useQuery(
@@ -109,8 +110,10 @@ export function useAuth() {
   const resetForProviderSignIn = useCallback(async () => {
     setAllowGuestMode(false);
     await resetBetterAuthClientSession({ refreshSession: betterAuth.refreshSession });
-    await clearLocalAuthState();
-  }, [betterAuth.refreshSession, setAllowGuestMode]);
+    if (!hasLocalPlan) {
+      await clearLocalAuthState();
+    }
+  }, [betterAuth.refreshSession, hasLocalPlan, setAllowGuestMode]);
 
   const signInWithApple = useCallback(async () => {
     setAuthActionStatus('signingIn');

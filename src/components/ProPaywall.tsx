@@ -34,10 +34,9 @@ export function ProPaywall({
   productPackages,
   isScreen = false,
 }: ProPaywallProps) {
-  const { height, width } = useWindowDimensions();
+  const { height } = useWindowDimensions();
   const isTinyHeight = height < 680;
-  const paywallWidth = Math.min(width - (isScreen ? 0 : 32), 520);
-  
+
   const options = useMemo(
     () =>
       (['yearly', 'monthly'] as ProductIdentifierKey[])
@@ -63,132 +62,134 @@ export function ProPaywall({
   const selectedCtaText = selectedOption ? getPrimaryCtaText(selectedOption.key, selectedOption.product) : 'Continue';
 
   return (
-    <SafeAreaView edges={['bottom', 'top']} style={[styles.container, isScreen && styles.screenContainer]}>
-      <ScrollView 
+    <SafeAreaView edges={['bottom', 'top']} style={styles.container}>
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        style={[styles.paywallCard, { width: paywallWidth }]}
+        style={styles.scrollView}
       >
-        <View style={styles.paywallHeader}>
-          <View style={styles.proBadgeHeader}>
-            <Ionicons name="diamond" size={12} color="#ff4d6d" />
-            <Text style={styles.proBadgeHeaderText}>Try premium</Text>
+        <View style={styles.paywallCard}>
+          <View style={styles.paywallHeader}>
+            <View style={styles.proBadgeHeader}>
+              <Ionicons name="diamond" size={12} color="#ff4d6d" />
+              <Text style={styles.proBadgeHeaderText}>Try premium</Text>
+            </View>
+            {!isScreen && (
+              <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="rgba(255, 255, 255, 0.42)" />
+              </Pressable>
+            )}
           </View>
-          {!isScreen && (
-            <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="rgba(255, 255, 255, 0.42)" />
-            </Pressable>
-          )}
-        </View>
 
-        <View style={styles.paywallIntro}>
-          <Text style={[styles.paywallTitle, isTinyHeight && styles.paywallTitleTiny]}>
-            Master your push-ups.
-          </Text>
-        </View>
+          <View style={styles.paywallIntro}>
+            <Text style={[styles.paywallTitle, isTinyHeight && styles.paywallTitleTiny]}>
+              Master your push-ups.
+            </Text>
+          </View>
 
-        <View style={styles.benefitsList}>
-          <BenefitItem 
-            icon="calendar-outline" 
-            title="Custom Plans" 
-            description="Rebuild your schedule anytime." 
-          />
-          <BenefitItem 
-            icon="camera-outline" 
-            title="Full Scene" 
-            description="Rep detection from any angle." 
-          />
-          <BenefitItem 
-            icon="stats-chart-outline" 
-            title="Deep History" 
-            description="Monthly and yearly progress." 
-          />
-        </View>
+          <View style={styles.benefitsList}>
+            <BenefitItem
+              icon="calendar-outline"
+              title="Custom Plans"
+              description="Rebuild your schedule anytime."
+            />
+            <BenefitItem
+              icon="camera-outline"
+              title="Full Scene"
+              description="Rep detection from any angle."
+            />
+            <BenefitItem
+              icon="stats-chart-outline"
+              title="Deep History"
+              description="Monthly and yearly progress."
+            />
+          </View>
 
-        <View style={styles.productList}>
-          {options.map(({ key, product }) => (
+          <View style={styles.productList}>
+            {options.map(({ key, product }) => (
+              <Pressable
+                accessibilityRole="button"
+                disabled={busyKey !== null}
+                key={product.vendorProductId}
+                onPress={() => setSelectedKey(key)}
+                style={({ pressed }: { pressed: boolean }) => [
+                  styles.productButton,
+                  selectedKey === key && styles.selectedProductButton,
+                  pressed && styles.pressedButton,
+                ]}
+              >
+                <View style={[styles.selectionDot, selectedKey === key && styles.selectionDotActive]}>
+                  {selectedKey === key && <View style={styles.selectionDotInner} />}
+                </View>
+                <View style={styles.productTextWrap}>
+                  <Text style={styles.productTitle}>{getPlanName(key)}</Text>
+                  <Text style={styles.productSubtitle} numberOfLines={1}>{getProductSubtitle(product, key)}</Text>
+                </View>
+                <View style={styles.priceWrap}>
+                  <Text style={styles.priceText}>{getProductPrice(product)}</Text>
+                  {key === 'yearly' && (
+                    <View style={styles.saveBadge}>
+                      <Text style={styles.saveBadgeText}>SAVE 10%</Text>
+                    </View>
+                  )}
+                </View>
+              </Pressable>
+            ))}
+          </View>
+
+          {message ? <Text style={styles.paywallMessage} numberOfLines={2}>{message}</Text> : null}
+
+          <View style={styles.ctaContainer}>
             <Pressable
               accessibilityRole="button"
-              disabled={busyKey !== null}
-              key={product.vendorProductId}
-              onPress={() => setSelectedKey(key)}
+              disabled={!selectedOption || busyKey !== null}
+              onPress={() => {
+                if (selectedOption) {
+                  void onPurchase(selectedOption.key, selectedOption.product);
+                }
+              }}
               style={({ pressed }: { pressed: boolean }) => [
-                styles.productButton,
-                selectedKey === key && styles.selectedProductButton,
+                styles.primaryCta,
+                (!selectedOption || busyKey !== null) && styles.disabledButton,
                 pressed && styles.pressedButton,
               ]}
             >
-              <View style={[styles.selectionDot, selectedKey === key && styles.selectionDotActive]}>
-                {selectedKey === key && <View style={styles.selectionDotInner} />}
-              </View>
-              <View style={styles.productTextWrap}>
-                <Text style={styles.productTitle}>{getPlanName(key)}</Text>
-                <Text style={styles.productSubtitle} numberOfLines={1}>{getProductSubtitle(product, key)}</Text>
-              </View>
-              <View style={styles.priceWrap}>
-                <Text style={styles.priceText}>{getProductPrice(product)}</Text>
-                {key === 'yearly' && (
-                  <View style={styles.saveBadge}>
-                    <Text style={styles.saveBadgeText}>SAVE 10%</Text>
-                  </View>
-                )}
-              </View>
+              {selectedOption && busyKey === selectedOption.key ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.primaryCtaText}>
+                  {selectedCtaText}
+                </Text>
+              )}
             </Pressable>
-          ))}
-        </View>
 
-        {message ? <Text style={styles.paywallMessage} numberOfLines={2}>{message}</Text> : null}
+            <Text style={styles.trialInfo}>
+              {selectedOption ? getSubscriptionTermsText(selectedOption.key, selectedOption.product) : 'Choose a plan to continue.'}
+            </Text>
+          </View>
 
-        <View style={styles.ctaContainer}>
-          <Pressable
-            accessibilityRole="button"
-            disabled={!selectedOption || busyKey !== null}
-            onPress={() => {
-              if (selectedOption) {
-                void onPurchase(selectedOption.key, selectedOption.product);
-              }
-            }}
-            style={({ pressed }: { pressed: boolean }) => [
-              styles.primaryCta,
-              (!selectedOption || busyKey !== null) && styles.disabledButton,
-              pressed && styles.pressedButton,
-            ]}
-          >
-            {selectedOption && busyKey === selectedOption.key ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.primaryCtaText}>
-                {selectedCtaText}
-              </Text>
-            )}
-          </Pressable>
-
-          <Text style={styles.trialInfo}>
-            3 days free, then {selectedOption ? getProductPrice(selectedOption.product) : '$249.00'}/year. Cancel anytime.
-          </Text>
-        </View>
-
-        <View style={styles.paywallFooter}>
-          <Pressable
-            accessibilityRole="button"
-            disabled={busyKey !== null}
-            onPress={onRestore}
-            style={styles.restoreButton}
-          >
-            {busyKey === 'restore' ? (
-              <ActivityIndicator color="#f43f5e" />
-            ) : (
-              <Text style={styles.restoreText}>Restore purchases</Text>
-            )}
-          </Pressable>
-          <View style={styles.legalLinks}>
-            <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(termsUrl); }}>
-              <Text style={styles.legalLinkText}>Terms of Use</Text>
+          <View style={styles.paywallFooter}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={busyKey !== null}
+              onPress={onRestore}
+              style={styles.restoreButton}
+            >
+              {busyKey === 'restore' ? (
+                <ActivityIndicator color="#f43f5e" />
+              ) : (
+                <Text style={styles.restoreText}>Restore purchases</Text>
+              )}
             </Pressable>
-            <Text style={styles.legalSeparator}>·</Text>
-            <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(privacyUrl); }}>
-              <Text style={styles.legalLinkText}>Privacy Policy</Text>
-            </Pressable>
+            <View style={styles.legalLinks}>
+              <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(termsUrl); }}>
+                <Text style={styles.legalLinkText}>Terms of Use</Text>
+              </Pressable>
+              <Text style={styles.legalSeparator}>·</Text>
+              <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(privacyUrl); }}>
+                <Text style={styles.legalLinkText}>Privacy Policy</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -237,23 +238,33 @@ function getProductPrice(product: AdaptyPaywallProduct): string {
   return product.price?.localizedString ?? 'Continue';
 }
 
+function getSubscriptionTermsText(key: ProductIdentifierKey, product: AdaptyPaywallProduct): string {
+  const price = getProductPrice(product);
+
+  if (key === 'yearly') {
+    return `3 days free, then ${price}/year. Renews automatically until canceled.`;
+  }
+
+  return `${price}/month. Renews automatically until canceled.`;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
-    paddingHorizontal: 20,
   },
-  screenContainer: {
-    paddingHorizontal: 0,
+  scrollView: {
+    flex: 1,
   },
   scrollContent: {
+    alignItems: 'center',
     paddingBottom: 40,
-    paddingTop: 10,
     paddingHorizontal: 20,
+    paddingTop: 10,
   },
   paywallCard: {
-    flex: 1,
-    alignSelf: 'center',
+    maxWidth: 520,
+    width: '100%',
   },
   paywallHeader: {
     flexDirection: 'row',

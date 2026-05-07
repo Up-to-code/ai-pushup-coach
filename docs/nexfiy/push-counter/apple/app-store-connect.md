@@ -30,6 +30,8 @@ Signed-in users can sync selected profile and workout data, join challenges, com
 
 The app is fitness guidance, not medical advice. Stop exercising if you feel pain, dizziness, shortness of breath, or unsafe symptoms.
 
+Terms of Use: https://www.pushcounter.online/terms
+
 Keywords:
 
 pushup,push-up,push ups,fitness,workout,calisthenics,rep counter,training,home workout,exercise
@@ -40,11 +42,11 @@ https://pushcounter.online
 
 Privacy Policy URL:
 
-https://pushcounter.online/privacy
+https://www.pushcounter.online/privacy
 
 Terms of Use URL:
 
-https://pushcounter.online/terms
+https://www.pushcounter.online/terms
 
 ## Review Notes
 
@@ -52,7 +54,7 @@ Push Counter can be reviewed without creating an account by selecting "Continue 
 
 Apple sign-in is provided for account sync, social features, challenges, leaderboards, and cross-device continuity.
 
-Camera permission is requested when entering camera workout flows. The camera is used to estimate push-up movement and count reps during live workouts. Workout video is not saved to the user's photo library by default. Manual fallback states are available when camera access is denied or unavailable.
+Camera permission is requested only when starting a camera workout flow. The onboarding camera step is informational and does not trigger the system permission prompt. The camera is used to estimate push-up movement and count reps during live workouts. Workout video is not saved to the user's photo library by default. If camera access is denied, the workout screen shows a permission-needed state with a Settings link.
 
 Account deletion is available from Settings > Data control > Delete account and data for signed-in users. Guest users can clear local data from the same section. Deleting the app account does not cancel an App Store subscription.
 

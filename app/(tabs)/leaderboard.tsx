@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { useLeaderboard, type LeaderboardPeriod, type LeaderboardScope } from '../../src/features/leaderboard/hooks';
-import { borderRadius, colors, spacing, typography } from '../../src/theme';
+import { colors, typography } from '../../src/theme';
+import { useResponsive } from '../../src/hooks';
 
 const rankTabs: Array<{ id: LeaderboardScope; label: string }> = [
   { id: 'global', label: 'Global' },
@@ -13,10 +14,10 @@ const rankTabs: Array<{ id: LeaderboardScope; label: string }> = [
 ];
 
 const periodTabs: Array<{ id: LeaderboardPeriod; label: string; shortLabel: string }> = [
-  { id: 'W', label: 'This Week', shortLabel: 'Week' },
-  { id: 'M', label: 'This Month', shortLabel: 'Month' },
-  { id: 'Y', label: 'This Year', shortLabel: 'Year' },
-  { id: 'ALL', label: 'All Time', shortLabel: 'All' },
+  { id: 'W', label: 'Week', shortLabel: 'Week' },
+  { id: 'M', label: 'Month', shortLabel: 'Month' },
+  { id: 'Y', label: 'Year', shortLabel: 'Year' },
+  { id: 'ALL', label: 'All', shortLabel: 'All' },
 ];
 
 const getFlagEmoji = (countryCode?: string) => {
@@ -28,6 +29,7 @@ const getFlagEmoji = (countryCode?: string) => {
 
 export default function LeaderboardScreen() {
   const router = useRouter();
+  const { normalize, verticalScale } = useResponsive();
   const [scope, setScope] = useState<LeaderboardScope>('global');
   const [period, setPeriod] = useState<LeaderboardPeriod>('W');
   const { rows, loading, isGlobalCountryFallback } = useLeaderboard(scope, period, 75);
@@ -35,36 +37,37 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Rank</Text>
-        <Text style={styles.subtitle}>
-          {isGlobalCountryFallback ? 'Choose a country in your profile to unlock country rank.' : `Ranking by ${activePeriod.label.toLowerCase()} reps.`}
+      <View style={[styles.header, { paddingHorizontal: normalize(24), marginTop: verticalScale(16) }]}>
+        <Text style={[styles.title, { fontSize: normalize(34) }]}>Rank</Text>
+        <Text style={[styles.subtitle, { fontSize: normalize(15) }]}>
+          {isGlobalCountryFallback ? 'Select a country in profile to unlock rank.' : `Your progress against the world.`}
         </Text>
-        <View style={styles.periodTabs}>
+
+        <View style={[styles.periodTabs, { marginTop: verticalScale(16) }]}>
           {periodTabs.map((tab) => {
             const active = tab.id === period;
             return (
               <Pressable
                 key={tab.id}
-                style={({ pressed }) => [
-                  styles.periodTab,
-                  active && styles.periodTabActive,
-                  pressed && styles.rowPressed,
-                ]}
+                style={[styles.periodTab, active && styles.periodTabActive]}
                 onPress={() => setPeriod(tab.id)}
               >
-                <Text style={[styles.periodTabText, active && styles.periodTabTextActive]}>{tab.label}</Text>
+                <Text style={[styles.periodTabText, { fontSize: normalize(13) }, active && styles.periodTabTextActive]}>
+                  {tab.label}
+                </Text>
               </Pressable>
             );
           })}
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.list, { paddingHorizontal: normalize(24), paddingTop: verticalScale(16) }]}
+        showsVerticalScrollIndicator={false}
+      >
         {loading ? (
           <View style={styles.stateBox}>
             <ActivityIndicator color={colors.accent} />
-            <Text style={styles.stateText}>Loading live ranks...</Text>
           </View>
         ) : rows && rows.length > 0 ? (
           rows.map((entry) => (
@@ -72,58 +75,65 @@ export default function LeaderboardScreen() {
               key={entry.id}
               style={({ pressed }) => [
                 styles.row,
+                { paddingVertical: verticalScale(12) },
                 entry.isCurrentUser && styles.rowActive,
                 pressed && styles.rowPressed,
               ]}
               onPress={() => router.push(`/user/${entry.id}` as any)}
             >
-              <Text style={styles.rankText}>{entry.rank}</Text>
-              <View style={styles.avatar}>
+              <Text style={[styles.rankText, { fontSize: normalize(16) }]}>{entry.rank}</Text>
+              <View style={[styles.avatar, { width: normalize(44), height: normalize(44), borderRadius: normalize(22) }]}>
                 {entry.avatar ? (
                   <Image source={{ uri: entry.avatar }} style={styles.avatarImage} />
                 ) : (
-                  <Text style={styles.avatarText}>{entry.name.slice(0, 1).toUpperCase()}</Text>
+                  <Text style={[styles.avatarText, { fontSize: normalize(16) }]}>{entry.name.slice(0, 1).toUpperCase()}</Text>
                 )}
               </View>
               <View style={styles.nameColumn}>
                 <View style={styles.nameRow}>
-                  <Text style={styles.nameText} numberOfLines={1}>{entry.name}</Text>
-                  <Text style={styles.flagText}>{getFlagEmoji(entry.countryCode)}</Text>
+                  <Text style={[styles.nameText, { fontSize: normalize(17) }]} numberOfLines={1}>{entry.name}</Text>
+                  <Text style={{ fontSize: normalize(14) }}>{getFlagEmoji(entry.countryCode)}</Text>
                 </View>
-                {entry.isCurrentUser ? <Text style={styles.youText}>You</Text> : null}
+                {entry.isCurrentUser ? <Text style={[styles.youText, { fontSize: normalize(11) }]}>YOU</Text> : null}
               </View>
               <View style={styles.scoreColumn}>
-                <Text style={styles.scoreText}>{entry.score.toLocaleString()}</Text>
-                <Text style={styles.scoreLabel}>{activePeriod.shortLabel}</Text>
+                <Text style={[styles.scoreText, { fontSize: normalize(18) }]}>{entry.score.toLocaleString()}</Text>
+                <Text style={[styles.scoreLabel, { fontSize: normalize(11) }]}>REPS</Text>
               </View>
             </Pressable>
           ))
         ) : (
           <View style={styles.stateBox}>
-            <Text style={styles.stateTitle}>No ranks yet</Text>
-            <Text style={styles.stateText}>
-              Complete a workout or follow people to build this leaderboard.
+            <Text style={[styles.stateTitle, { fontSize: normalize(18) }]}>No ranks yet</Text>
+            <Text style={[styles.stateText, { fontSize: normalize(14) }]}>
+              Start your first session to join the board.
             </Text>
           </View>
         )}
       </ScrollView>
 
-      <View style={styles.floatingContainer}>
-        <BlurView intensity={80} tint="dark" style={styles.floatingTabsContainer}>
+      <View style={[styles.floatingContainer, { bottom: verticalScale(32) }]}>
+        <BlurView intensity={20} tint="dark" style={styles.floatingTabsContainer}>
           <View style={styles.floatingTabs}>
             {rankTabs.map((tab) => {
               const active = tab.id === scope;
               return (
                 <Pressable
                   key={tab.id}
-                  style={({ pressed }) => [
+                  style={[
                     styles.floatingTabButton,
+                    { paddingHorizontal: normalize(20), paddingVertical: normalize(10) },
                     active && styles.floatingTabButtonActive,
-                    pressed && styles.rowPressed,
                   ]}
                   onPress={() => setScope(tab.id)}
                 >
-                  <Text style={[styles.floatingTabText, active && styles.floatingTabTextActive]}>{tab.label}</Text>
+                  <Text style={[
+                    styles.floatingTabText,
+                    { fontSize: normalize(13) },
+                    active && styles.floatingTabTextActive
+                  ]}>
+                    {tab.label}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -135,44 +145,37 @@ export default function LeaderboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: '#000' },
   header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    gap: spacing.xs,
+    gap: 4,
   },
-  title: { ...typography.titleLarge, color: colors.textPrimary },
-  subtitle: { ...typography.caption, color: colors.textSecondary, lineHeight: 18 },
+  title: { fontWeight: '900', color: '#fff', letterSpacing: -1 },
+  subtitle: { color: 'rgba(255,255,255,0.4)', fontWeight: '500', lineHeight: 20 },
   periodTabs: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    paddingTop: spacing.sm,
+    gap: 8,
   },
   periodTab: {
-    minHeight: 34,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   periodTabActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor: '#fff',
+    borderColor: '#fff',
   },
   periodTabText: {
-    ...typography.captionBold,
-    color: colors.textSecondary,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.5)',
   },
   periodTabTextActive: {
-    color: colors.textInverse,
+    color: '#000',
   },
   floatingContainer: {
     position: 'absolute',
-    bottom: 24,
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -190,66 +193,58 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   floatingTabButton: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   floatingTabButtonActive: {
-    backgroundColor: colors.textPrimary,
+    backgroundColor: '#fff',
   },
   floatingTabText: {
-    ...typography.captionBold,
-    color: colors.textSecondary,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.5)',
   },
   floatingTabTextActive: {
-    color: colors.textInverse,
+    color: '#000',
   },
-  list: { paddingHorizontal: spacing.lg, paddingBottom: 104 },
+  list: { paddingBottom: 120 },
   row: {
-    minHeight: 66,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   rowActive: {
-    marginHorizontal: -spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.md,
     backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 16,
+    borderBottomWidth: 0,
+    marginHorizontal: -8,
+    paddingHorizontal: 8,
   },
-  rowPressed: { opacity: 0.72 },
-  rankText: { width: 32, ...typography.bodyBold, color: colors.textSecondary },
+  rowPressed: { opacity: 0.7 },
+  rankText: { width: 30, fontWeight: '800', color: 'rgba(255,255,255,0.3)', textAlign: 'center' },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarText: { ...typography.bodyBold, color: colors.textPrimary },
-  nameColumn: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  nameText: { ...typography.bodyBold, color: colors.textPrimary, flexShrink: 1 },
-  flagText: { fontSize: 14 },
-  youText: { ...typography.caption, color: colors.accent, marginTop: 2 },
-  scoreColumn: { minWidth: 76, alignItems: 'flex-end' },
-  scoreText: { textAlign: 'right', ...typography.bodyBold, color: colors.textPrimary },
-  scoreLabel: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  avatarImage: { width: '100%', height: '100%' },
+  avatarText: { fontWeight: '800', color: '#fff' },
+  nameColumn: { flex: 1, justifyContent: 'center' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  nameText: { fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
+  youText: { fontWeight: '800', color: colors.accent, marginTop: 1, letterSpacing: 1 },
+  scoreColumn: { alignItems: 'flex-end' },
+  scoreText: { fontWeight: '800', color: '#fff' },
+  scoreLabel: { fontWeight: '700', color: 'rgba(255,255,255,0.3)', marginTop: 1 },
   stateBox: {
-    minHeight: 220,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: 100,
+    gap: 12,
   },
-  stateTitle: { ...typography.bodyBold, color: colors.textPrimary, textAlign: 'center' },
-  stateText: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', lineHeight: 18 },
+  stateTitle: { fontWeight: '700', color: '#fff' },
+  stateText: { color: 'rgba(255,255,255,0.3)', textAlign: 'center', lineHeight: 20 },
 });

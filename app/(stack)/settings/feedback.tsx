@@ -50,7 +50,9 @@ export default function FeedbackScreen() {
   const [busyVoteId, setBusyVoteId] = useState<string | null>(null);
 
   const feedbackRows = useMemo(
-    () => [...((rows as FeedbackRow[] | undefined) ?? [])].sort((a, b) => b.voteCount - a.voteCount || b.createdAt - a.createdAt),
+    () => [...((rows as FeedbackRow[] | undefined) ?? [])]
+      .filter((row) => row.isMine)
+      .sort((a, b) => b.createdAt - a.createdAt),
     [rows]
   );
   const loading = authLoading || (canUseAuthenticatedBackend && rows === undefined);
@@ -123,7 +125,7 @@ export default function FeedbackScreen() {
           <View style={styles.emptyPanel}>
             <Ionicons name="lock-closed-outline" size={28} color={colors.textSecondary} />
             <Text style={styles.emptyTitle}>Sign in to send feedback</Text>
-            <Text style={styles.emptyBody}>Votes and requests are tied to your account so each person gets one vote per request.</Text>
+          <Text style={styles.emptyBody}>Requests are tied to your account so support can follow up if needed.</Text>
           </View>
         ) : (
           <View style={styles.form}>
@@ -170,7 +172,7 @@ export default function FeedbackScreen() {
 
         <View style={styles.sectionTitleRow}>
           <Ionicons name="chatbubbles-outline" size={17} color={colors.textSecondary} />
-          <Text style={styles.sectionTitle}>Community asks</Text>
+          <Text style={styles.sectionTitle}>My requests</Text>
         </View>
 
         {loading ? (

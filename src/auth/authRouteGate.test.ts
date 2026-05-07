@@ -10,6 +10,7 @@ function target(
     authActionStatus?: AuthActionStatus;
     deletionLoading?: boolean;
     hasCompletedOnboarding?: boolean;
+    hasPlan?: boolean;
   } = {}
 ) {
   return getAuthRedirectTarget({
@@ -18,6 +19,7 @@ function target(
     authActionStatus: options.authActionStatus ?? 'idle',
     deletionLoading: options.deletionLoading ?? false,
     hasCompletedOnboarding: options.hasCompletedOnboarding ?? false,
+    hasPlan: options.hasPlan ?? false,
   });
 }
 
@@ -30,15 +32,21 @@ describe('getAuthRedirectTarget', () => {
   });
 
   it('redirects only when the current route is not already the target route', () => {
-    expect(target('signedOut', [])).toBe('/sign-in');
+    expect(target('signedOut', [])).toBe('/onboarding');
+    expect(target('signedOut', ['(stack)', 'onboarding'])).toBeNull();
     expect(target('signedOut', ['(auth)', 'sign-in'])).toBeNull();
-    expect(target('signedOut', ['(stack)', 'settings'])).toBe('/sign-in');
+    expect(target('signedOut', ['(stack)', 'settings'])).toBe('/onboarding');
+    expect(target('signedOut', [], { hasPlan: true })).toBe('/sign-in');
+    expect(target('signedOut', ['(auth)', 'sign-in'], { hasPlan: true })).toBeNull();
+    expect(target('signedOut', ['(stack)', 'onboarding'], { hasPlan: true })).toBe('/sign-in');
 
     expect(target('guest', [], { hasCompletedOnboarding: false })).toBe('/onboarding');
     expect(target('guest', ['(stack)', 'onboarding'], { hasCompletedOnboarding: false })).toBeNull();
+    expect(target('guest', [], { hasPlan: true })).toBe('/(tabs)');
 
     expect(target('signedIn', [], { hasCompletedOnboarding: true })).toBe('/(tabs)');
     expect(target('signedIn', ['(tabs)'], { hasCompletedOnboarding: true })).toBeNull();
+    expect(target('signedIn', [], { hasPlan: true })).toBe('/(tabs)');
 
     expect(target('pendingDeletion', ['(tabs)'], { hasCompletedOnboarding: true })).toBe('/restore-account');
     expect(target('pendingDeletion', ['(stack)', 'restore-account'], { hasCompletedOnboarding: true })).toBeNull();
@@ -54,6 +62,7 @@ describe('getAuthRedirectTarget', () => {
   it('keeps onboarding available for plan rebuilds and restore mismatches aligned', () => {
     expect(target('signedIn', ['(stack)', 'onboarding'], { hasCompletedOnboarding: true })).toBeNull();
     expect(target('signedIn', ['(tabs)'], { hasCompletedOnboarding: false })).toBe('/onboarding');
+    expect(target('signedIn', ['(tabs)'], { hasCompletedOnboarding: false, hasPlan: true })).toBeNull();
     expect(target('signedIn', ['(stack)', 'restore-account'], { hasCompletedOnboarding: true })).toBe('/(tabs)');
     expect(target('pendingDeletion', ['(stack)', 'settings'], { hasCompletedOnboarding: true })).toBe('/restore-account');
   });

@@ -230,7 +230,7 @@ export default function HomeScreen() {
                 trainingDays: plan.trainingDays,
                 preferredTime,
               });
-              router.push('/onboarding?mode=rebuild' as any);
+              router.push('/onboarding?mode=rebuild&returnTo=home' as any);
             }}
           />
         </View>

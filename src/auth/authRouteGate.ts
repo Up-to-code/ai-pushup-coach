@@ -5,6 +5,7 @@ type AuthRouteGateInput = {
   authActionStatus: AuthActionStatus;
   deletionLoading: boolean;
   hasCompletedOnboarding: boolean;
+  hasPlan: boolean;
   segments: readonly string[];
 };
 
@@ -43,15 +44,16 @@ function isOnRoute(target: string, segments: readonly string[]) {
   return false;
 }
 
-function resolveAuthenticatedTarget(hasCompletedOnboarding: boolean, segments: readonly string[]) {
+function resolveAuthenticatedTarget(hasCompletedOnboarding: boolean, hasPlan: boolean, segments: readonly string[]) {
   const { isRoot, isAuth, isTabs, isOnboarding, isRestore } = getRouteShape(segments);
-  const homeTarget = hasCompletedOnboarding ? '/(tabs)' : '/onboarding';
+  const effectiveOnboardingDone = hasCompletedOnboarding || hasPlan;
+  const homeTarget = effectiveOnboardingDone ? '/(tabs)' : '/onboarding';
 
   if (isRoot || isAuth || isRestore) {
     return homeTarget;
   }
 
-  if (isTabs && !hasCompletedOnboarding) {
+  if (isTabs && !effectiveOnboardingDone) {
     return '/onboarding';
   }
 
@@ -63,6 +65,7 @@ export function getAuthRedirectTarget({
   authActionStatus,
   deletionLoading,
   hasCompletedOnboarding,
+  hasPlan,
   segments,
 }: AuthRouteGateInput) {
   if (status === 'loading' || deletionLoading || authActionStatus !== 'idle') {
@@ -71,11 +74,17 @@ export function getAuthRedirectTarget({
 
   let target: string | null = null;
   if (status === 'signedOut') {
-    target = isOnRoute('/sign-in', segments) ? null : '/sign-in';
+    const effectiveOnboardingDone = hasCompletedOnboarding || hasPlan;
+    const { isAuth, isOnboarding } = getRouteShape(segments);
+    if (!effectiveOnboardingDone && (isAuth || isOnboarding)) {
+      return null;
+    }
+    const signedOutTarget = effectiveOnboardingDone ? '/sign-in' : '/onboarding';
+    target = isOnRoute(signedOutTarget, segments) ? null : signedOutTarget;
   } else if (status === 'pendingDeletion') {
     target = isOnRoute('/restore-account', segments) ? null : '/restore-account';
   } else {
-    target = resolveAuthenticatedTarget(hasCompletedOnboarding, segments);
+    target = resolveAuthenticatedTarget(hasCompletedOnboarding, hasPlan, segments);
   }
 
   if (!target || isOnRoute(target, segments)) {

@@ -42,7 +42,6 @@ import { useBetterAuth } from '../auth';
 import { privacyUrl, termsUrl } from '../config/links';
 import { useUserStore, type User } from '../store';
 import { ProPaywall } from '../components';
-import { useRouter } from 'expo-router';
 
 const DEFAULT_TRIAL_LABEL = '3-day free trial';
 
@@ -54,9 +53,6 @@ const signedOutSubscriptionMetadata = (): SubscriptionMetadata => ({
   activeAccessLevelId: undefined,
   subscriptionUpdatedAt: Date.now(),
 });
-
-const ACCOUNT_LINKED_SUBSCRIPTION_MESSAGE =
-  'This App Store subscription is already linked to another Push Counter account. Sign in to the subscribed account to use Pro.';
 
 function getProfileCustomerUserId(profile: AdaptyProfile | null) {
   return (profile as { customerUserId?: string | null } | null)?.customerUserId ?? null;
@@ -90,19 +86,18 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   const { isLoaded: authLoaded, isSignedIn, userId } = useBetterAuth();
   const appUserID = isSignedIn && userId ? userId : null;
   const accountUser = useUserStore((state) => state.user);
+  const subscriptionUserID = appUserID ?? accountUser.id;
   const updateUser = useUserStore((state) => state.updateUser);
   const updateSubscription = useMutation(api.users.updateSubscription);
   const isForcedPro = FORCE_PRO_FOR_TESTING;
   const accountSubscriptionBelongsToCurrentUser =
-    Boolean(appUserID) &&
-    accountUser.id === appUserID &&
-    accountUser.subscriptionOwnerUserId === appUserID;
+    Boolean(subscriptionUserID) &&
+    accountUser.subscriptionOwnerUserId === subscriptionUserID;
   const accountIsPro = accountSubscriptionBelongsToCurrentUser && accountUser.proStatus === 'pro';
-  const accountCanRefreshFromAdapty = accountIsPro && accountUser.subscriptionProvider === 'adapty';
-  const currentAppUserIDRef = useRef<string | null>(appUserID);
-  const router = useRouter();
+  const accountCanRefreshFromAdapty = accountSubscriptionBelongsToCurrentUser && accountUser.subscriptionProvider === 'adapty';
+  const currentSubscriptionUserIDRef = useRef<string | null>(subscriptionUserID);
   const [profile, setProfile] = useState<AdaptyProfile | null>(null);
-  const [profileOwnerId, setProfileOwnerId] = useState<string | null>(appUserID);
+  const [profileOwnerId, setProfileOwnerId] = useState<string | null>(subscriptionUserID);
   const [products, setProducts] = useState<AdaptyPaywallProduct[]>([]);
   const [productPackages, setProductPackages] = useState<Record<ProductIdentifierKey, AdaptyPaywallProduct | null>>({
     yearly: null,
@@ -123,7 +118,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         ...metadata,
         subscriptionOwnerUserId: getSubscriptionOwnerUserId(
           metadata.subscriptionProvider,
-          options.ownerId ?? appUserID
+          options.ownerId ?? subscriptionUserID
         ),
       });
 
@@ -136,7 +131,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         ...metadata,
         subscriptionOwnerUserId: getSubscriptionOwnerUserId(
           metadata.subscriptionProvider,
-          options.ownerId ?? appUserID
+          options.ownerId ?? subscriptionUserID
         ),
       }).catch((syncError) => {
         console.warn('Convex subscription sync failed', syncError);
@@ -147,7 +142,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
 
   const applyProfile = useCallback(
     (nextProfile: AdaptyProfile, ownerId: string | null, options: { syncAccount?: boolean } = {}) => {
-      if (!ownerId || currentAppUserIDRef.current !== ownerId) {
+      if (!ownerId || currentSubscriptionUserIDRef.current !== ownerId) {
         return;
       }
 
@@ -170,9 +165,9 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   );
 
   useEffect(() => {
-    currentAppUserIDRef.current = appUserID;
+    currentSubscriptionUserIDRef.current = subscriptionUserID;
     setProfile(null);
-    setProfileOwnerId(appUserID);
+    setProfileOwnerId(subscriptionUserID);
 
     if (!isForcedPro) {
       updateUser({
@@ -180,7 +175,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         subscriptionOwnerUserId: undefined,
       });
     }
-  }, [appUserID, isForcedPro, updateUser]);
+  }, [isForcedPro, subscriptionUserID, updateUser]);
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -193,12 +188,12 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         activeProductIdentifier: 'development-pro',
         activeAccessLevelId: 'development',
         subscriptionUpdatedAt: Date.now(),
-      }, { ownerId: appUserID });
+      }, { ownerId: subscriptionUserID });
       setLoading(false);
       return;
     }
 
-    if (!appUserID) {
+    if (!subscriptionUserID) {
       setProfile(null);
       setProfileOwnerId(null);
       updateUser({
@@ -210,20 +205,24 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     }
 
     try {
-      const nextProfile = await configureSubscriptions(appUserID);
+      const nextProfile = await configureSubscriptions(subscriptionUserID);
       const { products: nextProducts } = await getCurrentPaywallProducts();
 
       setProducts(nextProducts);
       setProductPackages(getConfiguredProducts(nextProducts));
-      applyProfile(nextProfile, appUserID, { syncAccount: accountCanRefreshFromAdapty });
+      applyProfile(nextProfile, subscriptionUserID, {
+        syncAccount: Boolean(appUserID && (accountCanRefreshFromAdapty || isPushupCoachPro(nextProfile))),
+      });
     } catch (refreshError) {
       setError(getSubscriptionErrorMessage(refreshError, 'Unable to refresh subscription status.'));
     }
-  }, [accountCanRefreshFromAdapty, appUserID, applyProfile, applySubscriptionMetadata, isForcedPro, updateUser]);
+  }, [accountCanRefreshFromAdapty, appUserID, applyProfile, applySubscriptionMetadata, isForcedPro, subscriptionUserID, updateUser]);
 
   useEffect(() => {
     const listener = addLatestProfileLoadListener((nextProfile) => {
-      applyProfile(nextProfile, currentAppUserIDRef.current, { syncAccount: accountCanRefreshFromAdapty });
+      applyProfile(nextProfile, currentSubscriptionUserIDRef.current, {
+        syncAccount: Boolean(appUserID && (accountCanRefreshFromAdapty || isPushupCoachPro(nextProfile))),
+      });
     });
 
     async function initializeSubscriptions() {
@@ -244,7 +243,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
           activeProductIdentifier: 'development-pro',
           activeAccessLevelId: 'development',
           subscriptionUpdatedAt: Date.now(),
-        }, { ownerId: appUserID });
+        }, { ownerId: subscriptionUserID });
         return;
       }
 
@@ -262,7 +261,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      if (!appUserID) {
+      if (!subscriptionUserID) {
         setProfile(null);
         setProfileOwnerId(null);
         setProducts([]);
@@ -280,8 +279,10 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         setLoading(true);
         setError(null);
 
-        const nextProfile = await configureSubscriptions(appUserID);
-        applyProfile(nextProfile, appUserID, { syncAccount: accountCanRefreshFromAdapty });
+        const nextProfile = await configureSubscriptions(subscriptionUserID);
+        applyProfile(nextProfile, subscriptionUserID, {
+          syncAccount: Boolean(appUserID && (accountCanRefreshFromAdapty || isPushupCoachPro(nextProfile))),
+        });
 
         const { products: nextProducts } = await getCurrentPaywallProducts();
         setProducts(nextProducts);
@@ -296,36 +297,30 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     void initializeSubscriptions();
 
     return () => listener.remove();
-  }, [accountCanRefreshFromAdapty, appUserID, applyProfile, applySubscriptionMetadata, authLoaded, isForcedPro, updateUser]);
+  }, [accountCanRefreshFromAdapty, appUserID, applyProfile, applySubscriptionMetadata, authLoaded, isForcedPro, subscriptionUserID, updateUser]);
 
   const buyPackage = useCallback(
     async (product: AdaptyPaywallProduct) => {
       setError(null);
 
-      if (!appUserID) {
-        const message = 'Sign in before purchasing Pro so access stays attached to your account.';
-        setError(message);
-        throw new Error(message);
-      }
-
       try {
-        const currentProfile = await configureSubscriptions(appUserID);
-        applyProfile(currentProfile, appUserID, { syncAccount: accountCanRefreshFromAdapty });
+        const currentProfile = await configureSubscriptions(subscriptionUserID);
+        applyProfile(currentProfile, subscriptionUserID, { syncAccount: Boolean(appUserID && accountCanRefreshFromAdapty) });
 
         if (isPushupCoachPro(currentProfile) && !accountIsPro) {
-          setError(ACCOUNT_LINKED_SUBSCRIPTION_MESSAGE);
-          throw new Error(ACCOUNT_LINKED_SUBSCRIPTION_MESSAGE);
+          applyProfile(currentProfile, subscriptionUserID, { syncAccount: Boolean(appUserID) });
+          return;
         }
 
         const nextProfile = await purchaseProProduct(product);
-        if (nextProfile) applyProfile(nextProfile, appUserID, { syncAccount: true });
+        if (nextProfile) applyProfile(nextProfile, subscriptionUserID, { syncAccount: Boolean(appUserID) });
       } catch (purchaseError) {
         const message = getSubscriptionErrorMessage(purchaseError, 'Purchase failed. Please try again.');
         setError(message);
         throw purchaseError;
       }
     },
-    [accountCanRefreshFromAdapty, accountIsPro, appUserID, applyProfile]
+    [accountCanRefreshFromAdapty, accountIsPro, appUserID, applyProfile, subscriptionUserID]
   );
 
   const buyProduct = useCallback(
@@ -345,17 +340,6 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   const restore = useCallback(async () => {
     setError(null);
 
-    if (!appUserID && !isForcedPro) {
-      const message = 'Sign in before restoring purchases so access stays attached to your account.';
-      setError(message);
-      throw new Error(message);
-    }
-
-    if (!accountCanRefreshFromAdapty && !isForcedPro) {
-      setError(ACCOUNT_LINKED_SUBSCRIPTION_MESSAGE);
-      throw new Error(ACCOUNT_LINKED_SUBSCRIPTION_MESSAGE);
-    }
-
     if (isForcedPro) {
       applySubscriptionMetadata({
         proStatus: 'pro',
@@ -364,19 +348,19 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         activeProductIdentifier: 'development-pro',
         activeAccessLevelId: 'development',
         subscriptionUpdatedAt: Date.now(),
-      }, { ownerId: appUserID });
+      }, { ownerId: subscriptionUserID });
       return;
     }
 
     try {
-      await configureSubscriptions(appUserID);
+      await configureSubscriptions(subscriptionUserID);
       const nextProfile = await restorePurchases();
-      applyProfile(nextProfile, appUserID, { syncAccount: true });
+      applyProfile(nextProfile, subscriptionUserID, { syncAccount: Boolean(appUserID) });
     } catch (restoreError) {
       setError(getSubscriptionErrorMessage(restoreError, 'Unable to restore purchases.'));
       throw restoreError;
     }
-  }, [accountCanRefreshFromAdapty, appUserID, applyProfile, applySubscriptionMetadata, isForcedPro]);
+  }, [appUserID, applyProfile, applySubscriptionMetadata, isForcedPro, subscriptionUserID]);
 
   const showPaywall = useCallback(async () => {
     setError(null);
@@ -390,20 +374,15 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         activeProductIdentifier: 'development-pro',
         activeAccessLevelId: 'development',
         subscriptionUpdatedAt: Date.now(),
-      }, { ownerId: appUserID });
+      }, { ownerId: subscriptionUserID });
       return true;
     }
 
-    if (!appUserID) {
-      const message = 'Sign in before opening Pro so access stays attached to your account.';
-      setError(message);
-      setPaywallMessage(message);
-      throw new Error(message);
-    }
-
     try {
-      const nextProfile = await configureSubscriptions(appUserID);
-      applyProfile(nextProfile, appUserID, { syncAccount: accountCanRefreshFromAdapty });
+      const nextProfile = await configureSubscriptions(subscriptionUserID);
+      applyProfile(nextProfile, subscriptionUserID, {
+        syncAccount: Boolean(appUserID && (accountCanRefreshFromAdapty || isPushupCoachPro(nextProfile))),
+      });
 
       if (accountIsPro && isPushupCoachPro(nextProfile)) {
         return true;
@@ -426,7 +405,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       setPaywallMessage(message);
       throw new Error(message);
     }
-  }, [accountCanRefreshFromAdapty, accountIsPro, appUserID, applyProfile, applySubscriptionMetadata, isForcedPro]);
+  }, [accountCanRefreshFromAdapty, accountIsPro, appUserID, applyProfile, applySubscriptionMetadata, isForcedPro, subscriptionUserID]);
 
   const purchaseFromPaywall = useCallback(
     async (productKey: ProductIdentifierKey, product: AdaptyPaywallProduct) => {
@@ -434,23 +413,19 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       setPaywallMessage(null);
 
       try {
-        if (!appUserID) {
-          setPaywallMessage('Sign in before purchasing Pro so access stays attached to your account.');
-          return;
-        }
-
-        const currentProfile = await configureSubscriptions(appUserID);
-        applyProfile(currentProfile, appUserID, { syncAccount: accountCanRefreshFromAdapty });
+        const currentProfile = await configureSubscriptions(subscriptionUserID);
+        applyProfile(currentProfile, subscriptionUserID, { syncAccount: Boolean(appUserID && accountCanRefreshFromAdapty) });
 
         if (isPushupCoachPro(currentProfile) && !accountIsPro) {
-          setPaywallMessage(ACCOUNT_LINKED_SUBSCRIPTION_MESSAGE);
+          applyProfile(currentProfile, subscriptionUserID, { syncAccount: Boolean(appUserID) });
+          setPaywallVisible(false);
           return;
         }
 
         const nextProfile = await purchaseProProduct(product);
 
         if (nextProfile) {
-          applyProfile(nextProfile, appUserID, { syncAccount: true });
+          applyProfile(nextProfile, subscriptionUserID, { syncAccount: Boolean(appUserID) });
           setPaywallVisible(false);
           return;
         }
@@ -462,7 +437,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         setPaywallBusyKey(null);
       }
     },
-    [accountCanRefreshFromAdapty, accountIsPro, appUserID, applyProfile]
+    [accountCanRefreshFromAdapty, accountIsPro, appUserID, applyProfile, subscriptionUserID]
   );
 
   const restoreFromPaywall = useCallback(async () => {
@@ -483,7 +458,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     throw new Error('Adapty does not provide an in-app customer center. Open App Store subscriptions instead.');
   }, []);
 
-  const scopedProfile = profileOwnerId === appUserID ? profile : null;
+  const scopedProfile = profileOwnerId === subscriptionUserID ? profile : null;
   const accountScopedProfile = accountIsPro ? scopedProfile : null;
 
   const value = useMemo(

@@ -63,4 +63,18 @@ describe('generateTrainingPlan', () => {
       expect(day.targetReps).toBeLessThanOrEqual(100);
     }
   });
+
+  it('falls back to a three-day weekly rhythm when no training days are selected', () => {
+    vi.setSystemTime(new Date('2026-05-04T10:00:00.000Z'));
+
+    const plan = generateTrainingPlan({
+      level: 'beginner',
+      goal: 'first_25',
+      trainingDays: [],
+      preferredTime: '07:30',
+    });
+
+    expect(plan.trainingDays).toEqual(['mon', 'wed', 'fri']);
+    expect(plan.days.filter((day) => day.status !== 'rest').length).toBeGreaterThan(0);
+  });
 });

@@ -43,21 +43,22 @@ export function buildWidgetPayload(
   const localTotalReps = completedWorkouts.reduce((sum, workout) => sum + safeReps(workout.reps), 0);
   const localBestReps = completedWorkouts.reduce((best, workout) => Math.max(best, safeReps(workout.reps)), 0);
   const lastCompletedWorkout = getLastCompletedWorkout(completedWorkouts);
+  const displayName = safeDisplayName(input.user.displayName || input.user.name);
 
   return {
-    streak: input.user.streak ?? 0,
-    totalReps: completedWorkouts.length > 0 ? localTotalReps : input.user.totalReps ?? 0,
-    bestReps: completedWorkouts.length > 0 ? localBestReps : input.user.bestReps ?? 0,
+    streak: safeWholeNumber(input.user.streak),
+    totalReps: completedWorkouts.length > 0 ? localTotalReps : safeWholeNumber(input.user.totalReps),
+    bestReps: completedWorkouts.length > 0 ? localBestReps : safeWholeNumber(input.user.bestReps),
     lastWorkoutReps: lastCompletedWorkout ? safeReps(lastCompletedWorkout.reps) : 0,
     lastWorkoutDate: lastCompletedWorkout?.date ?? '',
-    displayName: input.user.displayName || input.user.name || 'Athlete',
+    displayName,
     weeklyReps,
     friendsThisWeek: {
-      rank: input.friendComparison?.rank ?? 0,
-      score: input.friendComparison?.score ?? localWeekScore,
-      friendAverage: input.friendComparison?.friendAverage ?? 0,
-      deltaToNext: input.friendComparison?.deltaToNext ?? 0,
-      friendsCount: input.friendComparison?.friendsCount ?? 0,
+      rank: safeWholeNumber(input.friendComparison?.rank),
+      score: input.friendComparison?.score === undefined ? localWeekScore : safeWholeNumber(input.friendComparison.score),
+      friendAverage: safeWholeNumber(input.friendComparison?.friendAverage),
+      deltaToNext: safeWholeNumber(input.friendComparison?.deltaToNext),
+      friendsCount: safeWholeNumber(input.friendComparison?.friendsCount),
     },
     updatedAt: now.toISOString(),
   };
@@ -127,4 +128,14 @@ function getLastCompletedWorkout(workouts: Workout[]) {
 
 function safeReps(reps: number) {
   return Number.isFinite(reps) && reps > 0 ? reps : 0;
+}
+
+function safeWholeNumber(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
+}
+
+function safeDisplayName(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return 'Athlete';
+  return trimmed.slice(0, 24);
 }

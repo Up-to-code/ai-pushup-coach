@@ -25,8 +25,8 @@
         "CFBundleDisplayName": "Push Counter",
         "NSCameraUsageDescription": "Push Counter uses the camera during live workouts to track push-up movement and count reps. Workout video is not saved to your photo library.",
         "NSMicrophoneUsageDescription": "Push Counter does not use microphone audio for workout tracking.",
-        "NSPhotoLibraryUsageDescription": "Allow photo library access only when you choose a profile picture.",
-        "NSPhotoLibraryAddUsageDescription": "Allow saving selected profile pictures only when you choose to update your avatar.",
+        "NSPhotoLibraryUsageDescription": "Push Counter uses photo library access only when you choose a profile picture.",
+        "NSPhotoLibraryAddUsageDescription": "Push Counter saves selected profile pictures only when you choose to update your avatar.",
         "NSLocalNetworkUsageDescription": "Push Counter uses the local network in development builds to connect to the Expo server running on your Mac.",
         "NSBonjourServices": [
           "_expo._tcp"
@@ -62,7 +62,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow access to your photo library to set a profile picture."
+          "photosPermission": "Push Counter uses photo library access only when you choose a profile picture."
         }
       ],
       [

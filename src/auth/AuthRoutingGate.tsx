@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useRouter, useSegments } from 'expo-router';
-import { useSettingsStore } from '../store';
+import { useSettingsStore, usePlanStore } from '../store';
 import { getAuthRedirectTarget } from './authRouteGate';
 import { useAuth } from './useAuth';
 
@@ -9,6 +9,7 @@ export function AuthRoutingGate() {
   const segments = useSegments();
   const auth = useAuth();
   const hasCompletedOnboarding = useSettingsStore((state) => state.hasCompletedOnboarding);
+  const hasPlan = usePlanStore((state) => !!state.plan);
 
   const target = useMemo(
     () =>
@@ -17,6 +18,7 @@ export function AuthRoutingGate() {
         authActionStatus: auth.authActionStatus,
         deletionLoading: auth.deletionLoading,
         hasCompletedOnboarding,
+        hasPlan,
         segments: segments as readonly string[],
       }),
     [
@@ -24,6 +26,7 @@ export function AuthRoutingGate() {
       auth.deletionLoading,
       auth.status,
       hasCompletedOnboarding,
+      hasPlan,
       segments,
     ]
   );

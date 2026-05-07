@@ -109,15 +109,17 @@ Key features:
 
 Push Counter is fitness guidance only and is not medical advice. Stop exercising if you feel pain, dizziness, shortness of breath, or any unsafe symptoms. Consult a qualified health professional before starting a new exercise program if you have any medical condition, injury, or concern.
 
+Terms of Use: https://www.pushcounter.online/terms
+
 ## App Store Review Notes
 
 Reviewers can use Continue without sign in to test onboarding, plan setup, local workout sessions, settings, legal screens, and local workout history.
 
 Apple sign-in is available for account sync, social features, challenges, leaderboards, and cross-device continuity.
 
-Camera permission is requested for camera-assisted workout sessions. The camera is used during live workouts to estimate movement and count reps. Workout video is not saved to the user photo library by default.
+Camera permission is requested only when starting camera-assisted workout sessions. The onboarding camera step is informational and does not trigger the system permission prompt. The camera is used during live workouts to estimate movement and count reps. Workout video is not saved to the user photo library by default.
 
-If camera access is denied or the native camera path is unavailable, the app provides fallback states so the user can continue without camera-based counting.
+If camera access is denied, the workout screen shows a permission-needed state with a Settings link. If the native camera path is unavailable, the app provides fallback states so the user can continue without camera-based counting.
 
 Account deletion is available from Settings. Guest users can clear local data. Deleting the app account does not cancel an App Store subscription.
 

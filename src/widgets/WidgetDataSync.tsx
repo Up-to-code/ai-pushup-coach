@@ -5,7 +5,7 @@ import { api } from '../../convex/_generated/api';
 import { useBetterAuth } from '../auth';
 import { useUserStore, useWorkoutStore } from '../store';
 import { hasProAccess } from '../subscriptions';
-import { buildLockedWidgetPayload, buildWidgetPayload, getWidgetPayloadSignature, type WidgetPayload } from './widgetPayload';
+import { buildWidgetPayload, getWidgetPayloadSignature, type WidgetPayload } from './widgetPayload';
 
 type WidgetDataModuleType = {
   updateWidgetData?: (payload: WidgetPayload) => Promise<boolean>;
@@ -31,9 +31,7 @@ export function WidgetDataSync() {
       : 'skip'
   );
   const payload = useMemo(
-    () => isPro
-      ? buildWidgetPayload({ user, workouts, friendComparison })
-      : buildLockedWidgetPayload({ user }),
+    () => buildWidgetPayload({ user, workouts, friendComparison: isPro ? friendComparison : undefined }),
     [friendComparison, isPro, user, workouts]
   );
   const payloadSignature = useMemo(() => getWidgetPayloadSignature(payload), [payload]);

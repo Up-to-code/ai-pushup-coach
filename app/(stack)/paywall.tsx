@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { ProPaywall } from '../../src/components/ProPaywall';
 import { useSubscription } from '../../src/subscriptions';
+import { type ProductIdentifierKey } from '../../src/subscriptions/config';
 
 export default function PaywallScreen() {
   const router = useRouter();
+  const [busyKey, setBusyKey] = useState<ProductIdentifierKey | 'restore' | null>(null);
   const { 
     loading, 
     products, 
@@ -35,11 +37,25 @@ export default function PaywallScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <ProPaywall
-        busyKey={null} // Simplified for screen, hooks into state below if needed
+        busyKey={busyKey}
         message={error}
         onClose={handleClose}
-        onPurchase={(key, product) => buyPackage(product)}
-        onRestore={restore}
+        onPurchase={async (key, product) => {
+          setBusyKey(key);
+          try {
+            await buyPackage(product);
+          } finally {
+            setBusyKey(null);
+          }
+        }}
+        onRestore={async () => {
+          setBusyKey('restore');
+          try {
+            await restore();
+          } finally {
+            setBusyKey(null);
+          }
+        }}
         productPackages={productPackages}
         isScreen={true}
       />

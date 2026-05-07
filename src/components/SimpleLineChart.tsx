@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { colors } from '../theme';
+import { buildSimpleLineChartPaths } from './simpleLineChartPaths';
 
 interface SimpleLineChartProps {
   data: number[];
@@ -18,36 +19,24 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
   color = colors.accent,
   fillColor = 'rgba(225, 29, 72, 0.2)',
 }) => {
-  if (data.length < 2) return null;
-
-  const max = Math.max(...data) || 1;
-  const min = Math.min(...data);
-  const range = max - min || 1;
-
-  const points = data.map((value, index) => {
-    const x = (index / (data.length - 1)) * width;
-    const y = height - ((value - min) / range) * height;
-    return `${x},${y}`;
-  });
-
-  const pathData = `M ${points.join(' L ')}`;
-  const areaData = `${pathData} L ${width},${height} L 0,${height} Z`;
+  const paths = buildSimpleLineChartPaths(data, width, height);
+  if (!paths) return null;
 
   return (
     <View style={{ height, width }}>
       <Svg height={height} width={width}>
         <Defs>
           <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={color} stopOpacity="0.4" />
-            <Stop offset="1" stopColor={color} stopOpacity="0" />
+            <Stop offset="0" stopColor={fillColor} stopOpacity="0.4" />
+            <Stop offset="1" stopColor={fillColor} stopOpacity="0" />
           </LinearGradient>
         </Defs>
         <Path
-          d={areaData}
+          d={paths.areaData}
           fill="url(#gradient)"
         />
         <Path
-          d={pathData}
+          d={paths.pathData}
           fill="none"
           stroke={color}
           strokeWidth="3"
@@ -58,5 +47,3 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({});

@@ -324,7 +324,7 @@ export default function SettingsScreen() {
                     preferredTime,
                   });
                 }
-                router.push('/onboarding?mode=rebuild' as any);
+                router.push('/onboarding?mode=rebuild&returnTo=settings' as any);
               }}
             />
           </Section>

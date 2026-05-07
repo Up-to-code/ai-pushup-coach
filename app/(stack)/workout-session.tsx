@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -808,6 +808,13 @@ export default function WorkoutSessionScreen() {
         ? trackingProblemLabel
         : statusLabel;
 
+  const openCameraSettings = () => {
+    void Linking.openSettings().catch((error) => {
+      console.warn('Could not open settings for camera permission', error);
+      Alert.alert('Open Settings', 'Open the Settings app and allow camera access for Push Counter.');
+    });
+  };
+
   const immediateCue = isPaused || sessionState === 'resting';
   const delayedCueProblem = visibleTrackingProblem === 'none' ? trackingProblem : visibleTrackingProblem;
   const coachCue = immediateCue || visibleTrackingProblem !== 'none' ? getCoachCue({
@@ -877,6 +884,16 @@ export default function WorkoutSessionScreen() {
           <Text style={styles.cameraEmptyText}>
             {cameraPresentationState === 'permission' ? 'Camera permission needed' : 'Camera unavailable'}
           </Text>
+          {cameraPresentationState === 'permission' ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={openCameraSettings}
+              style={styles.settingsButton}
+            >
+              <Ionicons name="settings-outline" size={16} color="#050505" />
+              <Text style={styles.settingsButtonText}>Open Settings</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
       {cameraPresentationState === 'preparing' ? (
@@ -1122,6 +1139,19 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  settingsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.textPrimary,
+  },
+  settingsButtonText: {
+    ...typography.captionBold,
+    color: '#050505',
   },
   cameraStatusBadge: {
     position: 'absolute',
