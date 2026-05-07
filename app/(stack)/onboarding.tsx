@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useSubscription } from '../../src/revenuecat';
+import { useSubscription } from '../../src/subscriptions';
 import { useSettingsStore, usePlanStore, useUserStore, type PlanLevel, type PlanGoal } from '../../src/store';
 import { generateTrainingPlan } from '../../src/utils/planGenerator';
 import { syncNotificationsForPlan } from '../../src/services/notifications';
@@ -101,20 +101,36 @@ const sessionPreview = [
 
 const launchBackground = require('../../assets/bg.png');
 
+function timeFromDraft(value?: string) {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value ?? '');
+  const date = new Date();
+  date.setSeconds(0, 0);
+
+  if (!match) {
+    date.setHours(7, 30, 0, 0);
+    return date;
+  }
+
+  date.setHours(Number(match[1]), Number(match[2]), 0, 0);
+  return date;
+}
+
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { configured: subscriptionConfigured, showPaywall, loading } = useSubscription();
+  const { configured: subscriptionConfigured, products: subscriptionProducts, showPaywall, loading } = useSubscription();
   const { user } = useUserStore();
-  const { setPlan } = usePlanStore();
+  const { setPlan, setupDraft } = usePlanStore();
   const { settings, updateSettings, completeOnboarding, updateOnboardingProfile, setNotificationsEnabled } = useSettingsStore();
 
   const [index, setIndex] = useState(0);
-  const [level, setLevel] = useState<PlanLevel>();
-  const [goal, setGoal] = useState<PlanGoal>();
+  const [level, setLevel] = useState<PlanLevel | undefined>(setupDraft.level);
+  const [goal, setGoal] = useState<PlanGoal | undefined>(setupDraft.goal);
   const [selectedFrictions, setSelectedFrictions] = useState<string[]>([]);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
-  const [selectedDays, setSelectedDays] = useState<string[]>(['mon', 'wed', 'fri']);
-  const [preferredTime, setPreferredTime] = useState(new Date(new Date().setHours(7, 30, 0, 0)));
+  const [selectedDays, setSelectedDays] = useState<string[]>(
+    setupDraft.trainingDays.length ? setupDraft.trainingDays : ['mon', 'wed', 'fri']
+  );
+  const [preferredTime, setPreferredTime] = useState(() => timeFromDraft(setupDraft.preferredTime));
   
   const [busy, setBusy] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -124,6 +140,7 @@ export default function OnboardingScreen() {
   const isFirst = index === 0;
   const isLast = index === steps.length - 1;
   const progress = (index + 1) / steps.length;
+  const paywallAvailable = subscriptionConfigured && subscriptionProducts.length > 0;
 
   const canContinue =
     step.id === 'level' ? Boolean(level) :
@@ -202,6 +219,7 @@ export default function OnboardingScreen() {
         notificationsEnabled: false,
         workoutReminderEnabled: true,
         missedReminderEnabled: true,
+        habitNudgeEnabled: false,
       });
 
       setPlan({ ...plan, notificationIds });
@@ -221,6 +239,8 @@ export default function OnboardingScreen() {
   };
 
   const unlockAndFinish = async () => {
+    if (!paywallAvailable) return;
+
     setBusy(true);
     try {
       await showPaywall();
@@ -358,8 +378,8 @@ export default function OnboardingScreen() {
             <>
               <PrimaryButton label={getButtonLabel()} icon="sparkles-outline" onPress={finish} loading={busy || loading || finishing} />
               {subscriptionConfigured && (
-                <Pressable onPress={unlockAndFinish} disabled={busy || loading} style={styles.secondaryButton}>
-                  <Text style={styles.secondaryText}>View Pro →</Text>
+                <Pressable onPress={unlockAndFinish} disabled={busy || loading || !paywallAvailable} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryText}>{paywallAvailable ? 'View Pro →' : 'Pro setup required'}</Text>
                 </Pressable>
               )}
             </>

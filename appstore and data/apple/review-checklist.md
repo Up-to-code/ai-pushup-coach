@@ -28,10 +28,10 @@ Use this checklist before submitting Push Counter to App Review.
 ## Purchases
 
 - Digital Pro features use Apple in-app purchase.
-- Paywall shows product, price, billing period, renewal behavior, and legal links before purchase.
+- Paywall shows product, price, billing period, yearly 3-day free trial terms, renewal behavior, and legal links before purchase.
 - Paywall includes or links to Privacy Policy and Terms of Use.
 - Restore Purchases is available.
-- Manage Subscription opens RevenueCat Customer Center or Apple subscription management.
+- Manage Subscription opens Apple subscription management.
 - New subscriptions or in-app purchases are submitted with the app build.
 - Deleting an account does not claim to cancel an App Store subscription.
 
@@ -56,4 +56,4 @@ Push Counter can be reviewed without creating an account by selecting Continue w
 
 Camera permission is requested for camera-assisted workout sessions. The camera is used during live workouts to estimate movement and count reps. Workout video is not saved to the user's photo library by default.
 
-Restore purchases and Manage subscription are available from Settings. Payment details are handled by Apple; the app receives purchase and entitlement status through RevenueCat.
+Restore purchases and Manage subscription are available from Settings. Payment details are handled by Apple; the app receives purchase and entitlement status through Adapty.

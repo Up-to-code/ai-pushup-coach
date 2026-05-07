@@ -62,6 +62,33 @@ function getTrustedOrigins() {
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
+type AppleProfileLike = {
+  sub?: string | null;
+  email?: string | null;
+  name?: string | null;
+};
+
+function normalizeAppleSubject(subject?: string | null) {
+  const normalized = String(subject || 'unknown').replace(/[^a-zA-Z0-9._-]/g, '-');
+  return normalized || 'unknown';
+}
+
+export function getAppleProfileEmail(profile: AppleProfileLike) {
+  const email = typeof profile.email === 'string' ? profile.email.trim() : '';
+  if (email) return email;
+
+  return `apple-${normalizeAppleSubject(profile.sub)}@users.pushcounter.local`;
+}
+
+export function mapAppleProfileToUser(profile: AppleProfileLike) {
+  const name = typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : 'Athlete';
+
+  return {
+    email: getAppleProfileEmail(profile),
+    name,
+  };
+}
+
 export function getSocialProviders(): BetterAuthOptions['socialProviders'] {
   const socialProviders: BetterAuthOptions['socialProviders'] = {};
 
@@ -70,6 +97,14 @@ export function getSocialProviders(): BetterAuthOptions['socialProviders'] {
       clientId: process.env.APPLE_CLIENT_ID,
       clientSecret: process.env.APPLE_CLIENT_SECRET,
       appBundleIdentifier: process.env.APPLE_APP_BUNDLE_IDENTIFIER,
+      mapProfileToUser: mapAppleProfileToUser,
+    };
+  }
+
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    socialProviders.google = {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     };
   }
 

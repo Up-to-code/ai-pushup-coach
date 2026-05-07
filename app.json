@@ -14,10 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ahmedmansour.pushcounter",
+      "bundleIdentifier": "com.aipushupcoach.app",
       "entitlements": {
         "com.apple.security.application-groups": [
-          "group.com.ahmedmansour.pushcounter"
+          "group.com.aipushupcoach.app"
         ],
         "com.apple.developer.applesignin": ["Default"]
       },
@@ -27,6 +27,10 @@
         "NSMicrophoneUsageDescription": "Push Counter does not use microphone audio for workout tracking.",
         "NSPhotoLibraryUsageDescription": "Allow photo library access only when you choose a profile picture.",
         "NSPhotoLibraryAddUsageDescription": "Allow saving selected profile pictures only when you choose to update your avatar.",
+        "NSLocalNetworkUsageDescription": "Push Counter uses the local network in development builds to connect to the Expo server running on your Mac.",
+        "NSBonjourServices": [
+          "_expo._tcp"
+        ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -41,12 +45,19 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.ahmedmansour.pushcounter"
+      "package": "com.aipushupcoach.app"
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
       "expo-notifications",
-      "expo-secure-store",
+      "react-native-adapty",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": false
+        }
+      ],
       "expo-apple-authentication",
       [
         "expo-image-picker",
@@ -59,6 +70,9 @@
         {
           "android": {
             "minSdkVersion": 24
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
           }
         }
       ]

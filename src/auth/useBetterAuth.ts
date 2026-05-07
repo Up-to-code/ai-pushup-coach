@@ -1,9 +1,15 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { authClient } from './authClient';
 
 export function useBetterAuth() {
-  const { data: session, isPending } = authClient.useSession();
+  const sessionQuery = authClient.useSession();
+  const { data: session, isPending, refetch } = sessionQuery;
   const user = session?.user;
+  const refreshSession = useCallback(async () => {
+    const result = await authClient.getSession();
+    await refetch();
+    return result.data ?? null;
+  }, [refetch]);
 
   return useMemo(
     () => ({
@@ -12,7 +18,8 @@ export function useBetterAuth() {
       userId: user?.id,
       user,
       signOut: authClient.signOut,
+      refreshSession,
     }),
-    [isPending, session?.session, user]
+    [isPending, refreshSession, session?.session, user]
   );
 }

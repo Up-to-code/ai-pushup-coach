@@ -63,7 +63,7 @@ Current service categories include:
 
 - Authentication provider for Apple sign-in through Better Auth.
 - Backend and database services through Convex.
-- Purchase entitlement and subscription management through RevenueCat and Apple.
+- Purchase entitlement and subscription management through Adapty and Apple.
 - Profile image upload and hosting services.
 - Apple services for App Store purchases, subscriptions, notifications, and platform functionality.
 
@@ -79,7 +79,7 @@ Local data remains on your device until you delete it, reset app data, or uninst
 
 Synced account data may remain on our systems until you delete your account or request deletion, unless retention is required for security, legal, accounting, fraud prevention, or dispute reasons.
 
-Purchase records may be retained by Apple, RevenueCat, and us as needed to manage entitlements, subscriptions, restore purchases, support requests, and legal obligations.
+Purchase records may be retained by Apple, Adapty, and us as needed to manage entitlements, subscriptions, restore purchases, support requests, and legal obligations.
 
 ## 7. Account Deletion And Data Choices
 

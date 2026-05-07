@@ -56,12 +56,12 @@ Camera permission is requested when entering camera workout flows. The camera is
 
 Account deletion is available from Settings > Data control > Delete account and data for signed-in users. Guest users can clear local data from the same section. Deleting the app account does not cancel an App Store subscription.
 
-Restore purchases and Manage subscription are available from Settings > Subscription. Payment card details are handled by Apple and RevenueCat; the app receives entitlement and purchase status.
+Restore purchases and Manage subscription are available from Settings > Subscription. Payment card details are handled by Apple and Adapty; the app receives entitlement and purchase status.
 
 ## Subscription and IAP Reminders
 
 - Submit any new subscriptions or in-app purchases with the app build.
-- Ensure RevenueCat offerings are configured and visible in the review build.
+- Ensure Adapty offerings are configured and visible in the review build.
 - Ensure App Store Connect subscription products have completed names, descriptions, prices, durations, screenshots, and review information.
 - Ensure the paywall shows the product, price, duration, renewal behavior, privacy policy link, and terms link before purchase.
 - Ensure Restore purchases works for reviewers.
@@ -69,7 +69,7 @@ Restore purchases and Manage subscription are available from Settings > Subscrip
 
 ## Pre-Submission Checks
 
-- Use production Better Auth, Convex, RevenueCat, and UploadThing credentials.
+- Use production Better Auth, Convex, Adapty, and UploadThing credentials.
 - Confirm the privacy policy URL loads publicly without authentication.
 - Confirm the support URL loads publicly and provides a contact path.
 - Confirm account deletion works with a test signed-in account.

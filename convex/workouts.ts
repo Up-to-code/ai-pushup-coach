@@ -299,8 +299,10 @@ export const profileRange = query({
       };
     }
 
-    const safeOffset = Math.max(0, Math.min(offset ?? 0, 120));
-    const range = getRangeForPeriod(period, safeOffset);
+    const hasProAccess = user.proStatus === 'pro';
+    const effectivePeriod: ProfilePeriod = hasProAccess ? period : 'W';
+    const safeOffset = hasProAccess ? Math.max(0, Math.min(offset ?? 0, 120)) : 0;
+    const range = getRangeForPeriod(effectivePeriod, safeOffset);
     
     // Fetch stats for charts and summaries (max 1000 days = ~3 years of active use)
     const stats = await ctx.db
@@ -310,7 +312,7 @@ export const profileRange = query({
       .take(1000);
 
     const rangeStats =
-      period === 'ALL'
+      effectivePeriod === 'ALL'
         ? stats
         : stats.filter((stat) => {
             const statTime = new Date(stat.dayKey).getTime();
@@ -318,19 +320,19 @@ export const profileRange = query({
           });
 
     const previousStats =
-      period === 'ALL'
+      effectivePeriod === 'ALL'
         ? []
         : stats.filter((stat) => {
-            const previousRange = getRangeForPeriod(period, safeOffset + 1);
+            const previousRange = getRangeForPeriod(effectivePeriod, safeOffset + 1);
             const statTime = new Date(stat.dayKey).getTime();
             return statTime >= previousRange.start && statTime <= previousRange.end;
           });
 
     const dailySeries =
-      period === 'ALL'
+      effectivePeriod === 'ALL'
         ? [...rangeStats.reduce((map, stat) => {
             const key = stat.dayKey.slice(0, 7); // monthKey
-            const current = map.get(key) ?? { key, label: formatSeriesLabel(key, period), reps: 0, workouts: 0 };
+            const current = map.get(key) ?? { key, label: formatSeriesLabel(key, effectivePeriod), reps: 0, workouts: 0 };
             current.reps += stat.reps;
             current.workouts += stat.workouts;
             map.set(key, current);
@@ -341,7 +343,7 @@ export const profileRange = query({
             const date = new Date(range.start);
             date.setDate(date.getDate() + index);
             const key = dayKey(date.getTime());
-            return { key, label: formatSeriesLabel(key, period), reps: 0, workouts: 0 };
+            return { key, label: formatSeriesLabel(key, effectivePeriod), reps: 0, workouts: 0 };
           }).map((bucket) => {
             const matches = rangeStats.filter((stat) => stat.dayKey === bucket.key);
             return {
@@ -357,12 +359,15 @@ export const profileRange = query({
       .withIndex('by_user_date', (q) => q.eq('userId', user._id))
       .order('desc')
       .take(100);
+    const rangeHistoryRows = effectivePeriod === 'ALL'
+      ? historyRows
+      : historyRows.filter((row) => row.completed && row.date >= range.start && row.date <= range.end);
 
     return {
       summary: buildSummary(rangeStats),
-      previousSummary: period === 'ALL' ? null : buildSummary(previousStats),
+      previousSummary: effectivePeriod === 'ALL' ? null : buildSummary(previousStats),
       dailySeries,
-      history: historyRows.map((row) => ({
+      history: rangeHistoryRows.map((row) => ({
         id: row._id,
         clientWorkoutId: row.clientWorkoutId,
         date: row.date,

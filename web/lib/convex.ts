@@ -17,6 +17,14 @@ type SharedProfileResult = {
   bestReps: number;
   followersCount: number;
   followingCount: number;
+  totalWorkouts: number;
+  totalDuration: number;
+  totalCalories: number;
+  recentDays: Array<{
+    dayKey: string;
+    reps: number;
+    workouts: number;
+  }>;
   updatedAt: number;
 } | null;
 

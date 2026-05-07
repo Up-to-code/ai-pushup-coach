@@ -9,21 +9,40 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
-    },
-    "production": {
-      "autoIncrement": true,
+      "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_CONVEX_URL": "https://mellow-gerbil-151.convex.cloud",
         "EXPO_PUBLIC_CONVEX_SITE_URL": "https://mellow-gerbil-151.convex.site",
         "EXPO_PUBLIC_WEB_URL": "https://www.pushcounter.online",
-        "EXPO_PUBLIC_AUTH_BASE_URL": "https://mellow-gerbil-151.convex.site",
+        "EXPO_PUBLIC_AUTH_BASE_URL": "https://www.pushcounter.online",
         "EXPO_PUBLIC_ASSOCIATED_DOMAIN": "pushcounter.online",
-        "EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID": "pro"
+        "EXPO_PUBLIC_ADAPTY_PUBLIC_SDK_KEY": "public_live_bdJ5pzeE.2hyFut1RrKMoXFOODM1c",
+        "EXPO_PUBLIC_ADAPTY_PRO_ACCESS_LEVEL_ID": "premium",
+        "EXPO_PUBLIC_ADAPTY_PAYWALL_PLACEMENT_ID": "main"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "ios": {
+        "resourceClass": "medium"
+      },
+      "env": {
+        "EXPO_PUBLIC_CONVEX_URL": "https://mellow-gerbil-151.convex.cloud",
+        "EXPO_PUBLIC_CONVEX_SITE_URL": "https://mellow-gerbil-151.convex.site",
+        "EXPO_PUBLIC_WEB_URL": "https://www.pushcounter.online",
+        "EXPO_PUBLIC_AUTH_BASE_URL": "https://www.pushcounter.online",
+        "EXPO_PUBLIC_ASSOCIATED_DOMAIN": "pushcounter.online",
+        "EXPO_PUBLIC_ADAPTY_PUBLIC_SDK_KEY": "public_live_bdJ5pzeE.2hyFut1RrKMoXFOODM1c",
+        "EXPO_PUBLIC_ADAPTY_PRO_ACCESS_LEVEL_ID": "premium",
+        "EXPO_PUBLIC_ADAPTY_PAYWALL_PLACEMENT_ID": "main"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6765990895"
+      }
+    }
   }
 }

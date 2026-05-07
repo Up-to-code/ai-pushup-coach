@@ -4,7 +4,8 @@ import { AppState, NativeModules, Platform } from 'react-native';
 import { api } from '../../convex/_generated/api';
 import { useBetterAuth } from '../auth';
 import { useUserStore, useWorkoutStore } from '../store';
-import { buildWidgetPayload, getWidgetPayloadSignature, type WidgetPayload } from './widgetPayload';
+import { hasProAccess } from '../subscriptions';
+import { buildLockedWidgetPayload, buildWidgetPayload, getWidgetPayloadSignature, type WidgetPayload } from './widgetPayload';
 
 type WidgetDataModuleType = {
   updateWidgetData?: (payload: WidgetPayload) => Promise<boolean>;
@@ -17,16 +18,23 @@ export function WidgetDataSync() {
   const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const user = useUserStore((state) => state.user);
   const workouts = useWorkoutStore((state) => state.workouts);
+  const isPro =
+    hasProAccess(user.proStatus) &&
+    Boolean(userId) &&
+    user.id === userId &&
+    user.subscriptionOwnerUserId === userId;
   const lastPayloadSignatureRef = useRef<string | null>(null);
   const friendComparison = useQuery(
     api.leaderboard.friendComparison,
-    isSignedIn && isConvexAuthenticated && userId
+    isPro && isSignedIn && isConvexAuthenticated && userId
       ? { clientUserId: userId, period: 'W', offset: 0, limit: 20 }
       : 'skip'
   );
   const payload = useMemo(
-    () => buildWidgetPayload({ user, workouts, friendComparison }),
-    [friendComparison, user, workouts]
+    () => isPro
+      ? buildWidgetPayload({ user, workouts, friendComparison })
+      : buildLockedWidgetPayload({ user }),
+    [friendComparison, isPro, user, workouts]
   );
   const payloadSignature = useMemo(() => getWidgetPayloadSignature(payload), [payload]);
 

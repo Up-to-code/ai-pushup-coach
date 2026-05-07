@@ -22,6 +22,12 @@ export interface User {
   countryName: string;
   avatar?: string;
   proStatus: 'free' | 'pro';
+  subscriptionStatus?: 'free' | 'pro' | 'expired' | 'unknown';
+  subscriptionProvider?: 'adapty' | 'development' | 'none';
+  activeProductIdentifier?: string;
+  activeAccessLevelId?: string;
+  subscriptionUpdatedAt?: number;
+  subscriptionOwnerUserId?: string;
   createdAt: string;
   streak: number;
   energy: number;

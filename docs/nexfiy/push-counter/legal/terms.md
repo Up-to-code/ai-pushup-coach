@@ -26,7 +26,7 @@ Guest or offline activity may remain local to the device unless you later use su
 
 ## Subscriptions
 
-Push Counter may offer optional paid subscription features. Before purchase, the app or App Store purchase sheet shows the product, price, duration, and renewal terms available in your region. Purchases, renewals, cancellations, and refunds are handled through the App Store and RevenueCat-supported purchase flows.
+Push Counter may offer optional paid subscription features. Eligible new subscribers may receive a 3-day free trial before the Yearly Pro subscription renews at the displayed price. Monthly Pro does not include a free trial. Before purchase, the app or App Store purchase sheet shows the product, price, duration, trial terms, and renewal terms available in your region. Purchases, renewals, cancellations, and refunds are handled through the App Store and Adapty-backed purchase flows.
 
 Auto-renewable subscriptions renew unless canceled at least 24 hours before the end of the current period. You can manage or cancel subscriptions from your Apple account subscriptions page. Deleting your Push Counter account does not cancel an active App Store subscription.
 

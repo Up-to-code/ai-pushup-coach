@@ -12,6 +12,10 @@ describe('getBetterAuthDisplayName', () => {
     expect(getBetterAuthDisplayName({ id: 'user_123', email: 'coach@example.com' })).toBe('coach');
     expect(getBetterAuthDisplayName({ id: 'user_123' })).toBe('Athlete');
   });
+
+  it('falls back to Athlete when Apple does not resend name or email', () => {
+    expect(getBetterAuthDisplayName({ id: 'apple_user_123', name: null, email: null })).toBe('Athlete');
+  });
 });
 
 describe('toLocalUserUpdates', () => {

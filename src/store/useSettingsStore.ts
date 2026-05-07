@@ -8,6 +8,7 @@ export interface Settings {
   notificationsEnabled: boolean;
   workoutReminderEnabled: boolean;
   missedReminderEnabled: boolean;
+  habitNudgeEnabled: boolean;
   allowGuestMode: boolean;
   defaultWorkoutTime: string;
   defaultCameraMode: 'faceFocus' | 'fullScene';
@@ -47,6 +48,7 @@ const defaultSettings: Settings = {
   notificationsEnabled: false,
   workoutReminderEnabled: true,
   missedReminderEnabled: true,
+  habitNudgeEnabled: false,
   allowGuestMode: false,
   defaultWorkoutTime: '07:30',
   defaultCameraMode: 'faceFocus',
@@ -99,6 +101,7 @@ export const useSettingsStore = create<SettingsState>()(
             notificationsEnabled: enabled,
             workoutReminderEnabled: enabled ? state.settings.workoutReminderEnabled : false,
             missedReminderEnabled: enabled ? state.settings.missedReminderEnabled : false,
+            habitNudgeEnabled: enabled ? state.settings.habitNudgeEnabled : false,
           },
         })),
       setAllowGuestMode: (enabled) =>

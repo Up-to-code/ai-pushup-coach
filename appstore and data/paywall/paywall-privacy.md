@@ -1,10 +1,10 @@
 # Push Counter Paywall Privacy Text
 
-Use this short copy for RevenueCat paywall privacy links, compact legal modals, or paywall footer text.
+Use this short copy for Adapty paywall privacy links, compact legal modals, or paywall footer text.
 
 ## Short Paywall Privacy Copy
 
-Push Counter uses purchase and entitlement information to unlock Pro access and restore purchases. Payments, renewals, cancellations, refunds, and payment method details are handled by Apple and RevenueCat-supported purchase services.
+Push Counter uses purchase and entitlement information to unlock Pro access and restore purchases. Payments, renewals, cancellations, refunds, and payment method details are handled by Apple and Adapty-supported purchase services.
 
 Push Counter does not collect your full payment card number or bank account details. The app may receive product identifiers, entitlement status, subscription status, renewal status, and purchase history needed to provide Pro access and support account recovery.
 

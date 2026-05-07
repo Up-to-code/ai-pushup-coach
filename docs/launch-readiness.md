@@ -31,7 +31,7 @@ Use the existing device helper:
 npm run ios:device
 ```
 
-The script detects a paired physical iPhone, starts Metro on port 8081 if needed, builds the Debug app, installs it, and launches `com.ahmedmansour.pushcounter`.
+The script detects a paired physical iPhone, starts Metro on port 8081 if needed, builds the Debug app, installs it, and launches `com.aipushupcoach.app`.
 
 For physical devices, the script also waits for Metro to report `packager-status:running` and temporarily forces the Debug build to embed `main.jsbundle`. This prevents the app from crashing with "No bundle URL present" when the iPhone cannot reach the Mac's Metro host during startup.
 
@@ -45,11 +45,11 @@ For physical devices, the script also waits for Metro to report `packager-status
 - Workout session can start, render the counter, and exit safely.
 - Completion flow records a workout and does not corrupt local state.
 - Settings, edit profile, badges, notifications, and legal screens open without crashes.
-- RevenueCat subscription screens handle loading, unavailable config, and network failure without blocking the rest of the app.
+- Adapty subscription screens handle loading, unavailable config, and network failure without blocking the rest of the app.
 - Convex-backed social, challenge, leaderboard, profile, and workout data show usable loading, empty, and error states.
 
 ## Remaining Release Risks
 
 - App Store metadata, screenshots, TestFlight setup, and final legal copy are not covered by this practical v1 pass.
-- RevenueCat and Convex production credentials must be verified in the target release environment.
+- Adapty and Convex production credentials must be verified in the target release environment.
 - Camera-based rep counting quality still needs physical workout QA beyond install and launch validation.

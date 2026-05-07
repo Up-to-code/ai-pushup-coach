@@ -87,11 +87,34 @@ describe('facePushupTracker', () => {
     let state = readyState();
 
     state = processFacePushupMetric(state, metric(420, 0.24, { faceDetected: false }), config);
-    expect(state.problem).toBe('dark');
+    expect(state.problem).toBe('noFace');
     expect(state.reps).toBe(0);
 
     state = processFacePushupMetric(state, metric(560, 0.24, { centerX: 0.02 }), config);
     expect(state.problem).toBe('offCenter');
     expect(state.reps).toBe(0);
+  });
+
+  it('only reports darkness when the camera marks the frame dark', () => {
+    let state = readyState();
+
+    state = processFacePushupMetric(
+      state,
+      metric(420, 0.24, { brightnessState: 'dark', faceDetected: false }),
+      config
+    );
+
+    expect(state.problem).toBe('dark');
+    expect(state.reps).toBe(0);
+  });
+
+  it('keeps counting when a detected face is mistakenly marked dark', () => {
+    let state = readyState();
+
+    state = processFacePushupMetric(state, metric(420, 0.23, { brightnessState: 'dark' }), config);
+    state = processFacePushupMetric(state, metric(560, 0.18, { brightnessState: 'dark' }), config);
+
+    expect(state.problem).toBe('none');
+    expect(state.reps).toBe(1);
   });
 });

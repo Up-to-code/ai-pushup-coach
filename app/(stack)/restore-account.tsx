@@ -1,13 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../convex/_generated/api';
-import { useBetterAuth } from '../../src/auth';
-import { cancelPlanNotifications } from '../../src/services/notifications';
-import { usePlanStore, useSettingsStore, useUserStore, useWorkoutStore } from '../../src/store';
+import { clearLocalAuthState, useAuth } from '../../src/auth';
 import { borderRadius, colors, spacing, typography } from '../../src/theme';
 
 function formatDate(timestamp?: number) {
@@ -21,34 +19,17 @@ function formatDate(timestamp?: number) {
 
 export default function RestoreAccountScreen() {
   const router = useRouter();
-  const { isLoaded, isSignedIn, signOut, userId } = useBetterAuth();
-  const plan = usePlanStore((state) => state.plan);
-  const resetPlan = usePlanStore((state) => state.resetPlan);
-  const resetSettings = useSettingsStore((state) => state.resetSettings);
-  const resetOnboarding = useSettingsStore((state) => state.resetOnboarding);
-  const resetUser = useUserStore((state) => state.resetUser);
-  const clearWorkouts = useWorkoutStore((state) => state.clearWorkouts);
+  const auth = useAuth();
+  const userId = auth.clientUserId;
   const restoreAccount = useMutation(api.users.restoreAccount);
   const permanentlyDeleteAccount = useMutation(api.users.permanentlyDeleteAccount);
-  const deletionState = useQuery(
-    api.users.deletionStatus,
-    isLoaded && isSignedIn && userId ? { clientUserId: userId } : 'skip'
-  );
+  const deletionState = auth.deletionState;
   const [busy, setBusy] = useState<'restore' | 'delete' | null>(null);
 
   const expired = useMemo(
     () => Boolean(deletionState?.deleteAfter && deletionState.deleteAfter <= Date.now()),
     [deletionState?.deleteAfter]
   );
-
-  const clearLocalData = async () => {
-    if (plan) await cancelPlanNotifications(plan.notificationIds);
-    clearWorkouts();
-    resetPlan();
-    resetOnboarding();
-    resetSettings();
-    resetUser();
-  };
 
   const handleRestore = async () => {
     if (!userId || expired) return;
@@ -82,8 +63,7 @@ export default function RestoreAccountScreen() {
             setBusy('delete');
             try {
               await permanentlyDeleteAccount({ clientUserId: userId });
-              await clearLocalData();
-              await signOut();
+              await auth.logout();
               router.replace('/sign-in' as any);
             } catch (error) {
               console.warn('Permanent account deletion failed', error);
@@ -97,7 +77,7 @@ export default function RestoreAccountScreen() {
     );
   };
 
-  if (!isLoaded || !deletionState) {
+  if (auth.status === 'loading' || !deletionState) {
     return (
       <SafeAreaView style={styles.container}>
         <ActivityIndicator color={colors.accent} />
@@ -105,13 +85,7 @@ export default function RestoreAccountScreen() {
     );
   }
 
-  if (!isSignedIn || !userId) {
-    router.replace('/sign-in' as any);
-    return null;
-  }
-
-  if (deletionState.status !== 'pendingDeletion') {
-    router.replace('/' as any);
+  if (auth.status !== 'pendingDeletion' || !userId) {
     return null;
   }
 

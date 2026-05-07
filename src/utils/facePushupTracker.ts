@@ -1,6 +1,6 @@
 export type FaceTrackingPhase = 'waiting' | 'calibratingTop' | 'ready' | 'down' | 'returning';
 
-export type FaceTrackingProblem = 'none' | 'dark' | 'offCenter' | 'tooFar' | 'unavailable';
+export type FaceTrackingProblem = 'none' | 'noFace' | 'dark' | 'offCenter' | 'tooFar' | 'unavailable';
 
 export type FaceTrackingStatus = 'ready' | 'tracking' | 'searching' | 'denied' | 'unavailable';
 
@@ -12,6 +12,7 @@ export type FacePushupEvent =
 
 export interface FacePushupMetric {
   status: FaceTrackingStatus;
+  brightnessState?: 'ok' | 'dark' | 'unknown';
   cameraReady: boolean;
   faceDetected: boolean;
   faceHeight: number;
@@ -51,8 +52,8 @@ export const defaultFacePushupTrackerConfig: FacePushupTrackerConfig = {
   centerToleranceX: 0.4,
   centerToleranceY: 0.42,
   debounceMs: 260,
-  downHoldMs: 80,
-  minDepthDelta: 0.045,
+  downHoldMs: 50,
+  minDepthDelta: 0.032,
   minFaceHeight: 0.05,
   stableStartMs: 500,
 };
@@ -67,7 +68,7 @@ export function createFacePushupTrackerState(): FacePushupTrackerState {
     lastGoodFaceAt: 0,
     lastRepAt: 0,
     phase: 'waiting',
-    problem: 'dark',
+    problem: 'noFace',
     reps: 0,
     sessionStarted: false,
     stableFaceSince: null,
@@ -98,8 +99,12 @@ function getMetricProblem(
     return 'unavailable';
   }
 
-  if (!metric.cameraReady || !metric.faceDetected || metric.status === 'searching') {
+  if (metric.brightnessState === 'dark' && !metric.faceDetected) {
     return 'dark';
+  }
+
+  if (!metric.cameraReady || !metric.faceDetected || metric.status === 'searching') {
+    return 'noFace';
   }
 
   if (

@@ -101,8 +101,8 @@ export default function UserProfileScreen() {
   const shareProfile = async () => {
     const url = profileShareUrl(targetUserId);
     await Share.share({
-      title: `${displayName} on Push Counter`,
-      message: `See ${displayName}'s Push Counter profile: ${url}`,
+      title: `${displayName}'s Push Counter profile`,
+      message: `${displayName} has logged ${profile.totalReps.toLocaleString()} push-up reps on Push Counter. View the public profile and open the app to follow along: ${url}`,
       url,
     });
   };

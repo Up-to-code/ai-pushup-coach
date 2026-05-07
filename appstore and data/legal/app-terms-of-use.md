@@ -48,7 +48,7 @@ Notifications are optional and can be controlled in the app or iOS Settings. Pho
 
 ## 7. Purchases And Pro Access
 
-Push Counter may offer Pro access, subscriptions, or other in-app purchases through Apple. Prices, durations, free trials, renewal terms, and cancellation options are shown before purchase in the App Store purchase flow or paywall.
+Push Counter may offer Pro access, subscriptions, or other in-app purchases through Apple. Eligible new subscribers may receive a 3-day free trial before the Yearly Pro subscription renews at the displayed price. Monthly Pro does not include a free trial. Prices, durations, trial terms, renewal terms, and cancellation options are shown before purchase in the App Store purchase flow or paywall.
 
 Auto-renewable subscriptions renew automatically unless canceled at least 24 hours before the end of the current billing period. Your Apple account is charged according to Apple terms. You can manage or cancel subscriptions in your Apple account subscription settings.
 

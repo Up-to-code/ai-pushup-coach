@@ -7,10 +7,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { useBetterAuth } from '../../src/auth';
-import { useSubscription } from '../../src/revenuecat';
+import { clearLocalAuthState, useAuth } from '../../src/auth';
+import { ProBadge } from '../../src/components';
+import { canUseFullSceneCamera, PRODUCT_IDENTIFIERS, useSubscription } from '../../src/subscriptions';
 import { appWebUrl, privacyUrl, supportUrl, termsUrl } from '../../src/config/links';
-import { usePlanStore, useSettingsStore, useUserStore, useWorkoutStore, type Day } from '../../src/store';
+import { usePlanStore, useSettingsStore, useUserStore, type Day } from '../../src/store';
 import { cancelPlanNotifications, requestNotificationPermission, syncNotificationsForPlan } from '../../src/services/notifications';
 import { formatPreferredTime } from '../../src/utils';
 
@@ -28,6 +29,14 @@ function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+function formatSubscriptionPlanLabel(productIdentifier: string | null) {
+  if (!productIdentifier) return 'Pro';
+  if (productIdentifier === 'development-pro') return 'Development Pro';
+  if (productIdentifier === PRODUCT_IDENTIFIERS.yearly) return 'Pro Yearly';
+  if (productIdentifier === PRODUCT_IDENTIFIERS.monthly) return 'Pro Monthly';
+  return 'Pro';
+}
+
 function reschedulePlanDays(days: Day[], preferredTime: string) {
   const [hours, minutes] = preferredTime.split(':').map(Number);
   return days.map((day) => {
@@ -40,28 +49,27 @@ function reschedulePlanDays(days: Day[], preferredTime: string) {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { isSignedIn, signOut, userId } = useBetterAuth();
+  const auth = useAuth();
+  const isSignedIn = auth.status === 'signedIn' || auth.status === 'pendingDeletion';
+  const userId = auth.clientUserId;
   const {
     activeProductIdentifier,
     configured: subscriptionConfigured,
     error: subscriptionError,
     isPro,
     loading: subscriptionLoading,
+    products: subscriptionProducts,
     restore,
     showCustomerCenter,
     showPaywall,
   } = useSubscription();
   const user = useUserStore((state) => state.user);
-  const resetUser = useUserStore((state) => state.resetUser);
   const settings = useSettingsStore((state) => state.settings);
   const updateSettings = useSettingsStore((state) => state.updateSettings);
   const setAllowGuestMode = useSettingsStore((state) => state.setAllowGuestMode);
-  const resetSettings = useSettingsStore((state) => state.resetSettings);
-  const resetOnboarding = useSettingsStore((state) => state.resetOnboarding);
   const plan = usePlanStore((state) => state.plan);
   const updatePlan = usePlanStore((state) => state.updatePlan);
-  const resetPlan = usePlanStore((state) => state.resetPlan);
-  const clearWorkouts = useWorkoutStore((state) => state.clearWorkouts);
+  const updateSetupDraft = usePlanStore((state) => state.updateSetupDraft);
   const deleteAccount = useMutation(api.users.deleteAccount);
   const [timeDraft, setTimeDraft] = useState(cleanTime(plan?.preferredTime ?? settings.defaultWorkoutTime));
   const [timeSaving, setTimeSaving] = useState(false);
@@ -76,6 +84,7 @@ export default function SettingsScreen() {
       notificationsEnabled: nextSettings.notificationsEnabled,
       workoutReminderEnabled: nextSettings.workoutReminderEnabled,
       missedReminderEnabled: nextSettings.missedReminderEnabled,
+      habitNudgeEnabled: nextSettings.habitNudgeEnabled,
     });
     updatePlan({ notificationIds: ids });
     return ids;
@@ -84,12 +93,18 @@ export default function SettingsScreen() {
   const toggleNotifications = async (enabled: boolean) => {
     if (!enabled) {
       if (plan) await cancelPlanNotifications(plan.notificationIds);
-      updateSettings({ notificationsEnabled: false, workoutReminderEnabled: false, missedReminderEnabled: false });
+      updateSettings({ notificationsEnabled: false, workoutReminderEnabled: false, missedReminderEnabled: false, habitNudgeEnabled: false });
       updatePlan({ notificationIds: [] });
       return;
     }
     const granted = await requestNotificationPermission();
-    const nextSettings = { ...settings, notificationsEnabled: granted, workoutReminderEnabled: granted, missedReminderEnabled: granted };
+    const nextSettings = {
+      ...settings,
+      notificationsEnabled: granted,
+      workoutReminderEnabled: granted,
+      missedReminderEnabled: granted,
+      habitNudgeEnabled: granted ? settings.habitNudgeEnabled : false,
+    };
     updateSettings(nextSettings);
     await resyncNotifications(nextSettings);
     if (!granted) {
@@ -97,7 +112,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const updateReminderSetting = async (key: 'workoutReminderEnabled' | 'missedReminderEnabled', value: boolean) => {
+  const updateReminderSetting = async (key: 'workoutReminderEnabled' | 'missedReminderEnabled' | 'habitNudgeEnabled', value: boolean) => {
     const nextSettings = { ...settings, [key]: value };
     updateSettings(nextSettings);
     await resyncNotifications(nextSettings);
@@ -130,6 +145,7 @@ export default function SettingsScreen() {
 
   const preferredTime = cleanTime(plan?.preferredTime ?? settings.defaultWorkoutTime);
   const timeChanged = cleanTime(timeDraft) !== preferredTime;
+  const paywallAvailable = subscriptionConfigured && subscriptionProducts.length > 0;
 
   const restoreSubscription = async () => {
     if (subscriptionLoading || !subscriptionConfigured) return;
@@ -143,7 +159,16 @@ export default function SettingsScreen() {
   };
 
   const openPaywall = async () => {
-    if (subscriptionLoading || !subscriptionConfigured) return;
+    if (subscriptionLoading) return;
+
+    if (!paywallAvailable) {
+      Alert.alert(
+        'Pro setup required',
+        subscriptionError ??
+          'Apple StoreKit is not returning the subscription products yet. Restart the device and try again later, or test from a fresh TestFlight build.'
+      );
+      return;
+    }
 
     try {
       const unlocked = await showPaywall();
@@ -152,7 +177,7 @@ export default function SettingsScreen() {
       console.warn('Paywall failed', error);
       Alert.alert(
         'Could not open paywall',
-        error instanceof Error ? error.message : 'Check your connection and RevenueCat setup, then try again.'
+        error instanceof Error ? error.message : 'Check your connection and Adapty setup, then try again.'
       );
     }
   };
@@ -188,22 +213,11 @@ export default function SettingsScreen() {
     await Linking.openURL(url);
   };
 
-  const clearLocalAccountData = async () => {
-    if (plan) await cancelPlanNotifications(plan.notificationIds);
-    clearWorkouts();
-    resetPlan();
-    resetOnboarding();
-    resetSettings();
-    resetUser();
-  };
-
   const logOut = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
     try {
-      if (plan) await cancelPlanNotifications(plan.notificationIds);
-      await signOut();
-      setAllowGuestMode(false);
+      await auth.logout();
       router.replace('/sign-in' as any);
     } catch (error) {
       console.warn('Logout failed', error);
@@ -230,8 +244,11 @@ export default function SettingsScreen() {
               if (isSignedIn && userId) {
                 await deleteAccount({ clientUserId: userId });
               }
-              await clearLocalAccountData();
-              if (isSignedIn) await signOut();
+              if (isSignedIn) {
+                await auth.logout();
+              } else {
+                await clearLocalAuthState();
+              }
               router.replace('/sign-in' as any);
             } catch (error) {
               console.warn('Account deletion failed', error);
@@ -290,7 +307,26 @@ export default function SettingsScreen() {
               onSave={saveWorkoutTime}
             />
             <Divider />
-            <NavRow icon="calendar-outline" label="Rebuild plan" onPress={() => router.push('/onboarding' as any)} />
+            <NavRow
+              icon={isPro ? 'calendar-outline' : 'lock-closed-outline'}
+              label="Rebuild plan"
+              badge={!isPro}
+              onPress={() => {
+                if (!isPro) {
+                  void openPaywall();
+                  return;
+                }
+                if (plan) {
+                  updateSetupDraft({
+                    level: plan.level,
+                    goal: plan.goal,
+                    trainingDays: plan.trainingDays,
+                    preferredTime,
+                  });
+                }
+                router.push('/onboarding?mode=rebuild' as any);
+              }}
+            />
           </Section>
 
           <Section title="Reminders">
@@ -306,6 +342,14 @@ export default function SettingsScreen() {
               description="Send one local reminder if I have not started after 30 minutes."
               value={settings.notificationsEnabled && settings.missedReminderEnabled}
               onChange={(value) => updateReminderSetting('missedReminderEnabled', value)}
+              disabled={!settings.notificationsEnabled}
+            />
+            <Divider />
+            <ToggleRow
+              label="Gentle habit nudge"
+              description="Send one extra local prompt later on training days."
+              value={settings.notificationsEnabled && settings.habitNudgeEnabled}
+              onChange={(value) => updateReminderSetting('habitNudgeEnabled', value)}
               disabled={!settings.notificationsEnabled}
             />
           </Section>
@@ -325,14 +369,21 @@ export default function SettingsScreen() {
                 { label: 'Full Scene', value: 'fullScene' }
               ]}
               value={settings.defaultCameraMode}
-              onChange={(val) => updateSettings({ defaultCameraMode: val as any })}
+              lockedValues={isPro ? [] : ['fullScene']}
+              onLockedPress={() => {
+                void openPaywall();
+              }}
+              onChange={(val) => {
+                if (val === 'fullScene' && !canUseFullSceneCamera(isPro)) return;
+                updateSettings({ defaultCameraMode: val as any });
+              }}
             />
           </Section>
 
           <Section title="Subscription">
             <InfoRow
               label="Plan"
-              value={subscriptionLoading ? 'Checking...' : isPro ? activeProductIdentifier ?? 'Pro' : 'Free'}
+              value={subscriptionLoading ? 'Checking...' : isPro ? formatSubscriptionPlanLabel(activeProductIdentifier) : 'Free'}
             />
             {subscriptionError && (
               <>
@@ -344,15 +395,16 @@ export default function SettingsScreen() {
               <>
                 <Divider />
                 <ActionRow
-                  disabled={subscriptionLoading || !subscriptionConfigured}
+                  disabled={subscriptionLoading || !paywallAvailable}
                   icon="sparkles-outline"
                   label={
                     subscriptionLoading
                       ? 'Loading paywall...'
-                      : subscriptionConfigured
+                      : paywallAvailable
                         ? 'Upgrade to Pro'
-                        : 'Upgrade unavailable'
+                        : 'Setup required'
                   }
+                  badge={paywallAvailable}
                   onPress={openPaywall}
                 />
               </>
@@ -440,7 +492,7 @@ const Divider = () => <View style={styles.divider} />;
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <View style={styles.infoRow}>
     <Text style={styles.rowLabel}>{label}</Text>
-    <Text style={styles.rowValue}>{value}</Text>
+    <Text style={styles.infoValue} numberOfLines={1}>{value}</Text>
   </View>
 );
 
@@ -486,20 +538,22 @@ const TimeRow = ({ value, displayValue, changed, saving, onChange, onSave }: {
   );
 };
 
-const NavRow = ({ icon, label, value, onPress }: { icon: string; label: string; value?: string; onPress: () => void }) => (
+const NavRow = ({ badge, icon, label, value, onPress }: { badge?: boolean; icon: string; label: string; value?: string; onPress: () => void }) => (
   <Pressable style={({ pressed }) => [styles.navRow, pressed && styles.rowPressed]} onPress={onPress}>
     <View style={styles.navLabel}>
       <Ionicons name={icon as any} size={20} color="rgba(255,255,255,0.6)" />
       <Text style={styles.rowLabel}>{label}</Text>
     </View>
     <View style={styles.navValue}>
+      {badge ? <ProBadge /> : null}
       {value && <Text style={styles.rowValue} numberOfLines={1}>{value}</Text>}
       <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.3)" />
     </View>
   </Pressable>
 );
 
-const ActionRow = ({ disabled, destructive, icon, label, onPress }: {
+const ActionRow = ({ badge, disabled, destructive, icon, label, onPress }: {
+  badge?: boolean;
   disabled?: boolean;
   destructive?: boolean;
   icon: string;
@@ -515,7 +569,10 @@ const ActionRow = ({ disabled, destructive, icon, label, onPress }: {
       <Ionicons name={icon as any} size={20} color={destructive ? '#fb7185' : 'rgba(255,255,255,0.6)'} />
       <Text style={[styles.rowLabel, destructive && styles.destructiveText]}>{label}</Text>
     </View>
-    <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.3)" />
+    <View style={styles.navValue}>
+      {badge ? <ProBadge /> : null}
+      <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.3)" />
+    </View>
   </Pressable>
 );
 
@@ -541,12 +598,14 @@ const ToggleRow = ({ label, description, value, disabled, onChange }: {
   </View>
 );
 
-const ChoiceRow = ({ label, description, options, value, onChange }: {
+const ChoiceRow = ({ label, description, options, value, lockedValues = [], onChange, onLockedPress }: {
   label: string;
   description: string;
   options: Array<{ label: string; value: string }>;
   value: string;
+  lockedValues?: string[];
   onChange: (val: string) => void;
+  onLockedPress?: (val: string) => void;
 }) => (
   <View style={styles.choiceRow}>
     <View style={styles.toggleCopy}>
@@ -556,13 +615,23 @@ const ChoiceRow = ({ label, description, options, value, onChange }: {
     <View style={styles.pillsContainer}>
       {options.map((opt) => {
         const active = value === opt.value;
+        const locked = lockedValues.includes(opt.value);
         return (
           <Pressable
             key={opt.value}
-            onPress={() => onChange(opt.value)}
-            style={[styles.pill, active && styles.pillActive]}
+            onPress={() => {
+              if (locked) {
+                onLockedPress?.(opt.value);
+                return;
+              }
+              onChange(opt.value);
+            }}
+            style={[styles.pill, active && styles.pillActive, locked && styles.pillLocked]}
           >
-            <Text style={[styles.pillText, active && styles.pillTextActive]}>{opt.label}</Text>
+            <View style={styles.pillContent}>
+              <Text style={[styles.pillText, active && styles.pillTextActive]}>{opt.label}</Text>
+              {locked ? <ProBadge size="tiny" /> : null}
+            </View>
           </Pressable>
         );
       })}
@@ -609,6 +678,7 @@ const styles = StyleSheet.create({
   rowLabel: { fontSize: 16, fontWeight: '500', color: '#fff' },
   destructiveText: { color: '#fb7185' },
   rowValue: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.6)' },
+  infoValue: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.68)', flex: 1, textAlign: 'right', marginLeft: 16 },
   rowDescription: { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.5)', marginTop: 2, lineHeight: 16 },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginLeft: 16 },
   timeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, minHeight: 64, gap: 12 },
@@ -622,7 +692,9 @@ const styles = StyleSheet.create({
   choiceRow: { paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
   pillsContainer: { flexDirection: 'row', gap: 8, backgroundColor: 'rgba(255,255,255,0.04)', padding: 4, borderRadius: 40 },
   pill: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 32 },
+  pillContent: { minHeight: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   pillActive: { backgroundColor: '#f43f5e' },
+  pillLocked: { opacity: 0.58 },
   pillText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.6)' },
   pillTextActive: { color: '#fff' },
 });

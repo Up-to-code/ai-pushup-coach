@@ -5,9 +5,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Camera, CameraView } from 'expo-camera';
-import { useConvexAuth, useMutation, useQuery } from 'convex/react';
+import { useConvexAuth, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { useBetterAuth } from '../../src/auth';
+import { useAuth } from '../../src/auth';
 import { PushupCameraView, pushupCameraAvailable, type FaceMetricsEvent } from '../../src/components/PushupCameraView';
 import {
   useSettingsStore,
@@ -165,11 +165,20 @@ function getCoachCue({
     };
   }
 
-  if (trackingProblem === 'dark' || !faceDetected) {
+  if (trackingProblem === 'dark') {
     return {
       icon: 'sunny-outline',
+      title: 'Need more light',
+      body: 'Add light so the camera can lock onto your face.',
+      tone: 'warning',
+    };
+  }
+
+  if (trackingProblem === 'noFace' || !faceDetected) {
+    return {
+      icon: 'scan-circle-outline',
       title: 'Need face in frame',
-      body: 'Add light and bring your face into the circle.',
+      body: 'Bring your face into the circle.',
       tone: 'warning',
     };
   }
@@ -256,7 +265,7 @@ export default function WorkoutSessionScreen() {
   const [faceCenterX, setFaceCenterX] = useState(0.5);
   const [faceCenterY, setFaceCenterY] = useState(0.5);
   const [trackingPhase, setTrackingPhase] = useState<FaceTrackingPhase>('waiting');
-  const [trackingProblem, setTrackingProblem] = useState<FaceTrackingProblem>('dark');
+  const [trackingProblem, setTrackingProblem] = useState<FaceTrackingProblem>('noFace');
   const [formFeedback, setFormFeedback] = useState<FormFeedbackState>('good');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [guardArmed, setGuardArmed] = useState(false);
@@ -267,30 +276,24 @@ export default function WorkoutSessionScreen() {
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [restRemaining, setRestRemaining] = useState(0);
   const [visibleTrackingProblem, setVisibleTrackingProblem] = useState<VisibleTrackingProblem>('none');
-  const { isSignedIn, userId } = useBetterAuth();
+  const auth = useAuth();
   const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const user = useUserStore((state) => state.user);
   const updateUser = useUserStore((state) => state.updateUser);
   const markCurrentDayCompleted = usePlanStore((state) => state.markCurrentDayCompleted);
-  const convexUserId = userId ?? user.id;
-
-  const deletionState = useQuery(
-    api.users.deletionStatus,
-    isSignedIn && userId ? { clientUserId: userId } : 'skip'
-  );
+  const convexUserId = auth.clientUserId ?? user.id;
 
   const canSyncConvex = Boolean(
-    isSignedIn && 
+    auth.status === 'signedIn' && 
     isConvexAuthenticated && 
-    userId && 
-    deletionState?.status !== 'pendingDeletion'
+    auth.clientUserId
   );
 
   useEffect(() => {
-    if (isSignedIn && deletionState?.status === 'pendingDeletion') {
+    if (auth.status === 'pendingDeletion') {
       router.replace('/restore-account' as any);
     }
-  }, [isSignedIn, deletionState, router]);
+  }, [auth.status, router]);
 
   const {
     currentWorkout,
@@ -346,7 +349,7 @@ export default function WorkoutSessionScreen() {
     setCurrentSetIndex(0);
     setRestRemaining(0);
     setTrackingPhase('waiting');
-    setTrackingProblem('dark');
+    setTrackingProblem('noFace');
     setSessionState('waitingForFace');
     setVisibleTrackingProblem('none');
     trackingIssueSinceRef.current = null;
@@ -416,7 +419,7 @@ export default function WorkoutSessionScreen() {
       if (Date.now() - lastMetricsAtRef.current > DETECTION_STALE_MS) {
         setFaceDetected(false);
         setFormFeedback('incomplete');
-        setTrackingProblem('dark');
+        setTrackingProblem('noFace');
       }
     }, 400);
 
@@ -490,7 +493,7 @@ export default function WorkoutSessionScreen() {
         cameraPresentationState === 'preparing' ||
         (cameraPresentationState === 'tracking' && trackingProblem !== 'none');
       if (stillProblem && trackingIssueSinceRef.current !== null) {
-        setVisibleTrackingProblem(trackingProblem === 'none' ? 'dark' : trackingProblem);
+        setVisibleTrackingProblem(trackingProblem === 'none' ? 'noFace' : trackingProblem);
       }
     }, remainingDelay);
 
@@ -623,7 +626,7 @@ export default function WorkoutSessionScreen() {
         centerY: payload.centerY,
         trackingPhase,
         trackingProblem,
-        brightnessState: payload.brightnessState ?? (payload.faceDetected ? 'ok' : 'dark'),
+        brightnessState: payload.brightnessState ?? (payload.faceDetected ? 'ok' : 'unknown'),
       }).catch(() => {
         // Draft workout sync may still be catching up; the next sample can retry.
       });
@@ -631,6 +634,7 @@ export default function WorkoutSessionScreen() {
 
     const metric: FacePushupMetric = {
       status: payload.status,
+      brightnessState: payload.brightnessState,
       cameraReady: payload.cameraReady,
       faceDetected: payload.faceDetected,
       faceHeight: payload.faceHeight,
@@ -783,6 +787,7 @@ export default function WorkoutSessionScreen() {
 
   const trackingProblemLabel = {
     none: phaseLabel,
+    noFace: 'Find face',
     dark: 'More light',
     offCenter: 'Center face',
     tooFar: 'Move closer',
@@ -790,11 +795,18 @@ export default function WorkoutSessionScreen() {
   }[trackingProblem];
   const visibleTrackingProblemLabel = {
     none: '',
+    noFace: 'Find face',
     dark: 'More light',
     offCenter: 'Center face',
     tooFar: 'Move closer',
     unavailable: 'No tracking',
   }[visibleTrackingProblem];
+  const liveStatusBadgeLabel =
+    visibleTrackingProblem !== 'none'
+      ? visibleTrackingProblemLabel
+      : cameraPresentationState === 'tracking'
+        ? trackingProblemLabel
+        : statusLabel;
 
   const immediateCue = isPaused || sessionState === 'resting';
   const delayedCueProblem = visibleTrackingProblem === 'none' ? trackingProblem : visibleTrackingProblem;
@@ -816,6 +828,7 @@ export default function WorkoutSessionScreen() {
       ? 'ready'
       : cameraPresentationState === 'permission' ||
           cameraPresentationState === 'unavailable' ||
+          trackingProblem === 'noFace' ||
           trackingProblem === 'dark' ||
           trackingProblem === 'offCenter' ||
           trackingProblem === 'tooFar'
@@ -872,11 +885,19 @@ export default function WorkoutSessionScreen() {
           <Text style={styles.cameraEmptyText}>Opening camera</Text>
         </View>
       ) : null}
-      {visibleTrackingProblem !== 'none' ? (
-        <View style={styles.cameraStatusBadge}>
-          <Text style={styles.cameraStatusText}>{visibleTrackingProblemLabel}</Text>
-        </View>
-      ) : null}
+      <View style={styles.cameraStatusBadge}>
+        <View
+          style={[
+            styles.cameraStatusDot,
+            cameraRingState === 'ready'
+              ? styles.cameraStatusDotReady
+              : cameraRingState === 'bad'
+                ? styles.cameraStatusDotBad
+                : styles.cameraStatusDotWaiting,
+          ]}
+        />
+        <Text style={styles.cameraStatusText}>{liveStatusBadgeLabel}</Text>
+      </View>
       <View style={styles.faceTarget}>
         <View style={styles.faceTargetDot} />
       </View>
@@ -1106,16 +1127,37 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: spacing.lg,
     alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(0,0,0,0.68)',
+    backgroundColor: 'rgba(255,255,255,0.92)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
+    borderColor: 'rgba(255,255,255,0.96)',
+    shadowColor: '#000',
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  cameraStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  cameraStatusDotReady: {
+    backgroundColor: colors.success,
+  },
+  cameraStatusDotWaiting: {
+    backgroundColor: '#F59E0B',
+  },
+  cameraStatusDotBad: {
+    backgroundColor: colors.accent,
   },
   cameraStatusText: {
     ...typography.captionBold,
-    color: colors.textPrimary,
+    color: '#050505',
   },
   faceTarget: {
     position: 'absolute',

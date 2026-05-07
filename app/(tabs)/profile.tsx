@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,8 @@ import { useSocialCounts } from '../../src/features/social/hooks';
 import { useSocialInbox } from '../../src/features/notifications/hooks';
 import { colors, spacing, typography } from '../../src/theme';
 import { useResponsive } from '../../src/hooks';
-import { SimpleLineChart } from '../../src/components';
+import { ProBadge, SimpleLineChart } from '../../src/components';
+import { canUseProfileRange, resolveProfileRangeForAccess, useSubscription } from '../../src/subscriptions';
 
 type ProfileTab = 'stats' | 'history' | 'badges';
 
@@ -83,20 +84,24 @@ export default function ProfileScreen() {
   const { horizontalPadding } = useResponsive();
   const screenWidth = Dimensions.get('window').width;
   const user = useUserStore((state) => state.user);
+  const { isPro, showPaywall } = useSubscription();
   const { counts } = useSocialCounts();
   const { inbox } = useSocialInbox(10);
   const [activeTab, setActiveTab] = useState<ProfileTab>('stats');
   const [period, setPeriod] = useState<TimePeriod>('W');
   const [periodOffset, setPeriodOffset] = useState(0);
   const [showPicker, setShowPicker] = useState(false);
-  const { range: profileRange, loading: profileLoading } = useProfileRange(period, periodOffset);
-  const { range: allTimeRange } = useProfileRange('ALL', 0);
+  const profileAccessRange = resolveProfileRangeForAccess(period, periodOffset, isPro);
+  const visiblePeriod = profileAccessRange.period as TimePeriod;
+  const visibleOffset = profileAccessRange.offset;
+  const { range: profileRange, loading: profileLoading } = useProfileRange(visiblePeriod, visibleOffset);
+  const { range: allTimeRange } = useProfileRange(isPro ? 'ALL' : 'W', 0);
   const { comparison: friendComparison } = useFriendComparison('W', 0);
   const rawDisplayName = user.displayName || user.name;
   const displayName = rawDisplayName.length > 4 ? `${rawDisplayName.slice(0, 4)}...` : rawDisplayName;
   const chartWidth = screenWidth - horizontalPadding * 2;
 
-  const days = getDaysForPeriod(period);
+  const days = getDaysForPeriod(visiblePeriod);
   const current = profileRange?.summary ?? emptyStats;
   const previous = profileRange?.previousSummary ?? null;
   const chartData = profileRange?.dailySeries.map((point) => point.reps) ?? [];
@@ -108,30 +113,30 @@ export default function ProfileScreen() {
   }));
 
   const periodLabel = useMemo(() => {
-    if (periodOffset === 0) return getPeriodLabel(period);
+    if (visibleOffset === 0) return getPeriodLabel(visiblePeriod);
     const now = new Date();
     const target = new Date(now);
-    target.setDate(target.getDate() - periodOffset * days);
-    if (period === 'W') {
-      return formatWeekRange(periodOffset);
+    target.setDate(target.getDate() - visibleOffset * days);
+    if (visiblePeriod === 'W') {
+      return formatWeekRange(visibleOffset);
     }
-    if (period === 'M') return target.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
-    return getPeriodLabel(period);
-  }, [period, periodOffset, days]);
-  const compareLabel = getCompareLabel(period);
+    if (visiblePeriod === 'M') return target.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+    return getPeriodLabel(visiblePeriod);
+  }, [visiblePeriod, visibleOffset, days]);
+  const compareLabel = getCompareLabel(visiblePeriod);
 
   /* Generate picker options */
   const pickerOptions = useMemo(() => {
     const opts: Array<{ label: string; offset: number }> = [];
-    const count = period === 'W' ? 12 : period === 'M' ? 12 : 5;
+    const count = visiblePeriod === 'W' ? 12 : visiblePeriod === 'M' ? 12 : 5;
     for (let i = 0; i < count; i++) {
       const now = new Date();
       const target = new Date(now);
       target.setDate(target.getDate() - i * days);
       let label = '';
-      if (period === 'W') {
+      if (visiblePeriod === 'W') {
         label = i === 0 ? `This Week (${formatWeekRange(i)})` : i === 1 ? `Last Week (${formatWeekRange(i)})` : formatWeekRange(i);
-      } else if (period === 'M') {
+      } else if (visiblePeriod === 'M') {
         label = i === 0 ? 'This Month' : i === 1 ? 'Last Month' : target.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       } else {
         label = i === 0 ? 'This Year' : `${new Date().getFullYear() - i}`;
@@ -139,7 +144,18 @@ export default function ProfileScreen() {
       opts.push({ label, offset: i });
     }
     return opts;
-  }, [period, days]);
+  }, [visiblePeriod, days]);
+
+  const promptPro = async () => {
+    try {
+      await showPaywall();
+    } catch (error) {
+      Alert.alert(
+        'Pro feature',
+        error instanceof Error ? error.message : 'Upgrade to Pro to unlock older history and longer date ranges.'
+      );
+    }
+  };
 
   function formatCompare(curr: number, prev: number | undefined): string {
     if (prev === undefined || prev === null) return '';
@@ -228,23 +244,42 @@ export default function ProfileScreen() {
           <>
             {/* Period Header */}
             <View style={styles.periodHeader}>
-              <Pressable onPress={() => { if (period !== 'ALL') setShowPicker(true); }}>
+              <Pressable
+                onPress={() => {
+                  if (!isPro) {
+                    void promptPro();
+                    return;
+                  }
+                  if (visiblePeriod !== 'ALL') setShowPicker(true);
+                }}
+              >
                 <View style={styles.periodLabelRow}>
                   <Text style={styles.periodTitle}>{periodLabel}</Text>
-                  {period !== 'ALL' && <Ionicons name="chevron-down" size={14} color={colors.accent} style={{ marginLeft: 4 }} />}
+                  {visiblePeriod !== 'ALL' && <Ionicons name="chevron-down" size={14} color={colors.accent} style={{ marginLeft: 4 }} />}
                 </View>
                 {compareLabel ? <Text style={styles.periodCompare}>{compareLabel}</Text> : null}
               </Pressable>
               <View style={styles.periodPills}>
                 {periods.map((p) => {
-                  const active = period === p;
+                  const active = visiblePeriod === p;
+                  const locked = !canUseProfileRange(p, 0, isPro);
                   return (
                     <Pressable
                       key={p}
-                      style={[styles.periodPill, active && styles.periodPillActive]}
-                      onPress={() => { setPeriod(p); setPeriodOffset(0); }}
+                      style={[styles.periodPill, active && styles.periodPillActive, locked && styles.periodPillLocked]}
+                      onPress={() => {
+                        if (locked) {
+                          void promptPro();
+                          return;
+                        }
+                        setPeriod(p);
+                        setPeriodOffset(0);
+                      }}
                     >
-                      <Text style={[styles.periodPillText, active && styles.periodPillTextActive]}>{p}</Text>
+                      <View style={styles.periodPillContent}>
+                        <Text style={[styles.periodPillText, active && styles.periodPillTextActive]}>{p}</Text>
+                        {locked ? <ProBadge size="tiny" /> : null}
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -413,6 +448,18 @@ export default function ProfileScreen() {
                 <Text style={styles.emptyText}>Your completed sessions will show here after saving.</Text>
               </View>
             )}
+            {!isPro ? (
+              <Pressable style={styles.proLockPanel} onPress={() => void promptPro()}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.accent} />
+                <View style={styles.proLockCopy}>
+                  <View style={styles.proLockTitleRow}>
+                    <Text style={styles.proLockTitle}>Older history</Text>
+                    <ProBadge />
+                  </View>
+                  <Text style={styles.proLockText}>Free users can view this week. Pro unlocks previous weeks, months, years, and all-time history.</Text>
+                </View>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
 
@@ -435,7 +482,7 @@ export default function ProfileScreen() {
           <Pressable style={styles.sheetContainer} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>
-              {period === 'W' ? 'Select Week' : period === 'M' ? 'Select Month' : 'Select Year'}
+              {visiblePeriod === 'W' ? 'Select Week' : visiblePeriod === 'M' ? 'Select Month' : 'Select Year'}
             </Text>
             <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
               {pickerOptions.map((opt) => {
@@ -594,8 +641,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
   },
+  periodPillContent: {
+    minHeight: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
   periodPillActive: {
     backgroundColor: colors.accent,
+  },
+  periodPillLocked: {
+    opacity: 0.45,
   },
   periodPillText: {
     ...typography.captionBold,
@@ -808,6 +865,37 @@ const styles = StyleSheet.create({
     ...typography.captionBold,
     color: colors.textSecondary,
     textTransform: 'capitalize',
+  },
+  proLockPanel: {
+    marginTop: spacing.md,
+    minHeight: 76,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderAccent,
+    backgroundColor: colors.accentAlpha,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+  },
+  proLockCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  proLockTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  proLockTitle: {
+    ...typography.bodyBold,
+    color: colors.textPrimary,
+  },
+  proLockText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
 
   /* ── Badges ── */

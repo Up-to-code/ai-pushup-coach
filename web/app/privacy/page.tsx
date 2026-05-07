@@ -36,7 +36,7 @@ export default function PrivacyPage() {
 
           <h2>Purchases</h2>
           <p>
-            Subscription purchase, renewal, restore, cancellation, and refund flows are handled through RevenueCat and the App Store. Payment card details are handled by Apple and RevenueCat.
+            Subscription purchase, renewal, restore, cancellation, and refund flows are handled through Adapty and the App Store. Payment card details are handled by Apple and Adapty.
           </p>
 
           <h2>Account Deletion</h2>

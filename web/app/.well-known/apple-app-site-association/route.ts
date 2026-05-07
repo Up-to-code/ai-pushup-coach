@@ -19,6 +19,10 @@ export function GET() {
                 '/': '/open/*',
                 comment: 'Open app handoff URLs.',
               },
+              {
+                '/': '/connect/*',
+                comment: 'Open profile connection handoff URLs.',
+              },
             ],
           },
         ],

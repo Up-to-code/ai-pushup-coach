@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { NeonButton } from '../../src/components';
 import { useWorkoutStore, useSettingsStore, type WorkoutType } from '../../src/store';
+import { resolveCameraModeForAccess, useSubscription } from '../../src/subscriptions';
 import { borderRadius, colors, spacing, typography } from '../../src/theme';
 
 function parseNumberParam(value: string | string[] | undefined) {
@@ -30,6 +31,7 @@ export default function TrainingSetupScreen() {
   const params = useLocalSearchParams();
   const startWorkout = useWorkoutStore((state) => state.startWorkout);
   const { settings, hasCompletedOnboarding } = useSettingsStore();
+  const { isPro } = useSubscription();
 
   React.useEffect(() => {
     if (!hasCompletedOnboarding) {
@@ -45,6 +47,7 @@ export default function TrainingSetupScreen() {
   const goal = parseNumberParam(params.goal);
   const restTime = parseNumberParam(params.restTime);
   const sets = parseSetsParam(params.sets);
+  const cameraMode = resolveCameraModeForAccess(settings.defaultCameraMode, isPro);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -71,7 +74,7 @@ export default function TrainingSetupScreen() {
             {restTime ? <DetailRow label="Rest" value={`${restTime}s`} /> : null}
             <DetailRow 
               label="Camera" 
-              value={settings.defaultCameraMode === 'faceFocus' ? 'Face Focus' : 'Full Scene'} 
+              value={cameraMode === 'faceFocus' ? 'Face Focus' : 'Full Scene'}
               isDimmed
             />
           </View>
@@ -89,7 +92,7 @@ export default function TrainingSetupScreen() {
         <NeonButton
           title="Start live session"
           onPress={() => {
-            startWorkout(type, settings.defaultCameraMode, goal, sets, restTime);
+            startWorkout(type, cameraMode, goal, sets, restTime);
             router.replace('/workout-session');
           }}
         />

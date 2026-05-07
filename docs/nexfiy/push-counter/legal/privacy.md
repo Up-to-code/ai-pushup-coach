@@ -11,7 +11,7 @@ Push Counter helps users track push-up workouts, training plans, progress histor
 - Account and profile information you provide or sync through sign-in, such as user id, display name, nickname, bio, country, avatar, and coach tone.
 - Workout information, such as reps, duration, calories, workout type, goal, sets, completion state, form feedback state, camera mode, quality score, and workout dates.
 - Training settings, such as workout days, reminder time, sound, haptics, camera mode, and notification preferences.
-- Subscription status from RevenueCat, such as whether the Pro entitlement is active.
+- Subscription status from Adapty, such as whether the Pro entitlement is active.
 - Social and leaderboard data when you use synced features, such as follows, friends, country rank, challenge progress, and notifications.
 - Photo library content only when you choose an image for your profile avatar.
 - Diagnostic and usage data needed to run app services, troubleshoot sync, and keep subscriptions working.
@@ -30,7 +30,7 @@ When you are signed in and backend configuration is available, selected profile,
 
 ## Purchases
 
-Subscription purchase, renewal, restore, cancellation, and refund flows are handled through RevenueCat and the App Store. Push Counter uses subscription status and purchase history to unlock Pro features, but payment card details are handled by Apple and RevenueCat.
+Subscription purchase, renewal, restore, cancellation, and refund flows are handled through Adapty and the App Store. Push Counter uses subscription status and purchase history to unlock Pro features, but payment card details are handled by Apple and Adapty.
 
 ## Account Deletion
 

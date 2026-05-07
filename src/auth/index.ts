@@ -1,5 +1,17 @@
 export { authClient } from './authClient';
 export { BetterAuthUserSync } from './BetterAuthUserSync';
+export { ConvexUserSync } from './ConvexUserSync';
+export { AuthRoutingGate } from './AuthRoutingGate';
+export { getAuthRedirectTarget } from './authRouteGate';
+export { clearBetterAuthExpoCache } from './betterAuthExpoStorage';
+export { clearLocalAuthState } from './clearLocalAuthState';
+export { getAuthEntryRoute, resolveAuthStatus } from './authState';
 export { getBetterAuthDisplayName, toLocalUserUpdates } from './betterAuthUserProfile';
+export { resetBetterAuthClientSession } from './resetBetterAuthClientSession';
+export { useAuth } from './useAuth';
 export { useBetterAuth } from './useBetterAuth';
+export { useCurrentUser } from './useCurrentUser';
+export { useSettingsHydrated } from './useSettingsHydrated';
+export type { AuthActionStatus } from './authActionStore';
+export type { AuthStatus, DeletionStateLike } from './authState';
 export type { BetterAuthProfileSource } from './betterAuthUserProfile';

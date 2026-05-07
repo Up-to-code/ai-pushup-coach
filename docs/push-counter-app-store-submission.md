@@ -19,7 +19,7 @@ Generated from the current React Native codebase on May 2, 2026.
 - Global, country, and friends leaderboards across week, month, year, and all time.
 - Challenges with join/leave, progress tracking, rewards, and completion status.
 - Social following, notifications, and friend comparison features for signed-in users.
-- Pro access through App Store purchases managed with RevenueCat, including restore purchases and subscription management.
+- Pro access through App Store purchases managed with Adapty, including restore purchases and subscription management.
 - Account deletion for signed-in users and local data clearing for guest users.
 
 ## Recommended App Store Metadata
@@ -121,7 +121,7 @@ If camera access is denied or the native camera path is unavailable, the app pro
 
 Account deletion is available from Settings. Guest users can clear local data. Deleting the app account does not cancel an App Store subscription.
 
-Restore purchases and Manage subscription are available from Settings. Payment details are handled by Apple; the app receives purchase and entitlement status through RevenueCat.
+Restore purchases and Manage subscription are available from Settings. Payment details are handled by Apple; the app receives purchase and entitlement status through Adapty.
 
 ## Privacy Policy
 
@@ -186,7 +186,7 @@ Current service categories include:
 
 - Authentication provider for Apple sign-in through Better Auth.
 - Backend and database services through Convex.
-- Purchase entitlement and subscription management through RevenueCat and Apple.
+- Purchase entitlement and subscription management through Adapty and Apple.
 - Profile image upload and hosting services.
 - Apple services for App Store purchases, subscriptions, notifications, and platform functionality.
 
@@ -202,7 +202,7 @@ Local data remains on your device until you delete it, reset app data, or uninst
 
 Synced account data may remain on our systems until you delete your account or request deletion, unless retention is required for security, legal, accounting, fraud prevention, or dispute reasons.
 
-Purchase records may be retained by Apple, RevenueCat, and us as needed to manage entitlements, subscriptions, restore purchases, support requests, and legal obligations.
+Purchase records may be retained by Apple, Adapty, and us as needed to manage entitlements, subscriptions, restore purchases, support requests, and legal obligations.
 
 ### 7. Account Deletion And Data Choices
 
@@ -290,7 +290,7 @@ Notifications are optional and can be controlled in the app or iOS Settings. Pho
 
 ### 7. Purchases And Pro Access
 
-Push Counter may offer Pro access, subscriptions, or other in-app purchases through Apple. Prices, durations, free trials, renewal terms, and cancellation options are shown before purchase in the App Store purchase flow or paywall.
+Push Counter may offer Pro access, subscriptions, or other in-app purchases through Apple. Eligible new subscribers may receive a 3-day free trial before the Yearly Pro subscription renews at the displayed price. Monthly Pro does not include a free trial. Prices, durations, trial terms, renewal terms, and cancellation options are shown before purchase in the App Store purchase flow or paywall.
 
 Auto-renewable subscriptions renew automatically unless canceled at least 24 hours before the end of the current billing period. Your Apple account is charged according to Apple terms. You can manage or cancel subscriptions in your Apple account subscription settings.
 
@@ -463,7 +463,7 @@ Data not collected by the app:
 - Use Apple in-app purchase for Pro digital features.
 - Paywall must show product name, price, billing period, renewal behavior, trial terms if any, privacy link, and terms link before purchase.
 - Restore purchases must work.
-- Manage subscription must open RevenueCat Customer Center or Apple subscription management.
+- Manage subscription must open Apple subscription management.
 - Submit new in-app purchase or subscription products with the app build.
 - Do not unlock digital Pro features through external payment links.
 

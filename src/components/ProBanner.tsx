@@ -6,6 +6,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { colors, typography, spacing, borderRadius, layout, shadows } from '../theme';
+import { ProBadge } from './ProBadge';
 
 interface ProBannerProps {
   title: string;
@@ -42,9 +43,7 @@ export const ProBanner: React.FC<ProBannerProps> = ({
       style={[styles.card, animatedStyle]}
     >
       <View style={styles.content}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>PRO</Text>
-        </View>
+        <ProBadge style={styles.bannerBadge} />
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
@@ -69,18 +68,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  badge: {
-    backgroundColor: colors.accentAlpha,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    alignSelf: 'flex-start',
+  bannerBadge: {
     marginBottom: spacing.sm,
-  },
-  badgeText: {
-    ...typography.captionBold,
-    color: colors.accentStrong,
-    fontSize: 11,
   },
   title: {
     ...typography.headlineMedium,

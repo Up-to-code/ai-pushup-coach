@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getAccountOptions, getSocialProviders, requireMatchingIdentity } from './auth';
+import {
+  getAccountOptions,
+  getAppleProfileEmail,
+  getSocialProviders,
+  mapAppleProfileToUser,
+  requireMatchingIdentity,
+} from './auth';
 
 function ctxWithSubject(subject: string | null) {
   return {
@@ -42,27 +48,73 @@ describe('getSocialProviders', () => {
     vi.unstubAllEnvs();
   });
 
-  it('registers only Apple, even when Google credentials are present', () => {
+  it('registers Apple and Google when credentials are present', () => {
     vi.stubEnv('APPLE_CLIENT_ID', 'com.example.pushcounter.oauth');
     vi.stubEnv('APPLE_CLIENT_SECRET', 'apple-secret');
-    vi.stubEnv('APPLE_APP_BUNDLE_IDENTIFIER', 'com.example.pushcounter');
+    vi.stubEnv('APPLE_APP_BUNDLE_IDENTIFIER', 'com.aipushupcoach.app');
     vi.stubEnv('GOOGLE_CLIENT_ID', 'google-client');
     vi.stubEnv('GOOGLE_CLIENT_SECRET', 'google-secret');
 
     expect(getSocialProviders()).toEqual({
-      apple: {
+      apple: expect.objectContaining({
         clientId: 'com.example.pushcounter.oauth',
         clientSecret: 'apple-secret',
-        appBundleIdentifier: 'com.example.pushcounter',
+        appBundleIdentifier: 'com.aipushupcoach.app',
+        mapProfileToUser: expect.any(Function),
+      }),
+      google: {
+        clientId: 'google-client',
+        clientSecret: 'google-secret',
       },
     });
   });
 
-  it('does not register Google by itself', () => {
+  it('registers Google by itself', () => {
     vi.stubEnv('GOOGLE_CLIENT_ID', 'google-client');
     vi.stubEnv('GOOGLE_CLIENT_SECRET', 'google-secret');
 
-    expect(getSocialProviders()).toEqual({});
+    expect(getSocialProviders()).toEqual({
+      google: {
+        clientId: 'google-client',
+        clientSecret: 'google-secret',
+      },
+    });
+  });
+
+  it('passes through the native Apple app bundle identifier for id token validation', () => {
+    vi.stubEnv('APPLE_CLIENT_ID', 'com.example.pushcounter.oauth');
+    vi.stubEnv('APPLE_CLIENT_SECRET', 'apple-secret');
+    vi.stubEnv('APPLE_APP_BUNDLE_IDENTIFIER', 'com.aipushupcoach.app');
+
+    expect(getSocialProviders()?.apple).toMatchObject({
+      clientId: 'com.example.pushcounter.oauth',
+      clientSecret: 'apple-secret',
+      appBundleIdentifier: 'com.aipushupcoach.app',
+      mapProfileToUser: expect.any(Function),
+    });
+  });
+
+  it('maps Apple profiles with missing email to a deterministic internal fallback', () => {
+    expect(getAppleProfileEmail({ sub: 'apple-user-123', email: null })).toBe(
+      'apple-apple-user-123@users.pushcounter.local'
+    );
+    expect(mapAppleProfileToUser({ sub: 'apple:user/123', email: null, name: null })).toEqual({
+      email: 'apple-apple-user-123@users.pushcounter.local',
+      name: 'Athlete',
+    });
+  });
+
+  it('keeps Apple profile email and name when Apple provides them', () => {
+    expect(
+      mapAppleProfileToUser({
+        sub: 'apple-user-123',
+        email: 'athlete@example.com',
+        name: 'Ahmed Mansour',
+      })
+    ).toEqual({
+      email: 'athlete@example.com',
+      name: 'Ahmed Mansour',
+    });
   });
 });
 

@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { NeonButton } from '../../src/components';
+import { NeonButton, ProBadge } from '../../src/components';
 import { usePlanStore, useSettingsStore, useUserStore, useWorkoutStore, type Day, type Plan } from '../../src/store';
+import { resolveCameraModeForAccess, useSubscription } from '../../src/subscriptions';
 import { borderRadius, colors, spacing, typography } from '../../src/theme';
 import { useResponsive } from '../../src/hooks';
 import { formatPreferredTime, getCurrentPlanDay } from '../../src/utils';
@@ -32,6 +33,7 @@ export default function HomeScreen() {
   const { horizontalPadding } = useResponsive();
   const user = useUserStore((state) => state.user);
   const settings = useSettingsStore((state) => state.settings);
+  const { isPro, showPaywall } = useSubscription();
   const startWorkout = useWorkoutStore((state) => state.startWorkout);
   const plan = usePlanStore((state) => state.plan);
   const updatePlan = usePlanStore((state) => state.updatePlan);
@@ -64,7 +66,13 @@ export default function HomeScreen() {
     };
 
     markCurrentDayStarted();
-    startWorkout('sets', settings.defaultCameraMode, currentDay.targetReps, currentDay.sets, currentDay.restTime);
+    startWorkout(
+      'sets',
+      resolveCameraModeForAccess(settings.defaultCameraMode, isPro),
+      currentDay.targetReps,
+      currentDay.sets,
+      currentDay.restTime
+    );
 
     await cancelPlanNotifications(plan.notificationIds);
     const notificationIds = await syncNotificationsForPlan({
@@ -73,10 +81,22 @@ export default function HomeScreen() {
       notificationsEnabled: settings.notificationsEnabled,
       workoutReminderEnabled: settings.workoutReminderEnabled,
       missedReminderEnabled: settings.missedReminderEnabled,
+      habitNudgeEnabled: settings.habitNudgeEnabled,
     });
     updatePlan({ notificationIds });
 
     router.push('/workout-session' as any);
+  };
+
+  const promptPro = async () => {
+    try {
+      await showPaywall();
+    } catch (error) {
+      Alert.alert(
+        'Pro feature',
+        error instanceof Error ? error.message : 'Upgrade to Pro to rebuild and customize your plan.'
+      );
+    }
   };
 
   if (!plan) {
@@ -189,18 +209,28 @@ export default function HomeScreen() {
           </View>
         ))}
 
-        <View style={{ paddingHorizontal: horizontalPadding, marginTop: spacing.md }}>
+        <View style={[styles.changePlanArea, { paddingHorizontal: horizontalPadding }]}>
+          {!isPro ? (
+            <View style={styles.changePlanProRow}>
+              <ProBadge />
+              <Text style={styles.changePlanProText}>Plan rebuilds and customization</Text>
+            </View>
+          ) : null}
           <NeonButton
             title="Change plan"
             variant="outline"
             onPress={() => {
+              if (!isPro) {
+                void promptPro();
+                return;
+              }
               updateSetupDraft({
                 level: plan.level,
                 goal: plan.goal,
                 trainingDays: plan.trainingDays,
                 preferredTime,
               });
-              router.push('/onboarding' as any);
+              router.push('/onboarding?mode=rebuild' as any);
             }}
           />
         </View>
@@ -355,6 +385,20 @@ const styles = StyleSheet.create({
   todayStartText: { ...typography.bodyBold, color: colors.textInverse, fontSize: 14 },
   restPanel: { padding: spacing.md, borderRadius: borderRadius.lg, backgroundColor: colors.backgroundElevated },
   restText: { ...typography.bodySmall, color: colors.textSecondary, lineHeight: 20 },
+  changePlanArea: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  changePlanProRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  changePlanProText: {
+    ...typography.captionBold,
+    color: colors.textSecondary,
+  },
   weekContainer: { marginBottom: spacing.sm },
   weekHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.md, alignItems: 'center' },
   weekTitle: { ...typography.bodyBold, color: colors.textPrimary },

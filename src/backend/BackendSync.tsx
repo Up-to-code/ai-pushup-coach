@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useConvexAuth, useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { useRouter } from 'expo-router';
 import { useBetterAuth } from '../auth';
 import { useSettingsStore, useUserStore, useWorkoutStore, type Workout } from '../store';
 
@@ -28,7 +27,6 @@ function toWorkoutPayload(clientUserId: string, workout: Workout) {
 export function BackendSync() {
   const { isLoaded, isSignedIn, userId } = useBetterAuth();
   const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
-  const router = useRouter();
   const user = useUserStore((state) => state.user);
   const settings = useSettingsStore((state) => state.settings);
   const workouts = useWorkoutStore((state) => state.workouts);
@@ -47,12 +45,6 @@ export function BackendSync() {
     () => workouts.filter((workout) => workout.completed && !workout.synced),
     [workouts]
   );
-
-  useEffect(() => {
-    if (deletionState?.status === 'pendingDeletion') {
-      router.replace('/restore-account' as any);
-    }
-  }, [deletionState, router]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !isConvexAuthenticated || !userId || !deletionState) {
@@ -79,12 +71,9 @@ export function BackendSync() {
           countryCode: user.countryCode,
           countryName: user.countryName,
           avatar: user.avatar,
-          proStatus: user.proStatus,
           createdAt: user.createdAt,
-          streak: user.streak,
-          energy: user.energy,
-          totalReps: user.totalReps,
-          bestReps: user.bestReps,
+          // Stats (streak, energy, reps) and Subscriptions are backend-managed.
+          // We exclude them here to prevent accidental overwrites from local state.
         });
 
         if (cancelled) return;
@@ -98,6 +87,7 @@ export function BackendSync() {
           notificationsEnabled: settings.notificationsEnabled,
           workoutReminderEnabled: settings.workoutReminderEnabled,
           missedReminderEnabled: settings.missedReminderEnabled,
+          habitNudgeEnabled: settings.habitNudgeEnabled,
           defaultWorkoutTime: settings.defaultWorkoutTime,
           defaultCameraMode: settings.defaultCameraMode,
         });

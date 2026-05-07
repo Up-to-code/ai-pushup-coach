@@ -63,6 +63,33 @@ export function buildWidgetPayload(
   };
 }
 
+export function buildLockedWidgetPayload(
+  input: {
+    user: Pick<User, 'displayName' | 'name'>;
+    now?: Date;
+  }
+): WidgetPayload {
+  const now = input.now ?? new Date();
+
+  return {
+    streak: 0,
+    totalReps: 0,
+    bestReps: 0,
+    lastWorkoutReps: 0,
+    lastWorkoutDate: '',
+    displayName: 'Upgrade to Pro',
+    weeklyReps: ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label) => ({ label, reps: 0 })),
+    friendsThisWeek: {
+      rank: 0,
+      score: 0,
+      friendAverage: 0,
+      deltaToNext: 0,
+      friendsCount: 0,
+    },
+    updatedAt: now.toISOString(),
+  };
+}
+
 export function getWidgetPayloadSignature(payload: WidgetPayload) {
   return JSON.stringify({
     ...payload,

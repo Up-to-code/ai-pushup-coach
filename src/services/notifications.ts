@@ -4,6 +4,8 @@ import { getCoachMessage } from '../utils/coachMessages';
 type NotificationsModule = typeof import('expo-notifications');
 
 let cachedNotifications: NotificationsModule | null | undefined;
+const MAX_SCHEDULED_PLAN_NOTIFICATIONS = 48;
+const HABIT_NUDGE_DELAY_HOURS = 6;
 
 function getNotifications() {
   if (cachedNotifications !== undefined) {
@@ -84,45 +86,108 @@ export async function scheduleMissedWorkoutReminder(input: {
   });
 }
 
-export async function schedulePlanNotifications(input: {
+export type PlanNotificationKind = 'workoutReminder' | 'missedWorkout' | 'habitNudge';
+
+export interface PlanNotificationCandidate {
+  kind: PlanNotificationKind;
+  scheduledAt: string;
+  day: number;
+}
+
+export function buildPlanNotificationCandidates(input: {
   plan: Plan;
-  user: User;
   workoutReminderEnabled: boolean;
   missedReminderEnabled: boolean;
+  habitNudgeEnabled: boolean;
+  now?: number;
 }) {
-  const Notifications = getNotifications();
-  if (!Notifications) return [];
-
-  const ids: string[] = [];
+  const now = input.now ?? Date.now();
+  const candidates: PlanNotificationCandidate[] = [];
 
   for (const day of input.plan.days) {
     if (!day.scheduledAt || day.startedAt || day.status === 'rest' || day.status === 'completed') {
       continue;
     }
 
-    if (new Date(day.scheduledAt).getTime() <= Date.now()) {
+    const scheduled = new Date(day.scheduledAt);
+    if (scheduled.getTime() <= now) {
       continue;
     }
 
     if (input.workoutReminderEnabled) {
+      candidates.push({ kind: 'workoutReminder', scheduledAt: scheduled.toISOString(), day: day.day });
+    }
+
+    if (input.missedReminderEnabled) {
+      const missedAt = new Date(scheduled);
+      missedAt.setMinutes(missedAt.getMinutes() + 30);
+      if (missedAt.getTime() > now) {
+        candidates.push({ kind: 'missedWorkout', scheduledAt: missedAt.toISOString(), day: day.day });
+      }
+    }
+
+    if (input.habitNudgeEnabled) {
+      const nudgeAt = new Date(scheduled);
+      nudgeAt.setHours(nudgeAt.getHours() + HABIT_NUDGE_DELAY_HOURS);
+      if (nudgeAt.getTime() > now) {
+        candidates.push({ kind: 'habitNudge', scheduledAt: nudgeAt.toISOString(), day: day.day });
+      }
+    }
+  }
+
+  return candidates
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+    .slice(0, MAX_SCHEDULED_PLAN_NOTIFICATIONS);
+}
+
+export async function schedulePlanNotifications(input: {
+  plan: Plan;
+  user: User;
+  workoutReminderEnabled: boolean;
+  missedReminderEnabled: boolean;
+  habitNudgeEnabled: boolean;
+}) {
+  const Notifications = getNotifications();
+  if (!Notifications) return [];
+
+  const ids: string[] = [];
+  const candidates = buildPlanNotificationCandidates(input);
+
+  for (const candidate of candidates) {
+    if (candidate.kind === 'workoutReminder') {
       const reminderId = await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Push-up session ready',
           body: getCoachMessage('dueNow', input.user, input.plan),
-          data: { kind: 'workoutReminder', planId: input.plan.id, day: day.day },
+          data: { kind: 'workoutReminder', planId: input.plan.id, day: candidate.day },
         },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: secondsUntil(day.scheduledAt) },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: secondsUntil(candidate.scheduledAt) },
       });
       ids.push(reminderId);
     }
 
-    if (input.missedReminderEnabled) {
-      const missedId = await scheduleMissedWorkoutReminder({
-        scheduledAt: day.scheduledAt,
-        title: 'Still time for today',
-        body: getCoachMessage('missed30', input.user, input.plan),
+    if (candidate.kind === 'missedWorkout') {
+      const missedId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Still time for today',
+          body: getCoachMessage('missed30', input.user, input.plan),
+          data: { kind: 'missedWorkout', planId: input.plan.id, day: candidate.day },
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: secondsUntil(candidate.scheduledAt) },
       });
-      if (missedId) ids.push(missedId);
+      ids.push(missedId);
+    }
+
+    if (candidate.kind === 'habitNudge') {
+      const nudgeId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'A few reps keep the streak warm',
+          body: getCoachMessage('comeback', input.user, input.plan),
+          data: { kind: 'habitNudge', planId: input.plan.id, day: candidate.day },
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: secondsUntil(candidate.scheduledAt) },
+      });
+      ids.push(nudgeId);
     }
   }
 
@@ -135,6 +200,7 @@ export async function syncNotificationsForPlan(input: {
   notificationsEnabled: boolean;
   workoutReminderEnabled: boolean;
   missedReminderEnabled: boolean;
+  habitNudgeEnabled?: boolean;
 }) {
   if (!input.plan) return [];
 
@@ -149,5 +215,6 @@ export async function syncNotificationsForPlan(input: {
     user: input.user,
     workoutReminderEnabled: input.workoutReminderEnabled,
     missedReminderEnabled: input.missedReminderEnabled,
+    habitNudgeEnabled: input.habitNudgeEnabled ?? false,
   });
 }

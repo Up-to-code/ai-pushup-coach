@@ -6,6 +6,7 @@ import { borderRadius, colors, layout, spacing, typography } from '../../../src/
 import { useUserStore } from '../../../src/store';
 import { getCountryByCode, getFlagEmoji } from '../../../src/data/countries';
 import { CFEView, NeonButton, StackHeader } from '../../../src/components';
+import { authClient } from '../../../src/auth/authClient';
 import { pickAndUploadAvatar } from '../../../src/utils/uploadthing';
 
 export default function EditProfileScreen() {
@@ -37,19 +38,36 @@ export default function EditProfileScreen() {
   const handleSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
-    const displayName = name.trim() || user.name;
+    
+    try {
+      const displayName = name.trim() || user.name;
+      const avatar = avatarUrl || undefined;
 
-    updateUser({
-      name: displayName,
-      displayName,
-      nickname: nickname.trim() || displayName,
-      bio: bio.trim(),
-      avatar: avatarUrl || undefined,
-      countryCode: selectedCountry.code,
-      countryName: selectedCountry.name,
-    });
-    setIsSaving(false);
-    router.back();
+      // 1. Update the Auth Provider (BetterAuth/Clerk) first
+      // This ensures that on reload, BetterAuthUserSync pulls the correct data.
+      await authClient.updateUser({
+        name: displayName,
+        image: avatar,
+      });
+
+      // 2. Update the local Zustand store for immediate UI update
+      updateUser({
+        name: displayName,
+        displayName,
+        nickname: nickname.trim() || displayName,
+        bio: bio.trim(),
+        avatar,
+        countryCode: selectedCountry.code,
+        countryName: selectedCountry.name,
+      });
+
+      router.back();
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      Alert.alert('Error', 'Failed to save profile changes. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const displayInitial = (user.displayName || user.name).slice(0, 1).toUpperCase();

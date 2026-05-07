@@ -22,7 +22,7 @@ Rationale: The current app has no advertising SDK in `package.json` and should n
 
 - User ID
 - Purpose: App Functionality
-- Source: Better Auth user id, Convex client user id, RevenueCat app user id.
+- Source: Better Auth user id, Convex client user id, Adapty app user id.
 
 ### Health & Fitness
 
@@ -44,7 +44,7 @@ Rationale: The current app has no advertising SDK in `package.json` and should n
 
 - Purchase History
 - Purpose: App Functionality
-- Source: RevenueCat and App Store subscription status and entitlement history.
+- Source: Adapty and App Store subscription status and entitlement history.
 
 ### Usage Data
 

@@ -98,16 +98,22 @@ export const upsertProfile = mutation({
     countryCode: v.string(),
     countryName: v.string(),
     avatar: v.optional(v.string()),
-    proStatus: v.union(v.literal('free'), v.literal('pro')),
+    proStatus: v.optional(v.union(v.literal('free'), v.literal('pro'))),
+    subscriptionStatus: v.optional(v.union(v.literal('free'), v.literal('pro'), v.literal('expired'), v.literal('unknown'))),
+    subscriptionProvider: v.optional(v.union(v.literal('adapty'), v.literal('development'), v.literal('none'))),
+    activeProductIdentifier: v.optional(v.string()),
+    activeAccessLevelId: v.optional(v.string()),
+    subscriptionUpdatedAt: v.optional(v.number()),
+    subscriptionOwnerUserId: v.optional(v.string()),
     createdAt: v.union(v.string(), v.number()),
-    streak: v.number(),
-    energy: v.number(),
-    totalReps: v.number(),
-    bestReps: v.number(),
+    streak: v.optional(v.number()),
+    energy: v.optional(v.number()),
+    totalReps: v.optional(v.number()),
+    bestReps: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await requireMatchingIdentity(ctx, args.clientUserId);
-
+    
     const now = Date.now();
     const existing = await ctx.db
       .query('users')
@@ -125,13 +131,19 @@ export const upsertProfile = mutation({
       countryCode: args.countryCode,
       countryName: args.countryName,
       avatar: args.avatar,
-      proStatus: args.proStatus,
+      proStatus: args.proStatus ?? existing?.proStatus ?? 'free',
+      subscriptionStatus: args.subscriptionStatus ?? existing?.subscriptionStatus,
+      subscriptionProvider: args.subscriptionProvider ?? existing?.subscriptionProvider,
+      activeProductIdentifier: args.activeProductIdentifier ?? existing?.activeProductIdentifier,
+      activeAccessLevelId: args.activeAccessLevelId ?? existing?.activeAccessLevelId,
+      subscriptionUpdatedAt: args.subscriptionUpdatedAt ?? existing?.subscriptionUpdatedAt,
+      subscriptionOwnerUserId: args.subscriptionOwnerUserId ?? existing?.subscriptionOwnerUserId,
       createdAt: normalizeCreatedAt(args.createdAt, now),
       updatedAt: now,
-      streak: args.streak,
-      energy: args.energy,
-      totalReps: args.totalReps,
-      bestReps: args.bestReps,
+      streak: args.streak ?? existing?.streak ?? 0,
+      energy: args.energy ?? existing?.energy ?? 100,
+      totalReps: args.totalReps ?? existing?.totalReps ?? 0,
+      bestReps: args.bestReps ?? existing?.bestReps ?? 0,
     };
 
     if (existing) {
@@ -139,13 +151,59 @@ export const upsertProfile = mutation({
       await ctx.db.patch(existing._id, {
         ...payload,
         deletionStatus: 'active',
-        totalReps: Math.max(existing.totalReps, args.totalReps),
-        bestReps: Math.max(existing.bestReps, args.bestReps),
+        // Preserve existing values if provided ones are lower (stale local data)
+        streak: Math.max(existing.streak ?? 0, args.streak ?? 0),
+        energy: args.energy ?? existing.energy ?? 100, // Energy is transient, keep provided or existing
+        totalReps: Math.max(existing.totalReps ?? 0, args.totalReps ?? 0),
+        bestReps: Math.max(existing.bestReps ?? 0, args.bestReps ?? 0),
       });
       return existing._id;
     }
 
     return await ctx.db.insert('users', { ...payload, deletionStatus: 'active', restoreTokenVersion: 0 });
+  },
+});
+
+export const updateSubscription = mutation({
+  args: {
+    clientUserId: v.string(),
+    proStatus: v.union(v.literal('free'), v.literal('pro')),
+    subscriptionStatus: v.union(v.literal('free'), v.literal('pro'), v.literal('expired'), v.literal('unknown')),
+    subscriptionProvider: v.union(v.literal('adapty'), v.literal('development'), v.literal('none')),
+    activeProductIdentifier: v.optional(v.string()),
+    activeAccessLevelId: v.optional(v.string()),
+    subscriptionUpdatedAt: v.number(),
+    subscriptionOwnerUserId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireMatchingIdentity(ctx, args.clientUserId);
+
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_client_user_id', (q) => q.eq('clientUserId', args.clientUserId))
+      .unique();
+
+    if (!user) {
+      return { ok: false, status: 'missing' as const };
+    }
+
+    assertActiveUser(user);
+
+    await ctx.db.patch(user._id, {
+      proStatus: args.proStatus,
+      subscriptionStatus: args.subscriptionStatus,
+      subscriptionProvider: args.subscriptionProvider,
+      activeProductIdentifier: args.activeProductIdentifier,
+      activeAccessLevelId: args.activeAccessLevelId,
+      subscriptionUpdatedAt: args.subscriptionUpdatedAt,
+      subscriptionOwnerUserId:
+        args.subscriptionProvider === 'none'
+          ? undefined
+          : args.subscriptionOwnerUserId ?? args.clientUserId,
+      updatedAt: Date.now(),
+    });
+
+    return { ok: true, status: 'updated' as const };
   },
 });
 
@@ -360,6 +418,16 @@ export const sharedProfile = query({
       .query('follows')
       .withIndex('by_follower', (q) => q.eq('followerUserId', profile._id))
       .take(1000);
+    const allStats = await ctx.db
+      .query('dailyStats')
+      .withIndex('by_user_day', (q) => q.eq('userId', profile._id))
+      .order('desc')
+      .take(1000);
+    const recentStats = allStats.slice(0, 14);
+
+    const totalWorkouts = allStats.reduce((sum, row) => sum + row.workouts, 0);
+    const totalDuration = allStats.reduce((sum, row) => sum + row.duration, 0);
+    const totalCalories = allStats.reduce((sum, row) => sum + row.calories, 0);
 
     return {
       clientUserId: profile.clientUserId,
@@ -374,6 +442,16 @@ export const sharedProfile = query({
       bestReps: profile.bestReps,
       followersCount: followers.filter((row) => row.status === 'active').length,
       followingCount: followingRows.filter((row) => row.status === 'active').length,
+      totalWorkouts,
+      totalDuration,
+      totalCalories,
+      recentDays: recentStats
+        .map((row) => ({
+          dayKey: row.dayKey,
+          reps: row.reps,
+          workouts: row.workouts,
+        }))
+        .reverse(),
       updatedAt: profile.updatedAt,
     };
   },

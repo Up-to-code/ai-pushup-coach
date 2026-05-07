@@ -1,9 +1,9 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
-import { BetterAuthUserSync } from '../src/auth';
+import { AuthRoutingGate, BetterAuthUserSync, ConvexUserSync } from '../src/auth';
 import { ConvexBackendProvider } from '../src/backend';
-import { SubscriptionProvider } from '../src/revenuecat';
+import { SubscriptionProvider } from '../src/subscriptions';
 import { colors } from '../src/theme';
 import { WidgetDataSync } from '../src/widgets/WidgetDataSync';
 
@@ -11,7 +11,9 @@ export default function RootLayout() {
   return (
     <ConvexBackendProvider>
       <SubscriptionProvider>
+        <AuthRoutingGate />
         <BetterAuthUserSync />
+        <ConvexUserSync />
         <WidgetDataSync />
         <View style={styles.container}>
           <StatusBar style="light" />

@@ -67,6 +67,7 @@ export default function WorkoutCompleteScreen() {
         notificationsEnabled: settings.notificationsEnabled,
         workoutReminderEnabled: settings.workoutReminderEnabled,
         missedReminderEnabled: settings.missedReminderEnabled,
+        habitNudgeEnabled: settings.habitNudgeEnabled,
       })
         .then((ids) => updatePlan({ notificationIds: ids }))
         .catch((err) => console.warn('Notification sync failed', err));

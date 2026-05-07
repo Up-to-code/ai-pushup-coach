@@ -23,11 +23,11 @@ Official references:
 Declare data collected by the app and third-party SDKs if it is transmitted off-device and retained beyond servicing the request.
 
 - Contact Info: email address may be processed by Better Auth sign-in.
-- User ID: Better Auth user id, Convex client user id, RevenueCat app user id.
+- User ID: Better Auth user id, Convex client user id, Adapty app user id.
 - Fitness: workout reps, duration, calories, workout dates, goals, sets, form feedback, camera tracking state, quality score.
 - User Content: profile display name, nickname, bio, country, avatar image, social links if provided.
 - Photos or Videos: selected profile avatar image only.
-- Purchases: subscription status and purchase history through RevenueCat/App Store.
+- Purchases: subscription status and purchase history through Adapty/App Store.
 - Usage Data: product interaction and social/challenge/leaderboard activity if synced.
 - Diagnostics: crash, performance, network, and service diagnostics collected by integrated services.
 
@@ -48,12 +48,12 @@ Tracking:
 - Camera permission is requested when entering camera workout flows; manual fallback remains available if camera access is denied.
 - Account deletion is available from Settings > Data control.
 - Restore purchases and Manage subscription are available from Settings > Subscription.
-- Payment card details are handled by Apple/RevenueCat; the app only receives entitlement and purchase status.
+- Payment card details are handled by Apple/Adapty; the app only receives entitlement and purchase status.
 
 ## Before Submission
 
-- Use production Better Auth, Convex, RevenueCat, and UploadThing credentials.
-- Verify RevenueCat offerings and App Store Connect products are ready for review and visible in the review build.
+- Use production Better Auth, Convex, Adapty, and UploadThing credentials.
+- Verify Adapty offerings and App Store Connect products are ready for review and visible in the review build.
 - Upload current Privacy Policy and Terms URLs from the Push Counter website in App Store Connect.
 - Submit any in-app purchases/subscriptions with the app build if they are new.
 - Use a compatible Xcode for Expo SDK 51 or upgrade Expo SDK before final archive.

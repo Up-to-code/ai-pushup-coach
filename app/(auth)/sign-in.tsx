@@ -3,31 +3,37 @@ import {
   ActivityIndicator,
   ImageBackground,
   Linking,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { authClient } from '../../src/auth';
+import { useAuth } from '../../src/auth';
 import { privacyUrl, termsUrl } from '../../src/config/links';
 import { colors, spacing, typography } from '../../src/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
+type SocialProvider = 'apple' | 'google';
+
 function isAuthCancel(error: unknown) {
-  return error instanceof Error && 'code' in error && error.code === 'ERR_REQUEST_CANCELED';
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    (error.code === 'ERR_REQUEST_CANCELED' || error.code === 'ERR_REQUEST_CANCELLED')
+  );
 }
 
 export default function SignInScreen() {
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const auth = useAuth();
+  const [signingInProvider, setSigningInProvider] = useState<SocialProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const isSigningIn = signingInProvider !== null || auth.authActionStatus !== 'idle';
 
   const openLegalLink = useCallback(async (url: string) => {
     await Linking.openURL(url);
@@ -40,44 +46,15 @@ export default function SignInScreen() {
     };
   }, []);
 
-  const signInWithApple = useCallback(async () => {
-    if (Platform.OS !== 'ios' || !(await AppleAuthentication.isAvailableAsync())) {
-      return authClient.signIn.social({ provider: 'apple', callbackURL: '/' });
-    }
-
-    const credential = await AppleAuthentication.signInAsync({
-      requestedScopes: [
-        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-        AppleAuthentication.AppleAuthenticationScope.EMAIL,
-      ],
-    });
-
-    if (!credential.identityToken) {
-      throw new Error('Apple did not return an identity token.');
-    }
-
-    return authClient.signIn.social({
-      provider: 'apple',
-      idToken: {
-        token: credential.identityToken,
-        user: {
-          email: credential.email ?? undefined,
-          name: {
-            firstName: credential.fullName?.givenName ?? undefined,
-            lastName: credential.fullName?.familyName ?? undefined,
-          },
-        },
-      },
-      callbackURL: '/',
-    });
-  }, []);
-
-  const signInWithAppleOnly = useCallback(async () => {
-    setIsSigningIn(true);
+  const signInWithSocial = useCallback(async (provider: SocialProvider) => {
+    setSigningInProvider(provider);
     setError(null);
 
     try {
-      const { error } = await signInWithApple();
+      const { error } =
+        provider === 'apple'
+          ? await auth.signInWithApple()
+          : await auth.signInWithGoogle();
 
       if (error) {
         console.warn('Better Auth social sign-in error', error);
@@ -89,9 +66,9 @@ export default function SignInScreen() {
         setError('Could not finish sign in. Please try again.');
       }
     } finally {
-      setIsSigningIn(false);
+      setSigningInProvider(null);
     }
-  }, [signInWithApple]);
+  }, [auth]);
 
   return (
     <ImageBackground source={require('../../assets/bg.png')} style={styles.root}>
@@ -102,10 +79,7 @@ export default function SignInScreen() {
           <View style={styles.hero}>
             <View style={styles.titleBlock}>
               <Animated.Text entering={FadeInDown.delay(200).duration(500)} style={styles.headline}>
-                Smarter training.{'\n'}Clean progress.
-              </Animated.Text>
-              <Animated.Text entering={FadeInDown.delay(300).duration(500)} style={styles.sub}>
-                Your path to 100 reps starts here.
+                Perfect{'\n'}Every Rep
               </Animated.Text>
             </View>
           </View>
@@ -122,22 +96,40 @@ export default function SignInScreen() {
                       isSigningIn && styles.btnOff,
                     ]}
                     disabled={isSigningIn}
-                    onPress={signInWithAppleOnly}
+                    onPress={() => signInWithSocial('apple')}
                   >
                     <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-                    {isSigningIn ? (
+                    {signingInProvider === 'apple' ? (
                       <ActivityIndicator color="#FFF" size="small" />
                     ) : (
                       <Ionicons name="logo-apple" size={19} color="#FFF" />
                     )}
-                    <Text style={styles.btnLabel}>Continue with Apple</Text>
+                    <Text style={styles.btnLabel}>Apple</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.btn,
+                      styles.btnGoogle,
+                      pressed && styles.btnPressed,
+                      isSigningIn && styles.btnOff,
+                    ]}
+                    disabled={isSigningIn}
+                    onPress={() => signInWithSocial('google')}
+                  >
+                    {signingInProvider === 'google' ? (
+                      <ActivityIndicator color="#111" size="small" />
+                    ) : (
+                      <Ionicons name="logo-google" size={19} color="#111" />
+                    )}
+                    <Text style={[styles.btnLabel, styles.btnLabelDark]}>Google</Text>
                   </Pressable>
                 </View>
 
                 {error ? <Text style={styles.error}>{error}</Text> : null}
 
                 <View style={styles.legal}>
-                  <Text style={styles.legalTxt}>By continuing, you agree to our </Text>
+                  <Text style={styles.legalTxt}>By continuing, you agree to the </Text>
                   <Pressable onPress={() => openLegalLink(termsUrl)}>
                     <Text style={styles.legalLink}>Terms</Text>
                   </Pressable>
@@ -161,7 +153,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   safe: {
     flex: 1,
@@ -172,36 +164,33 @@ const styles = StyleSheet.create({
   },
   hero: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl,
   },
   titleBlock: {
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.mdSm,
+    maxWidth: 360,
   },
+
   headline: {
     ...typography.title,
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 48,
+    fontWeight: '900',
     color: '#FFF',
     textAlign: 'center',
-    lineHeight: 36,
-    letterSpacing: -0.5,
-  },
-  sub: {
-    ...typography.bodySmall,
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'center',
+    lineHeight: 56,
+    letterSpacing: -1,
   },
   bottomContainer: {
     width: '100%',
+    backgroundColor: 'transparent',
   },
   bottomContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   bottom: {
     gap: spacing.lg,
@@ -210,8 +199,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   btn: {
-    height: 56,
-    borderRadius: 14,
+    minHeight: 58,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -219,12 +208,30 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   btnApple: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  btnGuest: {
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
+  },
+  btnGoogle: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
+  },
+  guestBtn: {
+    minHeight: 52,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
   btnPressed: {
-    opacity: 0.8,
+    opacity: 0.76,
   },
   btnOff: {
     opacity: 0.5,
@@ -233,26 +240,31 @@ const styles = StyleSheet.create({
     ...typography.bodyBold,
     fontSize: 16,
     color: '#FFF',
-    letterSpacing: -0.2,
+    letterSpacing: 0,
+  },
+  btnLabelDark: {
+    color: '#111',
   },
   error: {
     ...typography.caption,
     color: colors.error,
     textAlign: 'center',
+    lineHeight: 17,
   },
   legal: {
     flexDirection: 'row',
     justifyContent: 'center',
     flexWrap: 'wrap',
-    opacity: 0.4,
+    paddingHorizontal: spacing.md,
   },
   legalTxt: {
-    fontSize: 12,
-    color: '#FFF',
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.3)',
+    lineHeight: 16,
   },
   legalLink: {
-    fontSize: 12,
-    color: '#FFF',
-    textDecorationLine: 'underline',
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.45)',
+    lineHeight: 16,
   },
 });

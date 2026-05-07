@@ -44,7 +44,7 @@ Rationale: The current app does not include an advertising SDK and should not li
 
 - Purchase History
 - Purpose: App Functionality
-- Source: RevenueCat and App Store subscription status and entitlement history.
+- Source: Adapty and App Store subscription status and entitlement history.
 
 ### Usage Data
 

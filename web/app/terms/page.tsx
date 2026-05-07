@@ -34,7 +34,7 @@ export default function TermsPage() {
 
           <h2>Subscriptions</h2>
           <p>
-            Optional paid subscription features may be offered. Purchases, renewals, cancellations, and refunds are handled through the App Store and RevenueCat-supported purchase flows.
+            Optional paid subscription features may be offered. Eligible new subscribers may receive a 3-day free trial before the Yearly Pro subscription renews at the displayed price. Monthly Pro does not include a free trial. Purchases, renewals, cancellations, and refunds are handled through the App Store and Adapty-backed purchase flows.
           </p>
 
           <h2>Social and Leaderboard Features</h2>
