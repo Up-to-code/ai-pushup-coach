@@ -44,7 +44,7 @@ Key features:
 - Progress charts, streaks, best sessions, and achievement badges
 - Global, country, and friends leaderboards
 - Challenges with progress tracking and rewards
-- Apple sign-in for account sync
+- Apple sign-in for account sync and subscription continuity
 - Pro access with restore purchases and subscription management
 
 Push Counter is fitness guidance only and is not medical advice. Stop exercising if you feel pain, dizziness, shortness of breath, or any unsafe symptoms. Consult a qualified health professional before starting a new exercise program if you have any medical condition, injury, or concern.
@@ -75,7 +75,7 @@ Apple sign-in is provided for account sync, social features, challenges, leaderb
 
 Camera permission is requested only when starting a camera-assisted workout flow. The onboarding camera step is informational and does not trigger the system permission prompt. The camera is used to estimate push-up movement and count reps during live workouts. Workout video is not saved to the user's photo library by default. If camera access is denied, the workout screen shows a permission-needed state with a Settings link.
 
-Account deletion is available from Settings. Guest users can clear local data from Settings. Deleting the app account does not cancel an App Store subscription.
+Account deletion is available from Settings. Deleting the app account does not cancel an App Store subscription.
 
 Restore purchases and Manage subscription are available from Settings. Payment card details are handled by Apple and Adapty; the app receives entitlement and purchase status.
 

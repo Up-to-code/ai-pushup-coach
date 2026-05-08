@@ -35,8 +35,8 @@ const features = [
     icon: Trophy,
   },
   {
-    title: 'Works Offline',
-    body: 'Guest mode with full local history. Sign in when you are ready.',
+    title: 'Secure Sync',
+    body: 'Sign in with Apple to sync progress, restore Pro, and keep training data connected.',
     icon: ShieldCheck,
   },
   {

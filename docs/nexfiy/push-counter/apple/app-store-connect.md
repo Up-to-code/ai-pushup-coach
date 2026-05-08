@@ -15,21 +15,38 @@
 
 Subtitle:
 
-Push-up counter and planner
+Count reps, build push-up plans
 
 Promotional text:
 
-Train toward stronger push-ups with guided plans, live rep tracking, reminders, and progress history.
+Build a stronger push-up habit with guided plans, live rep counting, workout reminders, challenges, and progress history.
 
 Description:
 
-Push Counter helps you build a consistent push-up routine with simple planning, live workout tracking, and progress feedback.
+Push Counter helps you build a stronger push-up habit with guided plans, live rep counting, workout reminders, and clear progress tracking.
 
-Create a plan around your current level, training days, and goals. During workouts, use camera-based rep tracking when available or continue manually when camera access is denied or unavailable. Your profile shows workout history, streaks, best sessions, weekly progress, and recent activity.
+Start by choosing your current level, training days, goal, and preferred workout time. Push Counter creates a four-week plan designed around your schedule, with training days and recovery days laid out in a simple calendar.
 
-Signed-in users can sync selected profile and workout data, join challenges, compare leaderboard progress, follow other athletes, and restore Pro access across devices.
+During workouts, you can use camera-assisted rep counting on supported devices or continue manually when camera access is unavailable. The session screen keeps your reps, sets, rest time, and workout state visible so you can focus on clean movement.
 
-The app is fitness guidance, not medical advice. Stop exercising if you feel pain, dizziness, shortness of breath, or unsafe symptoms.
+Track your progress over time with workout history, streaks, best sessions, total reps, estimated calories, charts, and achievement badges. You can train with quick practice modes, follow a structured plan, or join challenges for extra motivation.
+
+Signed-in users can sync selected profile and workout data, follow other athletes, compare leaderboard progress, join challenges, and restore Pro access across devices.
+
+Key features:
+
+- Four-week push-up plans based on your level, goal, days, and time
+- Practice modes for sets, open goals, timed reps, and daily sessions
+- Camera-assisted rep counting on supported devices
+- Manual-friendly workout flow when camera access is denied or unavailable
+- Workout reminders and missed-session follow-ups
+- Progress charts, streaks, best sessions, and achievement badges
+- Global, country, and friends leaderboards
+- Challenges with progress tracking and rewards
+- Apple sign-in for account sync and subscription continuity
+- Pro access with restore purchases and subscription management
+
+Push Counter is fitness guidance only and is not medical advice. Stop exercising if you feel pain, dizziness, shortness of breath, or any unsafe symptoms. Consult a qualified health professional before starting a new exercise program if you have any medical condition, injury, or concern.
 
 Terms of Use: https://www.pushcounter.online/terms
 
@@ -57,7 +74,7 @@ Apple sign-in is provided for account sync, social features, challenges, leaderb
 
 Camera permission is requested only when starting a camera workout flow. The onboarding camera step is informational and does not trigger the system permission prompt. The camera is used to estimate push-up movement and count reps during live workouts. Workout video is not saved to the user's photo library by default. If camera access is denied, the workout screen shows a permission-needed state with a Settings link.
 
-Account deletion is available from Settings > Data control > Delete account and data for signed-in users. Guest users can clear local data from the same section. Deleting the app account does not cancel an App Store subscription.
+Account deletion is available from Settings > Data control > Delete account and data for signed-in users. Deleting the app account does not cancel an App Store subscription.
 
 Restore purchases and Manage subscription are available from Settings > Subscription. Payment card details are handled by Apple and Adapty; the app receives entitlement and purchase status.
 

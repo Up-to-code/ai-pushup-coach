@@ -5,7 +5,7 @@ Generated from the current React Native codebase on May 2, 2026.
 ## Current App Features Found In Code
 
 - Push-up training onboarding with goals, blockers, preferred training style, camera prompt, and first-session preview.
-- Account options: Continue with Apple or continue without sign-in.
+- Account option: Continue with Apple for account sync, social features, subscriptions, and cross-device continuity.
 - Four-week push-up plan generation based on level, goal, selected training days, and preferred workout time.
 - Plan goals: First 25, Road to 50, and Road to 100.
 - Level options: Beginner, Intermediate, and Advanced.
@@ -20,7 +20,7 @@ Generated from the current React Native codebase on May 2, 2026.
 - Challenges with join/leave, progress tracking, rewards, and completion status.
 - Social following, notifications, and friend comparison features for signed-in users.
 - Pro access through App Store purchases managed with Adapty, including restore purchases and subscription management.
-- Account deletion for signed-in users and local data clearing for guest users.
+- Account deletion for signed-in users.
 
 ## Recommended App Store Metadata
 
@@ -92,7 +92,7 @@ During workouts, you can use camera-assisted rep counting on supported devices o
 
 Track your progress over time with workout history, streaks, best sessions, total reps, estimated calories, charts, and achievement badges. You can train with quick practice modes, follow a structured plan, or join challenges for extra motivation.
 
-Signed-in users can sync selected profile and workout data, follow other athletes, compare leaderboard progress, join challenges, and restore Pro access across devices. Guest mode keeps the core training experience available without creating an account.
+Signed-in users can sync selected profile and workout data, follow other athletes, compare leaderboard progress, join challenges, and restore Pro access across devices.
 
 Key features:
 
@@ -104,7 +104,7 @@ Key features:
 - Progress charts, streaks, best sessions, and achievement badges
 - Global, country, and friends leaderboards
 - Challenges with progress tracking and rewards
-- Apple sign-in, plus guest mode
+- Apple sign-in for account sync and subscription continuity
 - Pro access with restore purchases and subscription management
 
 Push Counter is fitness guidance only and is not medical advice. Stop exercising if you feel pain, dizziness, shortness of breath, or any unsafe symptoms. Consult a qualified health professional before starting a new exercise program if you have any medical condition, injury, or concern.
@@ -113,7 +113,7 @@ Terms of Use: https://www.pushcounter.online/terms
 
 ## App Store Review Notes
 
-Reviewers can use Continue without sign in to test onboarding, plan setup, local workout sessions, settings, legal screens, and local workout history.
+Reviewers can sign in with Apple to test onboarding, plan setup, workout sessions, settings, legal screens, subscriptions, social features, leaderboards, and cross-device continuity.
 
 Apple sign-in is available for account sync, social features, challenges, leaderboards, and cross-device continuity.
 
@@ -121,7 +121,7 @@ Camera permission is requested only when starting camera-assisted workout sessio
 
 If camera access is denied, the workout screen shows a permission-needed state with a Settings link. If the native camera path is unavailable, the app provides fallback states so the user can continue without camera-based counting.
 
-Account deletion is available from Settings. Guest users can clear local data. Deleting the app account does not cancel an App Store subscription.
+Account deletion is available from Settings. Deleting the app account does not cancel an App Store subscription.
 
 Restore purchases and Manage subscription are available from Settings. Payment details are handled by Apple; the app receives purchase and entitlement status through Adapty.
 
@@ -176,9 +176,9 @@ The camera is used only when you enter camera-assisted workout flows and grant p
 
 Workout video is not saved to your photo library by default. The app may process camera-derived movement measurements during a session and may store workout-related results such as reps, duration, quality score, tracking state, and form feedback. Do not use camera-assisted tracking if you do not want the camera involved in your workout session.
 
-### 4. Guest Mode
+### 4. Account Sync
 
-You can use core training features without signing in. In guest mode, workout history, settings, onboarding choices, and plans may remain local to your device. If you later sign in, selected information may be synced depending on app behavior and available services.
+Apple sign-in is used for account sync, social features, leaderboards, challenges, subscriptions, and cross-device continuity. Selected workout, profile, settings, and purchase status data may sync when signed in.
 
 ### 5. How We Share Information
 
@@ -209,8 +209,6 @@ Purchase records may be retained by Apple, Adapty, and us as needed to manage en
 ### 7. Account Deletion And Data Choices
 
 Signed-in users can request account deletion from Settings. Account deletion is intended to delete your synced profile, workout history, social data, challenge progress, and related account data, subject to limited retention required by law, security, fraud prevention, or dispute handling.
-
-Guest users can clear local data from Settings.
 
 Deleting your Push Counter account does not cancel an active App Store subscription. You must manage or cancel subscriptions through your Apple account subscription settings.
 
@@ -411,7 +409,7 @@ Optional but useful. If used, create a short portrait preview showing plan setup
 
 - Production build uploaded to App Store Connect.
 - Demo instructions in Review Notes.
-- Test account only if guest mode does not cover enough review paths. Otherwise mention Continue without sign in.
+- Provide Apple sign-in review access if Apple requests account-based testing support.
 - Subscription products submitted with the build if new.
 - Paywall screenshot and product metadata for each in-app purchase or subscription.
 - Public support page.
@@ -472,7 +470,7 @@ Data not collected by the app:
 ### Design
 
 - App should be complete and usable in review, not a shell or demo.
-- Guest mode should allow reviewers to test core features without requiring account creation.
+- Apple sign-in should allow reviewers to test account-based features consistently.
 - Use the actual app name consistently: Push Counter.
 - Remove the old app name from display name, permission text, scheme, website text, screenshots, support pages, privacy pages, and review notes.
 

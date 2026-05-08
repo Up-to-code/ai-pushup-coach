@@ -20,10 +20,8 @@ Use this checklist before submitting Push Counter to App Review.
 ## Sign-In And Account Access
 
 - Continue with Apple is the only third-party sign-in option offered.
-- Guest mode is available for review and supports core local training flows.
-- Review notes explain that reviewers can use Continue without sign in.
+- Review notes explain that Apple sign-in is used for account sync, social features, leaderboard access, subscriptions, and cross-device continuity.
 - Account deletion is available for signed-in users.
-- Guest users can clear local data.
 
 ## Purchases
 
@@ -37,8 +35,8 @@ Use this checklist before submitting Push Counter to App Review.
 
 ## Privacy And Legal
 
-- Privacy Policy URL is public: https://pushcounter.online/privacy
-- Terms URL is public: https://pushcounter.online/terms
+- Privacy Policy URL is public: https://www.pushcounter.online/privacy
+- Terms URL is public: https://www.pushcounter.online/terms
 - Privacy labels match the actual app and SDK behavior.
 - Public copy discloses account/profile data, workouts, camera-derived tracking states, purchases, avatar uploads, notifications, social/challenges, diagnostics, local storage, sync, and account deletion.
 - The app does not claim to collect contacts, precise location, saved workout video, or payment card numbers.
@@ -52,7 +50,7 @@ Use this checklist before submitting Push Counter to App Review.
 
 ## Review Notes To Paste
 
-Push Counter can be reviewed without creating an account by selecting Continue without sign in. Guest mode supports onboarding, plan setup, local workout sessions, settings, legal screens, and local workout history.
+Reviewers can sign in with Apple to test onboarding, plan setup, workout sessions, settings, legal screens, subscriptions, social features, leaderboard access, and cross-device continuity.
 
 Camera permission is requested for camera-assisted workout sessions. The camera is used during live workouts to estimate movement and count reps. Workout video is not saved to the user's photo library by default.
 
