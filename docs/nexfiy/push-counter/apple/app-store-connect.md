@@ -9,6 +9,7 @@
 - Secondary category: Sports
 - Content rights: The app does not contain, show, or access third-party copyrighted content as a primary feature.
 - Age rating basis: Fitness guidance, no medical diagnosis, no objectionable content.
+- Age rating selection: Health or Wellness Topics = Yes.
 
 ## Product Page Metadata
 
@@ -26,7 +27,7 @@ Push Counter helps you build a consistent push-up routine with simple planning, 
 
 Create a plan around your current level, training days, and goals. During workouts, use camera-based rep tracking when available or continue manually when camera access is denied or unavailable. Your profile shows workout history, streaks, best sessions, weekly progress, and recent activity.
 
-Signed-in users can sync selected profile and workout data, join challenges, compare leaderboard progress, follow other athletes, and restore Pro access across devices. Guest mode keeps core training flows available without sign-in.
+Signed-in users can sync selected profile and workout data, join challenges, compare leaderboard progress, follow other athletes, and restore Pro access across devices.
 
 The app is fitness guidance, not medical advice. Stop exercising if you feel pain, dizziness, shortness of breath, or unsafe symptoms.
 
@@ -50,9 +51,9 @@ https://www.pushcounter.online/terms
 
 ## Review Notes
 
-Push Counter can be reviewed without creating an account by selecting "Continue without sign in" on the sign-in screen. Guest mode supports onboarding, local planning, workout sessions, settings, legal screens, and local workout history.
+The app includes fitness and wellness training content, so Health or Wellness Topics is selected Yes in Age Rating. The paywall was updated so the billed subscription amount is the most prominent purchase element, with the free trial shown only as secondary explanatory text. Terms of Use is included in App Store metadata: https://www.pushcounter.online/terms.
 
-Apple sign-in is provided for account sync, social features, challenges, leaderboards, and cross-device continuity.
+Apple sign-in is provided for account sync, social features, challenges, leaderboards, subscriptions, and cross-device continuity.
 
 Camera permission is requested only when starting a camera workout flow. The onboarding camera step is informational and does not trigger the system permission prompt. The camera is used to estimate push-up movement and count reps during live workouts. Workout video is not saved to the user's photo library by default. If camera access is denied, the workout screen shows a permission-needed state with a Settings link.
 
@@ -65,7 +66,7 @@ Restore purchases and Manage subscription are available from Settings > Subscrip
 - Submit any new subscriptions or in-app purchases with the app build.
 - Ensure Adapty offerings are configured and visible in the review build.
 - Ensure App Store Connect subscription products have completed names, descriptions, prices, durations, screenshots, and review information.
-- Ensure the paywall shows the product, price, duration, renewal behavior, privacy policy link, and terms link before purchase.
+- Ensure the paywall shows the product, billed price and billing period as the primary purchase element, with renewal behavior, privacy policy link, and terms link before purchase.
 - Ensure Restore purchases works for reviewers.
 - Use the same entitlement identifier expected by the app: `pushup-coach Pro` unless the production environment overrides it.
 

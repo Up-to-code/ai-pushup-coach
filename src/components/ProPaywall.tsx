@@ -126,12 +126,7 @@ export function ProPaywall({
                   <Text style={styles.productSubtitle} numberOfLines={1}>{getProductSubtitle(product, key)}</Text>
                 </View>
                 <View style={styles.priceWrap}>
-                  <Text style={styles.priceText}>{getProductPrice(product)}</Text>
-                  {key === 'yearly' && (
-                    <View style={styles.saveBadge}>
-                      <Text style={styles.saveBadgeText}>SAVE 10%</Text>
-                    </View>
-                  )}
+                  <Text style={styles.priceText}>{getProductPriceWithPeriod(product, key)}</Text>
                 </View>
               </Pressable>
             ))}
@@ -219,30 +214,33 @@ function getPlanName(key: ProductIdentifierKey): string {
 function getProductSubtitle(product: AdaptyPaywallProduct, key: ProductIdentifierKey): string {
   const freeTrialPhase = product.subscription?.offer?.phases.find((phase) => phase.paymentMode === 'free_trial');
   const trialPeriod = freeTrialPhase?.localizedNumberOfPeriods ?? freeTrialPhase?.localizedSubscriptionPeriod;
-  const trialLabel = trialPeriod ? `${trialPeriod} free trial` : '3-day free trial';
+  const trialLabel = trialPeriod ? `${trialPeriod} free, then billed yearly.` : '3 days free, then billed yearly.';
 
   return key === 'yearly'
-    ? `${trialLabel}, then yearly access.`
-    : 'Monthly access. No free trial.';
+    ? `${trialLabel} Renews automatically.`
+    : 'Billed monthly. Renews automatically.';
 }
 
 function getPrimaryCtaText(key: ProductIdentifierKey, product: AdaptyPaywallProduct): string {
-  const freeTrialPhase = product.subscription?.offer?.phases.find((phase) => phase.paymentMode === 'free_trial');
-  const trialPeriod = freeTrialPhase?.localizedNumberOfPeriods ?? freeTrialPhase?.localizedSubscriptionPeriod;
-  const trialLabel = trialPeriod ? `${trialPeriod} free trial` : '3-day free trial';
-
-  return key === 'yearly' ? `Start ${trialLabel}` : `Continue - ${getProductPrice(product)}`;
+  return `Subscribe for ${getProductPriceWithPeriod(product, key)}`;
 }
 
 function getProductPrice(product: AdaptyPaywallProduct): string {
   return product.price?.localizedString ?? 'Continue';
 }
 
+function getProductPriceWithPeriod(product: AdaptyPaywallProduct, key: ProductIdentifierKey): string {
+  const price = product.price?.localizedString;
+  const period = key === 'yearly' ? 'year' : 'month';
+
+  return price ? `${price}/${period}` : getPlanName(key);
+}
+
 function getSubscriptionTermsText(key: ProductIdentifierKey, product: AdaptyPaywallProduct): string {
   const price = getProductPrice(product);
 
   if (key === 'yearly') {
-    return `3 days free, then ${price}/year. Renews automatically until canceled.`;
+    return `${price}/year after 3-day free trial. Renews automatically until canceled.`;
   }
 
   return `${price}/month. Renews automatically until canceled.`;
@@ -408,19 +406,7 @@ const styles = StyleSheet.create({
   },
   priceText: {
     color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '900',
-  },
-  saveBadge: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 4,
-  },
-  saveBadgeText: {
-    color: '#ffffff',
-    fontSize: 9,
+    fontSize: 20,
     fontWeight: '900',
   },
   paywallMessage: {

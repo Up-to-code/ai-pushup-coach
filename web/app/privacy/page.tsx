@@ -46,7 +46,7 @@ export default function PrivacyPage() {
 
           <h2>Your Choices</h2>
           <p>
-            You can edit your profile, deny camera permission, use guest mode, manage subscriptions, delete your account, and change notification settings from the app.
+            You can edit your profile, deny camera permission, manage subscriptions, delete your account, and change notification settings from the app or device settings.
           </p>
         </div>
       </div>

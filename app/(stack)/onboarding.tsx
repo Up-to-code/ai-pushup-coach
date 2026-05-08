@@ -13,9 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOut } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../src/auth';
@@ -25,6 +24,7 @@ import { generateTrainingPlan } from '../../src/utils/planGenerator';
 import { cancelPlanNotifications, syncNotificationsForPlan } from '../../src/services/notifications';
 import { useResponsive } from '../../src/hooks/useResponsive';
 import { colors, typography } from '../../src/theme';
+import { CFEView, NeonButton } from '../../src/components';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -40,29 +40,27 @@ type SelectableItem = {
 
 type OnboardingStep = {
   id: StepId;
-  kicker: string;
   title: string;
-  body: string;
 };
 
 const welcomeSetupSteps: OnboardingStep[] = [
-  { id: 'landing', kicker: 'Focus', title: 'Transformation is a ritual.', body: 'Small, consistent steps lead to massive change. Your journey starts with a single rep.' },
-  { id: 'base', kicker: 'Personal', title: 'Built for your body.', body: 'A plan that respects where you are today and prepares you for where you’ll be tomorrow.' },
-  { id: 'ritual', kicker: 'Rhythm', title: 'Owned by your life.', body: 'Fit training into the gaps of your day. Consistency is the only shortcut that actually works.' },
-  { id: 'ready', kicker: 'Victory', title: 'Your path is clear.', body: 'The hardest part was deciding to start. You’ve done that. Now, let’s make it official.' },
+  { id: 'landing', title: 'Transformation is a ritual.' },
+  { id: 'base', title: 'Built for your body.' },
+  { id: 'ritual', title: 'Owned by your life.' },
+  { id: 'ready', title: 'Your path is clear.' },
 ];
 
 const directSetupSteps: OnboardingStep[] = [
-  { id: 'landing', kicker: 'Start', title: 'Set up your plan.', body: 'Swipe to begin your training setup.' },
-  { id: 'base', kicker: 'Profile', title: 'Choose your level and goal.', body: 'Pick the starting point and milestone your plan should respect.' },
-  { id: 'ritual', kicker: 'Schedule', title: 'Set your training rhythm.', body: 'Choose days and a time you can realistically keep.' },
-  { id: 'ready', kicker: 'Review', title: 'Your plan is ready.', body: 'Confirm the details and generate your training plan.' },
+  { id: 'landing', title: 'Set up your plan.' },
+  { id: 'base', title: 'Choose your level and goal.' },
+  { id: 'ritual', title: 'Set your training rhythm.' },
+  { id: 'ready', title: 'Your plan is ready.' },
 ];
 
 const rebuildSteps: OnboardingStep[] = [
-  { id: 'base', kicker: 'Edit Plan', title: 'Update your plan.', body: 'Adjust your level and target milestone.' },
-  { id: 'ritual', kicker: 'Schedule', title: 'Edit your schedule.', body: 'Choose the training days and reminder time for the rebuilt plan.' },
-  { id: 'ready', kicker: 'Review', title: 'Save your updated plan.', body: 'Review the changes before replacing your current plan.' },
+  { id: 'base', title: 'Update your plan.' },
+  { id: 'ritual', title: 'Edit your schedule.' },
+  { id: 'ready', title: 'Save your updated plan.' },
 ];
 
 const levels: SelectableItem[] = [
@@ -314,337 +312,267 @@ export default function OnboardingScreen() {
 
   const getButtonLabel = () => {
     if (step.id === 'base') {
-      if (isRebuildMode) return 'Review schedule';
-      if (!level) return 'Pick my level';
-      return goal ? 'Continue' : 'Choose my goal';
+      if (isRebuildMode) return 'Next';
+      if (!level) return 'Select level';
+      return goal ? 'Continue' : 'Select goal';
     }
-    if (step.id === 'ritual') return isRebuildMode ? 'Review changes' : useWelcomeCopy ? 'Lock in my routine' : 'Set my routine';
-    if (step.id === 'ready') return finishing ? 'Saving...' : isRebuildMode ? 'Save plan' : useWelcomeCopy ? 'Build my plan' : 'Create plan';
+    if (step.id === 'ritual') return 'Continue';
+    if (step.id === 'ready') return finishing ? 'Saving...' : isRebuildMode ? 'Save' : 'Start';
     return 'Continue';
   };
 
   return (
-    <View style={styles.root}>
-      <Animated.View entering={FadeIn.duration(1500)} style={StyleSheet.absoluteFill}>
-        <ImageBackground source={require('../../assets/bg.png')} style={StyleSheet.absoluteFill}>
-          <View style={[styles.overlay, { backgroundColor: isLanding ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.6)' }]} />
-        </ImageBackground>
-      </Animated.View>
+    <CFEView>
+      {/* Header – only after landing */}
+      {!isLanding && (
+        <Animated.View entering={FadeInDown} style={[styles.header, { paddingTop: normalize(8), paddingHorizontal: normalize(20) }]}>
+          {showBack ? (
+            <Pressable onPress={goBack} style={[styles.backButton, { width: normalize(44), height: normalize(44), borderRadius: normalize(22) }]}>
+              <Ionicons name="chevron-back" size={normalize(22)} color="#fff" />
+            </Pressable>
+          ) : <View style={{ width: 44 }} />}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressTrack, { height: normalize(4) }]}>
+              <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.accent }]} />
+            </View>
+          </View>
+          {showSkip ? (
+            <Pressable onPress={() => router.replace('/sign-in')} style={styles.skipButton}>
+              <Text style={[styles.skipText, { fontSize: normalize(14) }]}>Skip</Text>
+            </Pressable>
+          ) : <View style={{ width: 44 }} />}
+        </Animated.View>
+      )}
 
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-          {/* Header – only after landing */}
-          {!isLanding && (
-            <Animated.View entering={FadeInDown} style={[styles.header, { paddingTop: normalize(8), paddingHorizontal: normalize(20) }]}>
-              {showBack ? (
-                <Pressable onPress={goBack} style={[styles.backButton, { width: normalize(44), height: normalize(44), borderRadius: normalize(22) }]}>
-                  <Ionicons name="chevron-back" size={normalize(22)} color="#fff" />
-                </Pressable>
-              ) : <View style={{ width: 44 }} />}
-              <View style={styles.progressContainer}>
-                <View style={[styles.progressTrack, { height: normalize(4) }]}>
-                  <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.accent }]} />
-                </View>
-              </View>
-              {showSkip ? (
-                <Pressable onPress={() => router.replace('/sign-in')} style={styles.skipButton}>
-                  <Text style={[styles.skipText, { fontSize: normalize(14) }]}>Skip</Text>
-                </Pressable>
-              ) : <View style={{ width: 44 }} />}
-            </Animated.View>
-          )}
-
-          <ScrollView
-            contentContainerStyle={[
-              styles.scrollContent,
-              {
-                paddingHorizontal: normalize(32),
-                paddingTop: isLanding ? verticalScale(100) : normalize(16),
-                paddingBottom: normalize(160)
-              }
-            ]}
-            showsVerticalScrollIndicator={false}
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingHorizontal: normalize(32),
+            paddingTop: isLanding ? verticalScale(100) : normalize(16),
+            paddingBottom: normalize(160)
+          }
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {isLanding && (
+          <View
+            style={{
+              position: 'absolute',
+              top: verticalScale(60),
+              left: -normalize(40),
+              width: normalize(200),
+              height: normalize(200),
+              borderRadius: normalize(100),
+              backgroundColor: colors.accent,
+              opacity: 0.15,
+              transform: [{ scale: 1.5 }],
+            }}
           >
-            {isLanding && (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: verticalScale(60),
-                  left: -normalize(40),
-                  width: normalize(200),
-                  height: normalize(200),
-                  borderRadius: normalize(100),
-                  backgroundColor: colors.accent,
-                  opacity: 0.15,
-                  transform: [{ scale: 1.5 }],
-                }}
-              >
-                <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
-              </View>
-            )}
-            <Animated.View key={step.id} entering={FadeInDown.duration(400)} exiting={FadeOut.duration(200)} style={[styles.stepContainer, { gap: normalize(48) }]}>
-              <View style={[styles.textBlock, isLanding && styles.textBlockHero]}>
-                {!isLanding && (
-                  <View style={[styles.kickerContainer, { paddingHorizontal: normalize(12), paddingVertical: normalize(6), borderRadius: normalize(30) }]}>
-                    <Text style={[styles.kicker, { fontSize: normalize(12) }]}>{step.kicker}</Text>
-                  </View>
-                )}
-                <Text
-                  numberOfLines={2}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.8}
-                  style={[
-                    styles.title,
-                    isLanding && {
-                      fontSize: normalize(38),
-                      lineHeight: normalize(44),
-                      fontStyle: 'italic',
-                      fontWeight: '900',
-                      letterSpacing: -1,
-                    },
-                    !isLanding && { fontSize: normalize(34), lineHeight: normalize(42), fontWeight: '800' }
-                  ]}
-                >
-                  {isLanding ? (
-                    <>
-                      {useWelcomeCopy ? (
-                        <>
-                          <Text style={{ color: '#FFF' }}>Transformation</Text>{'\n'}
-                          <Text style={{ color: colors.accent }}>is a ritual.</Text>
-                        </>
-                      ) : (
-                        <>
-                          <Text style={{ color: '#FFF' }}>Refine</Text>{'\n'}
-                          <Text style={{ color: colors.accent }}>your ritual.</Text>
-                        </>
-                      )}
-                    </>
-                  ) : step.title}
-                </Text>
-                <Text style={[
-                  styles.body,
-                  { fontSize: normalize(17), lineHeight: normalize(24) },
-                  isLanding && { marginTop: normalize(8), color: 'rgba(255,255,255,0.8)' }
-                ]}>
-                  {step.body}
-                </Text>
-              </View>
-
-              {step.id === 'base' && (
-                <View style={styles.grid}>
-                  {(!showGoalGrid || isRebuildMode) && (
-                    <>
-                      {isRebuildMode ? (
-                        <Text style={{ fontSize: normalize(16), fontWeight: '700', color: '#fff', marginBottom: 4 }}>Experience level</Text>
-                      ) : null}
-                      {levels.map(item => (
-                        <Pressable
-                          key={item.id}
-                          onPress={() => {
-                            setLevel(item.id as PlanLevel);
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          }}
-                          style={({ pressed }) => [
-                            styles.card,
-                            { padding: normalize(16), borderRadius: normalize(20) },
-                            level === item.id && styles.cardSelected,
-                            pressed && styles.cardPressed
-                          ]}
-                        >
-                          <BlurView intensity={level === item.id ? 40 : 15} tint="dark" style={StyleSheet.absoluteFill} />
-                          <View style={[styles.cardIcon, { width: normalize(48), height: normalize(48), borderRadius: normalize(16) }, level === item.id && styles.cardIconSelected]}>
-                            <Ionicons name={item.icon} size={normalize(22)} color="#fff" />
-                          </View>
-                          <View style={styles.cardContent}>
-                            <View style={styles.cardHeader}>
-                              <Text style={[styles.cardTitle, { fontSize: normalize(17) }]}>{item.title}</Text>
-                              {item.meta && <Text style={[styles.cardMeta, { fontSize: normalize(10), paddingHorizontal: normalize(8), paddingVertical: normalize(3) }]}>{item.meta}</Text>}
-                            </View>
-                            <Text style={[styles.cardDetail, { fontSize: normalize(13) }]}>{item.detail}</Text>
-                          </View>
-                          {level === item.id && <Ionicons name="checkmark-circle" size={normalize(22)} color="#fff" />}
-                        </Pressable>
-                      ))}
-                    </>
-                  )}
-
-                  {(showGoalGrid || isRebuildMode) && (
-                    <Animated.View entering={FadeInDown.duration(300)} style={{ gap: 12 }}>
-                      <Text style={{ fontSize: normalize(18), fontWeight: '700', color: '#fff', marginBottom: 8 }}>
-                        {isRebuildMode ? 'Goal' : 'Now, what’s your first win?'}
-                      </Text>
-                      {goals.map(item => (
-                        <Pressable
-                          key={item.id}
-                          onPress={() => {
-                            setGoal(item.id as PlanGoal);
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                          }}
-                          style={({ pressed }) => [
-                            styles.card,
-                            { padding: normalize(16), borderRadius: normalize(20) },
-                            goal === item.id && styles.cardSelected,
-                            pressed && styles.cardPressed
-                          ]}
-                        >
-                          <BlurView intensity={goal === item.id ? 40 : 15} tint="dark" style={StyleSheet.absoluteFill} />
-                          <View style={[styles.cardIcon, { width: normalize(48), height: normalize(48), borderRadius: normalize(16) }, goal === item.id && styles.cardIconSelected]}>
-                            <Ionicons name={item.icon} size={normalize(22)} color="#fff" />
-                          </View>
-                          <View style={styles.cardContent}>
-                            <View style={styles.cardHeader}>
-                              <Text style={[styles.cardTitle, { fontSize: normalize(17) }]}>{item.title}</Text>
-                              {item.meta && <Text style={[styles.cardMeta, { fontSize: normalize(10), paddingHorizontal: normalize(8), paddingVertical: normalize(3) }]}>{item.meta}</Text>}
-                            </View>
-                            <Text style={[styles.cardDetail, { fontSize: normalize(13) }]}>{item.detail}</Text>
-                          </View>
-                          {goal === item.id && <Ionicons name="checkmark-circle" size={normalize(22)} color="#fff" />}
-                        </Pressable>
-                      ))}
-                    </Animated.View>
-                  )}
-                </View>
-              )}
-
-              {step.id === 'ritual' && (
+            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+          </View>
+        )}
+        <Animated.View key={step.id} entering={FadeInDown.duration(400)} exiting={FadeOut.duration(200)} style={[styles.stepContainer, { gap: normalize(48) }]}>
+          <View style={[styles.textBlock, isLanding && styles.textBlockHero]}>
+            <Text
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+              style={[
+                styles.title,
+                isLanding && {
+                  fontSize: normalize(38),
+                  lineHeight: normalize(44),
+                  fontStyle: 'italic',
+                  fontWeight: '900',
+                  letterSpacing: -1,
+                },
+                !isLanding && { fontSize: normalize(34), lineHeight: normalize(42), fontWeight: '800' }
+              ]}
+            >
+              {isLanding ? (
                 <>
-                  <View style={styles.grid}>
-                    {daysOfWeek.map(day => {
-                      const isActive = selectedDays.includes(day.id);
-                      return (
-                        <Pressable
-                          key={day.id}
-                          onPress={() => toggleDay(day.id)}
-                          style={({ pressed }) => [
-                            styles.card,
-                            { padding: normalize(16), borderRadius: normalize(20) },
-                            isActive && styles.cardSelected,
-                            pressed && styles.cardPressed
-                          ]}
-                        >
-                          <BlurView intensity={isActive ? 40 : 15} tint="dark" style={StyleSheet.absoluteFill} />
-                          <View style={[styles.cardIcon, { width: normalize(48), height: normalize(48), borderRadius: normalize(16) }, isActive && styles.cardIconSelected]}>
-                            <Text style={[styles.dayLetter, { fontSize: normalize(18) }, isActive && styles.dayLetterActive]}>{day.letter}</Text>
-                          </View>
-                          <View style={styles.cardContent}>
-                            <Text style={[styles.cardTitle, { fontSize: normalize(17) }]}>{day.name}</Text>
-                            <Text style={[styles.cardDetail, { fontSize: normalize(13) }]}>{isActive ? 'Workout day' : 'Recovery day'}</Text>
-                          </View>
-                          <View style={[styles.checkbox, { width: normalize(22), height: normalize(22), borderRadius: normalize(11) }, isActive && styles.checkboxSelected]}>
-                            {isActive && <Ionicons name="checkmark" size={normalize(12)} color="#000" />}
-                          </View>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                  <View style={[styles.panel, { marginTop: 20, padding: normalize(24), borderRadius: normalize(28) }]}>
-                    <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-                    <DateTimePicker
-                      value={preferredTime}
-                      mode="time"
-                      display="spinner"
-                      onChange={(event, date) => date && setPreferredTime(date)}
-                      textColor="#fff"
-                      style={{ height: normalize(200) }}
-                    />
-                    <Text style={[styles.panelText, { fontSize: normalize(15) }]}>
-                      {isRebuildMode ? 'This time is used for rebuilt plan reminders.' : "We'll use this time for plan reminders."}
-                    </Text>
-                  </View>
+                  {useWelcomeCopy ? (
+                    <>
+                      <Text style={{ color: '#FFF' }}>Transformation</Text>{'\n'}
+                      <Text style={{ color: colors.accent }}>is a ritual.</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={{ color: '#FFF' }}>Refine</Text>{'\n'}
+                      <Text style={{ color: colors.accent }}>your ritual.</Text>
+                    </>
+                  )}
+                </>
+              ) : step.title}
+            </Text>
+          </View>
+
+          {step.id === 'base' && (
+            <View style={styles.grid}>
+              {(!showGoalGrid || isRebuildMode) && (
+                <>
+                  {levels.map(item => (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => {
+                        setLevel(item.id as PlanLevel);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                      style={({ pressed }) => [
+                        styles.card,
+                        { paddingVertical: normalize(18), paddingHorizontal: normalize(20), borderRadius: normalize(16) },
+                        level === item.id && styles.cardSelected,
+                        pressed && styles.cardPressed
+                      ]}
+                    >
+                      <Ionicons name={item.icon} size={normalize(20)} color={level === item.id ? '#fff' : 'rgba(255,255,255,0.4)'} />
+                      <View style={styles.cardContent}>
+                        <Text style={[styles.cardTitle, { fontSize: normalize(17) }]}>{item.title}</Text>
+                        <Text style={[styles.cardDetail, { fontSize: normalize(13) }]}>{item.detail}</Text>
+                      </View>
+                      {level === item.id && <Ionicons name="checkmark" size={normalize(18)} color="#fff" />}
+                    </Pressable>
+                  ))}
                 </>
               )}
 
-              {step.id === 'ready' && (
-                <View style={[styles.readyCard, { borderRadius: normalize(28), padding: normalize(24) }]}>
-                  <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-                  <View style={styles.readyHeader}>
-                    <Text style={[styles.readyTitle, { fontSize: normalize(20) }]}>Plan summary</Text>
-                    <View style={[styles.readyBadge, { paddingHorizontal: normalize(12), paddingVertical: normalize(6) }]}>
-                      <Text style={[styles.readyBadgeText, { fontSize: normalize(12) }]}>
-                        {isRebuildMode ? 'Edited' : 'Ready'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={[styles.summary, { borderRadius: normalize(20) }]}>
-                    <View style={[styles.summaryRow, { paddingVertical: normalize(14), paddingHorizontal: normalize(18) }]}>
-                      <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>Experience</Text>
-                      <Text style={[styles.summaryValue, { fontSize: normalize(17) }]}>
-                        {levels.find(l => l.id === level)?.title ?? 'Beginner'}
-                      </Text>
-                    </View>
-                    <View style={styles.summaryDivider} />
-                    <View style={[styles.summaryRow, { paddingVertical: normalize(14), paddingHorizontal: normalize(18) }]}>
-                      <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>Goal</Text>
-                      <Text style={[styles.summaryValue, { fontSize: normalize(17) }]}>
-                        {goals.find(g => g.id === goal)?.title ?? 'First 25'}
-                      </Text>
-                    </View>
-                    <View style={styles.summaryDivider} />
-                    <View style={[styles.summaryRow, { paddingVertical: normalize(14), paddingHorizontal: normalize(18) }]}>
-                      <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>Training days</Text>
-                      <Text style={[styles.summaryValue, { fontSize: normalize(17) }]}>
-                        {selectedDays.map(d => daysOfWeek.find(dw => dw.id === d)?.letter).join(', ')}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+              {(showGoalGrid || isRebuildMode) && (
+                <Animated.View entering={FadeInDown.duration(300)} style={{ gap: 10 }}>
+                  {goals.map(item => (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => {
+                        setGoal(item.id as PlanGoal);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      }}
+                      style={({ pressed }) => [
+                        styles.card,
+                        { paddingVertical: normalize(18), paddingHorizontal: normalize(20), borderRadius: normalize(16) },
+                        goal === item.id && styles.cardSelected,
+                        pressed && styles.cardPressed
+                      ]}
+                    >
+                      <Ionicons name={item.icon} size={normalize(20)} color={goal === item.id ? '#fff' : 'rgba(255,255,255,0.4)'} />
+                      <View style={styles.cardContent}>
+                        <Text style={[styles.cardTitle, { fontSize: normalize(17) }]}>{item.title}</Text>
+                        <Text style={[styles.cardDetail, { fontSize: normalize(13) }]}>{item.detail}</Text>
+                      </View>
+                      {goal === item.id && <Ionicons name="checkmark" size={normalize(18)} color="#fff" />}
+                    </Pressable>
+                  ))}
+                </Animated.View>
               )}
-            </Animated.View>
-          </ScrollView>
+            </View>
+          )}
 
-          {/* Fixed Footer for Actions */}
-          <Animated.View
-            entering={FadeInUp}
-            style={[
-              styles.footer,
-              {
-                paddingHorizontal: normalize(32),
-                paddingBottom: normalize(32),
-                paddingTop: normalize(12),
-                backgroundColor: isLanding ? 'transparent' : 'rgba(0,0,0,0.5)'
-              }
-            ]}
-          >
-            {isLanding ? (
-              <View style={{ alignItems: 'center' }}>
-                <SwipeSlider onComplete={goNext} />
+          {step.id === 'ritual' && (
+            <>
+              <View style={styles.grid}>
+                {daysOfWeek.map(day => {
+                  const isActive = selectedDays.includes(day.id);
+                  return (
+                    <Pressable
+                      key={day.id}
+                      onPress={() => toggleDay(day.id)}
+                      style={({ pressed }) => [
+                        styles.card,
+                        { paddingVertical: normalize(14), paddingHorizontal: normalize(20), borderRadius: normalize(16) },
+                        isActive && styles.cardSelected,
+                        pressed && styles.cardPressed
+                      ]}
+                    >
+                      <Text style={[styles.dayLetter, { fontSize: normalize(16), width: normalize(24), textAlign: 'center' }, isActive && styles.dayLetterActive]}>{day.letter}</Text>
+                      <View style={styles.cardContent}>
+                        <Text style={[styles.cardTitle, { fontSize: normalize(16) }]}>{day.name}</Text>
+                      </View>
+                      <View style={[styles.checkbox, { width: normalize(22), height: normalize(22), borderRadius: normalize(11) }, isActive && styles.checkboxSelected]}>
+                        {isActive && <Ionicons name="checkmark" size={normalize(12)} color="#000" />}
+                      </View>
+                    </Pressable>
+                  );
+                })}
               </View>
-            ) : (
-              <Pressable
-                onPress={step.id === 'ready' ? finish : goNext}
-                disabled={!canContinue || busy || finishing}
-                style={({ pressed }) => [
-                  styles.primaryButton,
-                  { minHeight: normalize(58), borderRadius: normalize(12) },
-                  (!canContinue || busy || finishing) && styles.primaryButtonDisabled,
-                  pressed && styles.primaryButtonPressed
-                ]}
-              >
-                {busy || finishing ? (
-                  <ActivityIndicator color="#000" />
-                ) : (
-                  <>
-                    <Text style={[styles.primaryText, { fontSize: normalize(17) }]}>{getButtonLabel()}</Text>
-                    <Ionicons name="arrow-forward" size={normalize(18)} color="#000" />
-                  </>
-                )}
-              </Pressable>
-            )}
-            {step.id === 'ready' && !isRebuildMode && subscriptionConfigured && (
-              <Pressable
-                onPress={async () => { await showPaywall(); await finish(); }}
-                disabled={busy || subLoading || !paywallAvailable}
-                style={styles.secondaryButton}
-              >
-                <Text style={[styles.secondaryText, { fontSize: normalize(15) }]}>
-                  {paywallAvailable ? 'View Pro →' : 'Pro setup required'}
+              <View style={[styles.panel, { marginTop: 16, padding: normalize(20), borderRadius: normalize(20) }]}>
+                <DateTimePicker
+                  value={preferredTime}
+                  mode="time"
+                  display="spinner"
+                  onChange={(event, date) => date && setPreferredTime(date)}
+                  textColor="#fff"
+                  style={{ height: normalize(180) }}
+                />
+              </View>
+            </>
+          )}
+
+          {step.id === 'ready' && (
+            <View style={[styles.readyCard, { borderRadius: normalize(20), padding: normalize(20) }]}>
+              <View style={[styles.summaryRow, { paddingVertical: normalize(14) }]}>
+                <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>Level</Text>
+                <Text style={[styles.summaryValue, { fontSize: normalize(17) }]}>
+                  {levels.find(l => l.id === level)?.title ?? 'Beginner'}
                 </Text>
-              </Pressable>
-            )}
-          </Animated.View>
-        </SafeAreaView>
-      </View>
-    );
-  }
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={[styles.summaryRow, { paddingVertical: normalize(14) }]}>
+                <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>Goal</Text>
+                <Text style={[styles.summaryValue, { fontSize: normalize(17) }]}>
+                  {goals.find(g => g.id === goal)?.title ?? 'First 25'}
+                </Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={[styles.summaryRow, { paddingVertical: normalize(14) }]}>
+                <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>Days</Text>
+                <Text style={[styles.summaryValue, { fontSize: normalize(17) }]}>
+                  {selectedDays.map(d => daysOfWeek.find(dw => dw.id === d)?.letter).join('  ')}
+                </Text>
+              </View>
+            </View>
+          )}
+        </Animated.View>
+      </ScrollView>
+
+      {/* Fixed Footer for Actions */}
+      <Animated.View
+        entering={FadeInUp}
+        style={[
+          styles.footer,
+          {
+            paddingHorizontal: normalize(32),
+            paddingBottom: normalize(32),
+            paddingTop: normalize(12),
+            backgroundColor: isLanding ? 'transparent' : 'rgba(0,0,0,0.5)'
+          }
+        ]}
+      >
+        {isLanding ? (
+          <View style={{ alignItems: 'center' }}>
+            <SwipeSlider onComplete={goNext} />
+          </View>
+        ) : (
+          <NeonButton
+            title={getButtonLabel()}
+            onPress={step.id === 'ready' ? finish : goNext}
+            disabled={!canContinue || busy || finishing}
+            style={{ minHeight: normalize(58) }}
+          />
+        )}
+        {step.id === 'ready' && !isRebuildMode && subscriptionConfigured && (
+          <Pressable
+            onPress={async () => { await showPaywall(); await finish(); }}
+            disabled={busy || subLoading || !paywallAvailable}
+            style={styles.secondaryButton}
+          >
+            <Text style={[styles.secondaryText, { fontSize: normalize(15) }]}>
+              {paywallAvailable ? 'View Pro →' : 'Pro setup required'}
+            </Text>
+          </Pressable>
+        )}
+      </Animated.View>
+    </CFEView>
+  );
+}
 
 function timeFromDraft(value?: string) {
   const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value ?? '');
@@ -659,9 +587,6 @@ function timeFromDraft(value?: string) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#000' },
-  overlay: { ...StyleSheet.absoluteFillObject },
-  safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   backButton: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)' },
   progressContainer: { flex: 1 },
@@ -670,10 +595,6 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: colors.accent,
     borderRadius: 2,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 6,
   },
   skipButton: { paddingHorizontal: 12, paddingVertical: 8 },
   skipText: { fontWeight: '500', color: 'rgba(255,255,255,0.5)' },
@@ -681,53 +602,35 @@ const styles = StyleSheet.create({
   stepContainer: { gap: 48 },
   textBlock: { gap: 10 },
   textBlockHero: { marginTop: 40 },
-  kickerContainer: { alignSelf: 'flex-start', backgroundColor: 'rgba(244,63,94,0.15)' },
-  kicker: { fontWeight: '700', color: '#fb7185', textTransform: 'uppercase', letterSpacing: 1 },
   title: { color: '#fff' },
-  body: { fontWeight: '500', color: 'rgba(255,255,255,0.6)', maxWidth: 320 },
-  grid: { gap: 12 },
+  grid: { gap: 10 },
   card: {
-    flexDirection: 'row', alignItems: 'center', gap: 16,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
     overflow: 'hidden',
   },
-  cardSelected: { backgroundColor: 'rgba(244,63,94,0.15)', borderColor: 'rgba(244,63,94,0.6)' },
+  cardSelected: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.15)' },
   cardPressed: { transform: [{ scale: 0.98 }] },
-  cardIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)' },
-  cardIconSelected: { backgroundColor: colors.accent },
-  cardContent: { flex: 1, gap: 4 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardContent: { flex: 1, gap: 2 },
   cardTitle: { fontWeight: '600', color: '#fff', letterSpacing: -0.2 },
-  cardMeta: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, fontWeight: '600', color: 'rgba(255,255,255,0.7)' },
-  cardDetail: { fontWeight: '500', color: 'rgba(255,255,255,0.5)', lineHeight: 18 },
-  checkbox: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center' },
+  cardDetail: { fontWeight: '400', color: 'rgba(255,255,255,0.4)' },
+  checkbox: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   checkboxSelected: { backgroundColor: '#fff', borderColor: '#fff' },
-  dayLetter: { fontWeight: '700', color: '#fff' },
+  dayLetter: { fontWeight: '700', color: 'rgba(255,255,255,0.4)' },
   dayLetterActive: { color: '#fff' },
   panel: {
-    gap: 16, backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
     overflow: 'hidden',
   },
-  panelIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
-  panelTitle: { fontWeight: '700', color: '#fff', letterSpacing: -0.3 },
-  panelText: { fontWeight: '500', color: 'rgba(255,255,255,0.5)', lineHeight: 22, textAlign: 'center' },
-  featureList: { gap: 12, marginTop: 6 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  featureText: { fontWeight: '500', color: 'rgba(255,255,255,0.75)' },
   readyCard: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
     overflow: 'hidden',
   },
-  readyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  readyTitle: { fontWeight: '800', color: '#fff' },
-  readyBadge: { backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 30 },
-  readyBadgeText: { fontWeight: '700', color: '#bbf7d0', textTransform: 'uppercase' },
-  summary: { backgroundColor: 'rgba(0,0,0,0.3)', overflow: 'hidden' },
   summaryRow: {},
-  summaryLabel: { fontWeight: '600', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 0.5 },
+  summaryLabel: { fontWeight: '600', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: 0.5 },
   summaryValue: { fontWeight: '700', color: '#fff', marginTop: 4 },
   summaryDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)' },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0 },
