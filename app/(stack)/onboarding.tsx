@@ -18,6 +18,7 @@ import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOut } from 'react-native-re
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../src/auth';
+import { useSaveBackendSettings } from '../../src/backend';
 import { useSubscription } from '../../src/subscriptions';
 import { useSettingsStore, usePlanStore, useUserStore, type PlanLevel, type PlanGoal } from '../../src/store';
 import { generateTrainingPlan } from '../../src/utils/planGenerator';
@@ -186,6 +187,7 @@ export default function OnboardingScreen() {
   const { normalize, verticalScale } = useResponsive();
   const auth = useAuth();
   const { configured: subscriptionConfigured, products: subscriptionProducts, showPaywall, loading: subLoading, isPro } = useSubscription();
+  const saveBackendSettings = useSaveBackendSettings();
   const { user } = useUserStore();
   const { setPlan, setupDraft } = usePlanStore();
   const existingPlan = usePlanStore((state) => state.plan);
@@ -286,10 +288,13 @@ export default function OnboardingScreen() {
       if (isRebuildMode && existingPlan?.notificationIds.length) {
         await cancelPlanNotifications(existingPlan.notificationIds);
       }
-      updateSettings({
+      const nextSettings = {
+        ...settings,
         defaultWorkoutTime: normalizedTime,
         notificationsEnabled,
-      });
+      };
+      updateSettings(nextSettings);
+      await saveBackendSettings(nextSettings);
       const notificationIds = await syncNotificationsForPlan({
         plan,
         user,

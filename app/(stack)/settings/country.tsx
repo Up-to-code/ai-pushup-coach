@@ -4,12 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COUNTRY_OPTIONS, getFlagEmoji, type CountryOption } from '../../../src/data/countries';
+import { useSaveBackendProfile } from '../../../src/backend';
 import { useUserStore } from '../../../src/store';
 import { borderRadius, colors, layout, spacing, typography } from '../../../src/theme';
 
 export default function CountrySettingsScreen() {
   const router = useRouter();
   const { user, updateUser } = useUserStore();
+  const saveBackendProfile = useSaveBackendProfile();
   const [query, setQuery] = useState('');
 
   const filteredCountries = useMemo(() => {
@@ -24,9 +26,14 @@ export default function CountrySettingsScreen() {
   }, [query]);
 
   const selectCountry = (country: CountryOption) => {
-    updateUser({
+    const nextUser = {
+      ...user,
       countryCode: country.code,
       countryName: country.name,
+    };
+    updateUser(nextUser);
+    void saveBackendProfile(nextUser).catch((error) => {
+      console.warn('Country profile save failed', error);
     });
     router.back();
   };

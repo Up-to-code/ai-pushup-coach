@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { borderRadius, colors, layout, spacing, typography } from '../../../src/theme';
 import { useUserStore } from '../../../src/store';
+import { useSaveBackendProfile } from '../../../src/backend';
 import { getCountryByCode, getFlagEmoji } from '../../../src/data/countries';
 import { CFEView, NeonButton, StackHeader } from '../../../src/components';
 import { authClient } from '../../../src/auth/authClient';
@@ -12,6 +13,7 @@ import { pickAndUploadAvatar } from '../../../src/utils/uploadthing';
 export default function EditProfileScreen() {
   const router = useRouter();
   const { user, updateUser } = useUserStore();
+  const saveBackendProfile = useSaveBackendProfile();
 
   const [name, setName] = useState(user.displayName || user.name);
   const [nickname, setNickname] = useState(user.nickname);
@@ -26,8 +28,10 @@ export default function EditProfileScreen() {
     try {
       const url = await pickAndUploadAvatar();
       if (url) {
+        const nextUser = { ...user, avatar: url };
         setAvatarUrl(url);
-        updateUser({ avatar: url });
+        updateUser(nextUser);
+        await saveBackendProfile(nextUser);
         Alert.alert('Done', 'Avatar uploaded and saved.');
       }
     } finally {
@@ -50,8 +54,8 @@ export default function EditProfileScreen() {
         image: avatar,
       });
 
-      // 2. Update the local Zustand store for immediate UI update
-      updateUser({
+      const nextUser = {
+        ...user,
         name: displayName,
         displayName,
         nickname: nickname.trim() || displayName,
@@ -59,7 +63,11 @@ export default function EditProfileScreen() {
         avatar,
         countryCode: selectedCountry.code,
         countryName: selectedCountry.name,
-      });
+      };
+
+      // 2. Update the local Zustand store for immediate UI update
+      updateUser(nextUser);
+      await saveBackendProfile(nextUser);
 
       router.back();
     } catch (error) {

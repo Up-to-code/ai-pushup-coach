@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { clearLocalAuthState, useAuth } from '../../src/auth';
+import { useSaveBackendSettings } from '../../src/backend';
 import { ProBadge } from '../../src/components';
 import { canUseFullSceneCamera, PRODUCT_IDENTIFIERS, useSubscription } from '../../src/subscriptions';
 import { appWebUrl, privacyUrl, supportUrl, termsUrl } from '../../src/config/links';
@@ -66,6 +67,7 @@ export default function SettingsScreen() {
   const user = useUserStore((state) => state.user);
   const settings = useSettingsStore((state) => state.settings);
   const updateSettings = useSettingsStore((state) => state.updateSettings);
+  const saveBackendSettings = useSaveBackendSettings();
   const setAllowGuestMode = useSettingsStore((state) => state.setAllowGuestMode);
   const plan = usePlanStore((state) => state.plan);
   const updatePlan = usePlanStore((state) => state.updatePlan);
@@ -75,6 +77,23 @@ export default function SettingsScreen() {
   const [timeSaving, setTimeSaving] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const saveSettings = async (nextSettings: typeof settings) => {
+    updateSettings(nextSettings);
+    try {
+      await saveBackendSettings(nextSettings);
+    } catch (error) {
+      console.warn('Settings save failed', error);
+    }
+  };
+
+  const updateAndSaveSettings = (partialSettings: Partial<typeof settings>) => {
+    const nextSettings = { ...settings, ...partialSettings };
+    updateSettings(partialSettings);
+    void saveBackendSettings(nextSettings).catch((error) => {
+      console.warn('Settings save failed', error);
+    });
+  };
 
   const resyncNotifications = async (nextSettings = settings, nextPlan = plan) => {
     if (!nextPlan) return [];
@@ -93,7 +112,13 @@ export default function SettingsScreen() {
   const toggleNotifications = async (enabled: boolean) => {
     if (!enabled) {
       if (plan) await cancelPlanNotifications(plan.notificationIds);
-      updateSettings({ notificationsEnabled: false, workoutReminderEnabled: false, missedReminderEnabled: false, habitNudgeEnabled: false });
+      await saveSettings({
+        ...settings,
+        notificationsEnabled: false,
+        workoutReminderEnabled: false,
+        missedReminderEnabled: false,
+        habitNudgeEnabled: false,
+      });
       updatePlan({ notificationIds: [] });
       return;
     }
@@ -105,7 +130,7 @@ export default function SettingsScreen() {
       missedReminderEnabled: granted,
       habitNudgeEnabled: granted ? settings.habitNudgeEnabled : false,
     };
-    updateSettings(nextSettings);
+    await saveSettings(nextSettings);
     await resyncNotifications(nextSettings);
     if (!granted) {
       Alert.alert('Notifications are off', 'Enable notifications in iOS Settings to receive workout reminders.');
@@ -114,7 +139,7 @@ export default function SettingsScreen() {
 
   const updateReminderSetting = async (key: 'workoutReminderEnabled' | 'missedReminderEnabled' | 'habitNudgeEnabled', value: boolean) => {
     const nextSettings = { ...settings, [key]: value };
-    updateSettings(nextSettings);
+    await saveSettings(nextSettings);
     await resyncNotifications(nextSettings);
   };
 
@@ -125,13 +150,15 @@ export default function SettingsScreen() {
       return;
     }
     setTimeSaving(true);
+    const nextSettings = { ...settings, defaultWorkoutTime: preferredTime };
     updateSettings({ defaultWorkoutTime: preferredTime });
     try {
+      await saveBackendSettings(nextSettings);
       if (plan) {
         const days = reschedulePlanDays(plan.days, preferredTime);
         const nextPlan = { ...plan, preferredTime, days };
         updatePlan({ preferredTime, days });
-        const notificationIds = await resyncNotifications(settings, nextPlan);
+        const notificationIds = await resyncNotifications(nextSettings, nextPlan);
         updatePlan({ notificationIds });
       }
     } catch (error) {
@@ -355,9 +382,9 @@ export default function SettingsScreen() {
           </Section>
 
           <Section title="Workout feedback">
-            <ToggleRow label="Sound" description="Count reps aloud during sessions." value={settings.soundEnabled} onChange={(soundEnabled) => updateSettings({ soundEnabled })} />
+            <ToggleRow label="Sound" description="Count reps aloud during sessions." value={settings.soundEnabled} onChange={(soundEnabled) => updateAndSaveSettings({ soundEnabled })} />
             <Divider />
-            <ToggleRow label="Haptics" description="Confirm counted reps with vibration." value={settings.hapticsEnabled} onChange={(hapticsEnabled) => updateSettings({ hapticsEnabled })} />
+            <ToggleRow label="Haptics" description="Confirm counted reps with vibration." value={settings.hapticsEnabled} onChange={(hapticsEnabled) => updateAndSaveSettings({ hapticsEnabled })} />
           </Section>
 
           <Section title="Session behavior">
@@ -375,7 +402,7 @@ export default function SettingsScreen() {
               }}
               onChange={(val) => {
                 if (val === 'fullScene' && !canUseFullSceneCamera(isPro)) return;
-                updateSettings({ defaultCameraMode: val as any });
+                updateAndSaveSettings({ defaultCameraMode: val as any });
               }}
             />
           </Section>

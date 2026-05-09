@@ -86,6 +86,22 @@ function normalizeCreatedAt(createdAt: string | number, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function valuesEqual(left: unknown, right: unknown) {
+  if (Object.is(left, right)) {
+    return true;
+  }
+
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return left.length === right.length && left.every((value, index) => Object.is(value, right[index]));
+  }
+
+  return false;
+}
+
+function hasPatchChanges<T extends Record<string, unknown>>(existing: T, patch: Partial<T>) {
+  return Object.entries(patch).some(([key, value]) => !valuesEqual(existing[key], value));
+}
+
 export const upsertProfile = mutation({
   args: {
     clientUserId: v.string(),
@@ -139,7 +155,6 @@ export const upsertProfile = mutation({
       subscriptionUpdatedAt: args.subscriptionUpdatedAt ?? existing?.subscriptionUpdatedAt,
       subscriptionOwnerUserId: args.subscriptionOwnerUserId ?? existing?.subscriptionOwnerUserId,
       createdAt: normalizeCreatedAt(args.createdAt, now),
-      updatedAt: now,
       streak: args.streak ?? existing?.streak ?? 0,
       energy: args.energy ?? existing?.energy ?? 100,
       totalReps: args.totalReps ?? existing?.totalReps ?? 0,
@@ -148,19 +163,27 @@ export const upsertProfile = mutation({
 
     if (existing) {
       assertActiveUser(existing);
-      await ctx.db.patch(existing._id, {
+      const patch = {
         ...payload,
-        deletionStatus: 'active',
+        deletionStatus: 'active' as const,
         // Preserve existing values if provided ones are lower (stale local data)
         streak: Math.max(existing.streak ?? 0, args.streak ?? 0),
         energy: args.energy ?? existing.energy ?? 100, // Energy is transient, keep provided or existing
         totalReps: Math.max(existing.totalReps ?? 0, args.totalReps ?? 0),
         bestReps: Math.max(existing.bestReps ?? 0, args.bestReps ?? 0),
-      });
+      };
+
+      if (hasPatchChanges(existing, patch)) {
+        await ctx.db.patch(existing._id, {
+          ...patch,
+          updatedAt: now,
+        });
+      }
+
       return existing._id;
     }
 
-    return await ctx.db.insert('users', { ...payload, deletionStatus: 'active', restoreTokenVersion: 0 });
+    return await ctx.db.insert('users', { ...payload, updatedAt: now, deletionStatus: 'active', restoreTokenVersion: 0 });
   },
 });
 

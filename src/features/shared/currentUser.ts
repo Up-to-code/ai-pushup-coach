@@ -1,24 +1,26 @@
 import { useConvexAuth } from 'convex/react';
-import { useAuth } from '../../auth';
-import { useUserStore } from '../../store';
+import { useBetterAuth, useSettingsHydrated } from '../../auth';
+import { useSettingsStore, useUserStore } from '../../store';
 
 export function useIsGuestMode() {
-  const auth = useAuth();
-  return auth.status === 'guest';
+  const { isLoaded, isSignedIn } = useBetterAuth();
+  const settingsHydrated = useSettingsHydrated();
+  const allowGuestMode = useSettingsStore((state) => state.settings.allowGuestMode);
+  return isLoaded && settingsHydrated && !isSignedIn && allowGuestMode;
 }
 
 export function useClientUserId() {
-  const { clientUserId } = useAuth();
+  const { userId } = useBetterAuth();
   const localUserId = useUserStore((state) => state.user.id);
-  return clientUserId ?? localUserId;
+  return userId ?? localUserId;
 }
 
 export function useAuthenticatedBackendState() {
-  const auth = useAuth();
+  const { isLoaded, isSignedIn, userId } = useBetterAuth();
   const { isAuthenticated, isLoading } = useConvexAuth();
   return {
-    canUseAuthenticatedBackend: Boolean(auth.status === 'signedIn' && isAuthenticated && auth.clientUserId),
-    authLoading: auth.status === 'loading' || isLoading,
-    userId: auth.clientUserId,
+    canUseAuthenticatedBackend: Boolean(isLoaded && isSignedIn && isAuthenticated && userId),
+    authLoading: !isLoaded || isLoading,
+    userId,
   };
 }

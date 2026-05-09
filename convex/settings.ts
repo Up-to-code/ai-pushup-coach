@@ -3,6 +3,22 @@ import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
 import { assertActiveUser } from './deletedUsers';
 
+function valuesEqual(left: unknown, right: unknown) {
+  if (Object.is(left, right)) {
+    return true;
+  }
+
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return left.length === right.length && left.every((value, index) => Object.is(value, right[index]));
+  }
+
+  return false;
+}
+
+function hasPatchChanges<T extends Record<string, unknown>>(existing: T, patch: Partial<T>) {
+  return Object.entries(patch).some(([key, value]) => !valuesEqual(existing[key], value));
+}
+
 export const upsertSettings = mutation({
   args: {
     clientUserId: v.string(),
@@ -46,15 +62,20 @@ export const upsertSettings = mutation({
       habitNudgeEnabled: args.habitNudgeEnabled,
       defaultWorkoutTime: args.defaultWorkoutTime,
       defaultCameraMode: args.defaultCameraMode,
-      updatedAt: Date.now(),
     };
 
     if (existing) {
-      await ctx.db.patch(existing._id, payload);
+      if (hasPatchChanges(existing, payload)) {
+        await ctx.db.patch(existing._id, {
+          ...payload,
+          updatedAt: Date.now(),
+        });
+      }
+
       return existing._id;
     }
 
-    return await ctx.db.insert('userSettings', payload);
+    return await ctx.db.insert('userSettings', { ...payload, updatedAt: Date.now() });
   },
 });
 

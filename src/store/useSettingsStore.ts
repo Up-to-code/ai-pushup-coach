@@ -65,6 +65,22 @@ const defaultOnboardingProfile: OnboardingProfile = {
   notificationsPrimed: false,
 };
 
+function valuesEqual(left: unknown, right: unknown) {
+  if (Object.is(left, right)) {
+    return true;
+  }
+
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return left.length === right.length && left.every((value, index) => Object.is(value, right[index]));
+  }
+
+  return false;
+}
+
+function hasChanges<T extends object>(current: T, updates: Partial<T>) {
+  return Object.entries(updates).some(([key, value]) => !valuesEqual(current[key as keyof T], value));
+}
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
@@ -72,9 +88,15 @@ export const useSettingsStore = create<SettingsState>()(
       hasCompletedOnboarding: false,
       onboardingProfile: defaultOnboardingProfile,
       updateSettings: (newSettings) =>
-        set((state) => ({
-          settings: { ...state.settings, ...newSettings },
-        })),
+        set((state) => {
+          if (!hasChanges(state.settings, newSettings)) {
+            return state;
+          }
+
+          return {
+            settings: { ...state.settings, ...newSettings },
+          };
+        }),
       updateOnboardingProfile: (profile) =>
         set((state) => ({
           onboardingProfile: {

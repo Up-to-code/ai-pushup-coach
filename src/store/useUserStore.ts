@@ -62,19 +62,47 @@ const defaultUser: User = {
   bestReps: 0,
 };
 
+function valuesEqual(left: unknown, right: unknown) {
+  if (Object.is(left, right)) {
+    return true;
+  }
+
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return left.length === right.length && left.every((value, index) => Object.is(value, right[index]));
+  }
+
+  return false;
+}
+
+function hasChanges<T extends object>(current: T, updates: Partial<T>) {
+  return Object.entries(updates).some(([key, value]) => !valuesEqual(current[key as keyof T], value));
+}
+
 export const useUserStore = create<UserState>()(
   persist(
     (set) => ({
       user: defaultUser,
       setUser: (user) => set({ user }),
       updateUser: (updates) =>
-        set((state) => ({
-          user: { ...state.user, ...updates },
-        })),
+        set((state) => {
+          if (!hasChanges(state.user, updates)) {
+            return state;
+          }
+
+          return {
+            user: { ...state.user, ...updates },
+          };
+        }),
       updateProStatus: (status) =>
-        set((state) => ({
-          user: { ...state.user, proStatus: status },
-        })),
+        set((state) => {
+          if (state.user.proStatus === status) {
+            return state;
+          }
+
+          return {
+            user: { ...state.user, proStatus: status },
+          };
+        }),
       resetUser: () => set({ user: defaultUser }),
     }),
     {
