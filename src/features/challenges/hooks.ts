@@ -4,10 +4,11 @@ import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { useAuthenticatedBackendState, useClientUserId } from '../shared/currentUser';
 
-export function useChallenges(limit = 25) {
+export function useChallenges(limit = 25, enabled = true) {
   const clientUserId = useClientUserId();
   const { authLoading, canUseAuthenticatedBackend } = useAuthenticatedBackendState();
-  const rows = useQuery(api.challenges.list, canUseAuthenticatedBackend ? { clientUserId, limit } : 'skip');
+  const shouldQuery = enabled && canUseAuthenticatedBackend;
+  const rows = useQuery(api.challenges.list, shouldQuery ? { clientUserId, limit } : 'skip');
   const seedMutation = useMutation(api.challenges.seedDefaults);
   const joinMutation = useMutation(api.challenges.join);
   const leaveMutation = useMutation(api.challenges.leave);
@@ -19,8 +20,8 @@ export function useChallenges(limit = 25) {
 
   return {
     challenges: canUseAuthenticatedBackend ? rows : undefined,
-    loading: authLoading || (canUseAuthenticatedBackend && rows === undefined),
-    canSeedDefaults: canUseAuthenticatedBackend,
+    loading: authLoading || (shouldQuery && rows === undefined),
+    canSeedDefaults: shouldQuery,
     seedDefaults: useCallback(() => {
       requireAuthenticatedBackend();
       return seedMutation({ clientUserId });

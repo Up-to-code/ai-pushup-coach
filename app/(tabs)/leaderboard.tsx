@@ -5,7 +5,7 @@ import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { useLeaderboard, type LeaderboardPeriod, type LeaderboardScope } from '../../src/features/leaderboard/hooks';
 import { colors, typography } from '../../src/theme';
-import { useResponsive } from '../../src/hooks';
+import { useIsScreenFocused, useResponsive } from '../../src/hooks';
 
 const rankTabs: Array<{ id: LeaderboardScope; label: string }> = [
   { id: 'global', label: 'Global' },
@@ -30,9 +30,10 @@ const getFlagEmoji = (countryCode?: string) => {
 export default function LeaderboardScreen() {
   const router = useRouter();
   const { normalize, verticalScale } = useResponsive();
+  const isFocused = useIsScreenFocused();
   const [scope, setScope] = useState<LeaderboardScope>('global');
   const [period, setPeriod] = useState<LeaderboardPeriod>('W');
-  const { rows, loading, isGlobalCountryFallback } = useLeaderboard(scope, period, 75);
+  const { rows, loading, isGlobalCountryFallback } = useLeaderboard(scope, period, 75, isFocused);
   const activePeriod = periodTabs.find((tab) => tab.id === period) ?? periodTabs[0];
 
   return (

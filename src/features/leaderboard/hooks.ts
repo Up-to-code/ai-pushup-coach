@@ -37,13 +37,13 @@ function toRows(rows: Array<{
   }));
 }
 
-export function useLeaderboard(scope: LeaderboardScope, period: LeaderboardPeriod = 'W', limit = 50) {
+export function useLeaderboard(scope: LeaderboardScope, period: LeaderboardPeriod = 'W', limit = 50, enabled = true) {
   const clientUserId = useClientUserId();
   const { isSignedIn } = useBetterAuth();
   const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
   const countryCode = useUserStore((state) => state.user.countryCode);
   const needsAuth = scope === 'friends';
-  const skipAuthQuery = needsAuth && (!isSignedIn || !isConvexAuthenticated);
+  const skipAuthQuery = !enabled || (needsAuth && (!isSignedIn || !isConvexAuthenticated));
   const rows = useQuery(
     api.leaderboard.rankedLeaderboard,
     skipAuthQuery

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { createContext, createElement, useCallback, useContext, useMemo, type PropsWithChildren } from 'react';
 import { Platform } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useConvexAuth, useQuery } from 'convex/react';
@@ -50,7 +50,7 @@ async function clearProviderCacheSafely() {
   }
 }
 
-export function useAuth() {
+function useAuthValue() {
   const betterAuth = useBetterAuth();
   const { isAuthenticated: isConvexAuthenticated, isLoading: convexLoading } = useConvexAuth();
   const authActionStatus = useAuthActionStore((state) => state.authActionStatus);
@@ -232,4 +232,21 @@ export function useAuth() {
       status,
     ]
   );
+}
+
+export type AuthValue = ReturnType<typeof useAuthValue>;
+
+const AuthContext = createContext<AuthValue | null>(null);
+
+export function AuthProvider({ children }: PropsWithChildren) {
+  const value = useAuthValue();
+  return createElement(AuthContext.Provider, { value }, children);
+}
+
+export function useAuth() {
+  const value = useContext(AuthContext);
+  if (!value) {
+    throw new Error('useAuth must be used inside AuthProvider.');
+  }
+  return value;
 }

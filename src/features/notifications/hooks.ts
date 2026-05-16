@@ -3,10 +3,11 @@ import { api } from '../../../convex/_generated/api';
 import { useAuthenticatedBackendState, useClientUserId } from '../shared/currentUser';
 import type { Id } from '../../../convex/_generated/dataModel';
 
-export function useSocialInbox(limit = 50) {
+export function useSocialInbox(limit = 50, enabled = true) {
   const clientUserId = useClientUserId();
   const { authLoading, canUseAuthenticatedBackend } = useAuthenticatedBackendState();
-  const inbox = useQuery(api.socialNotifications.inbox, canUseAuthenticatedBackend ? { clientUserId, limit } : 'skip');
+  const shouldQuery = enabled && canUseAuthenticatedBackend;
+  const inbox = useQuery(api.socialNotifications.inbox, shouldQuery ? { clientUserId, limit } : 'skip');
   const markReadMutation = useMutation(api.socialNotifications.markRead);
   const markAllReadMutation = useMutation(api.socialNotifications.markAllRead);
   const followBackMutation = useMutation(api.socialNotifications.followBack);
@@ -16,7 +17,7 @@ export function useSocialInbox(limit = 50) {
       items: [],
       unreadCount: 0,
     },
-    loading: authLoading || (canUseAuthenticatedBackend && inbox === undefined),
+    loading: authLoading || (shouldQuery && inbox === undefined),
     markRead: (notificationId: Id<'socialNotifications'>) =>
       markReadMutation({ clientUserId, notificationId }),
     markAllRead: () => markAllReadMutation({ clientUserId }),

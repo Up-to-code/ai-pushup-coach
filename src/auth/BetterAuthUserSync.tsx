@@ -1,8 +1,23 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useSaveBackendProfile } from '../backend/useBackendPersistence';
-import { useUserStore } from '../store';
+import { useUserStore, type User } from '../store';
 import { toLocalUserUpdates } from './betterAuthUserProfile';
 import { useBetterAuth } from './useBetterAuth';
+
+function toProfileInput(user: User): Parameters<ReturnType<typeof useSaveBackendProfile>>[0] {
+  return {
+    name: user.name,
+    displayName: user.displayName,
+    nickname: user.nickname,
+    bio: user.bio,
+    coachTone: user.coachTone,
+    personalityTags: user.personalityTags,
+    countryCode: user.countryCode,
+    countryName: user.countryName,
+    avatar: user.avatar,
+    createdAt: user.createdAt,
+  };
+}
 
 export function BetterAuthUserSync() {
   const { isLoaded, isSignedIn, user, userId } = useBetterAuth();
@@ -12,7 +27,7 @@ export function BetterAuthUserSync() {
   const lastProfileSaveSignatureRef = useRef<string | null>(null);
   const localAvatar = localUser.avatar;
 
-  const nextUser = useMemo(() => {
+  const authUpdates = useMemo(() => {
     if (!isLoaded || !isSignedIn || !user || !userId) {
       return null;
     }
@@ -23,49 +38,47 @@ export function BetterAuthUserSync() {
     }
 
     return {
-      ...localUser,
       ...updates,
       id: userId,
     };
-  }, [isLoaded, isSignedIn, localAvatar, localUser, user, userId]);
+  }, [isLoaded, isSignedIn, localAvatar, user, userId]);
 
   useEffect(() => {
-    if (!nextUser) {
+    if (!authUpdates) {
       return;
     }
 
-    updateUser(nextUser);
-  }, [nextUser, updateUser]);
+    updateUser(authUpdates);
+  }, [authUpdates, updateUser]);
 
-  useEffect(() => {
-    if (!nextUser) {
-      return;
+  const backendProfile = useMemo(() => {
+    if (!authUpdates) {
+      return null;
     }
 
-    const signature = JSON.stringify({
-      userId: nextUser.id,
-      name: nextUser.name,
-      displayName: nextUser.displayName,
-      nickname: nextUser.nickname,
-      bio: nextUser.bio,
-      coachTone: nextUser.coachTone,
-      personalityTags: nextUser.personalityTags,
-      countryCode: nextUser.countryCode,
-      countryName: nextUser.countryName,
-      avatar: nextUser.avatar,
-      createdAt: nextUser.createdAt,
+    return toProfileInput({
+      ...localUser,
+      ...authUpdates,
     });
+  }, [authUpdates, localUser]);
+
+  useEffect(() => {
+    if (!backendProfile) {
+      return;
+    }
+
+    const signature = JSON.stringify({ userId, ...backendProfile });
 
     if (lastProfileSaveSignatureRef.current === signature) {
       return;
     }
 
     lastProfileSaveSignatureRef.current = signature;
-    void saveBackendProfile(nextUser).catch((error) => {
+    void saveBackendProfile(backendProfile).catch((error) => {
       lastProfileSaveSignatureRef.current = null;
       console.warn('Convex account profile save failed', error);
     });
-  }, [nextUser, saveBackendProfile]);
+  }, [backendProfile, saveBackendProfile, userId]);
 
   return null;
 }

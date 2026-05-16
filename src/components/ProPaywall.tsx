@@ -34,8 +34,9 @@ export function ProPaywall({
   productPackages,
   isScreen = false,
 }: ProPaywallProps) {
-  const { height } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const isTinyHeight = height < 680;
+  const isNarrowWidth = width < 390;
 
   const options = useMemo(
     () =>
@@ -106,30 +107,54 @@ export function ProPaywall({
           </View>
 
           <View style={styles.productList}>
-            {options.map(({ key, product }) => (
-              <Pressable
-                accessibilityRole="button"
-                disabled={busyKey !== null}
-                key={product.vendorProductId}
-                onPress={() => setSelectedKey(key)}
-                style={({ pressed }: { pressed: boolean }) => [
-                  styles.productButton,
-                  selectedKey === key && styles.selectedProductButton,
-                  pressed && styles.pressedButton,
-                ]}
-              >
-                <View style={[styles.selectionDot, selectedKey === key && styles.selectionDotActive]}>
-                  {selectedKey === key && <View style={styles.selectionDotInner} />}
-                </View>
-                <View style={styles.productTextWrap}>
-                  <Text style={styles.productTitle}>{getPlanName(key)}</Text>
-                  <Text style={styles.productSubtitle} numberOfLines={1}>{getProductSubtitle(product, key)}</Text>
-                </View>
-                <View style={styles.priceWrap}>
-                  <Text style={styles.priceText}>{getProductPriceWithPeriod(product, key)}</Text>
-                </View>
-              </Pressable>
-            ))}
+            {options.map(({ key, product }) => {
+              const priceLabel = getProductPriceWithPeriod(product, key);
+              const usesStackedPrice = isNarrowWidth || priceLabel.length >= 16;
+
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={busyKey !== null}
+                  key={product.vendorProductId}
+                  onPress={() => setSelectedKey(key)}
+                  style={({ pressed }: { pressed: boolean }) => [
+                    styles.productButton,
+                    selectedKey === key && styles.selectedProductButton,
+                    pressed && styles.pressedButton,
+                  ]}
+                >
+                  <View style={[styles.selectionDot, selectedKey === key && styles.selectionDotActive]}>
+                    {selectedKey === key && <View style={styles.selectionDotInner} />}
+                  </View>
+                  <View style={styles.productContent}>
+                    <View style={[styles.productHeaderRow, usesStackedPrice && styles.productHeaderStacked]}>
+                      <View style={styles.productTextWrap}>
+                        <Text style={styles.productTitle} numberOfLines={1}>
+                          {getPlanName(key)}
+                        </Text>
+                        <Text style={styles.productSubtitle} numberOfLines={1}>
+                          {getProductSubtitle(product, key)}
+                        </Text>
+                      </View>
+                      <View style={[styles.priceWrap, usesStackedPrice && styles.priceWrapStacked]}>
+                        <Text
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.7}
+                          numberOfLines={1}
+                          style={[
+                            styles.priceText,
+                            priceLabel.length >= 16 && styles.priceTextLong,
+                            usesStackedPrice && styles.priceTextStacked,
+                          ]}
+                        >
+                          {priceLabel}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
 
           {message ? <Text style={styles.paywallMessage} numberOfLines={2}>{message}</Text> : null}
@@ -152,7 +177,7 @@ export function ProPaywall({
               {selectedOption && busyKey === selectedOption.key ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text style={styles.primaryCtaText}>
+                <Text adjustsFontSizeToFit minimumFontScale={0.76} numberOfLines={1} style={styles.primaryCtaText}>
                   {selectedCtaText}
                 </Text>
               )}
@@ -368,6 +393,7 @@ const styles = StyleSheet.create({
     opacity: 0.82,
   },
   selectionDot: {
+    flexShrink: 0,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 12,
     borderWidth: 2,
@@ -388,6 +414,21 @@ const styles = StyleSheet.create({
   },
   productTextWrap: {
     flex: 1,
+    minWidth: 0,
+  },
+  productContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  productHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+  },
+  productHeaderStacked: {
+    alignItems: 'flex-start',
+    flexDirection: 'column',
+    gap: 8,
   },
   productTitle: {
     color: '#ffffff',
@@ -402,12 +443,27 @@ const styles = StyleSheet.create({
   },
   priceWrap: {
     alignItems: 'flex-end',
+    flexShrink: 1,
     justifyContent: 'center',
+    maxWidth: '58%',
+    minWidth: 0,
+  },
+  priceWrapStacked: {
+    alignItems: 'flex-start',
+    maxWidth: '100%',
+    width: '100%',
   },
   priceText: {
     color: '#ffffff',
     fontSize: 20,
     fontWeight: '900',
+  },
+  priceTextLong: {
+    fontSize: 18,
+  },
+  priceTextStacked: {
+    lineHeight: 24,
+    width: '100%',
   },
   paywallMessage: {
     backgroundColor: 'rgba(252, 165, 165, 0.08)',
@@ -432,12 +488,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     minHeight: 56,
+    paddingHorizontal: 16,
   },
   primaryCtaText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '900',
     textAlign: 'center',
+    width: '100%',
   },
   disabledButton: {
     opacity: 0.64,

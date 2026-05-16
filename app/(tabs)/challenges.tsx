@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useChallenges } from '../../src/features/challenges/hooks';
 import { colors, typography } from '../../src/theme';
-import { useResponsive } from '../../src/hooks';
+import { useIsScreenFocused, useResponsive } from '../../src/hooks';
 import type { Id } from '../../convex/_generated/dataModel';
 
 type ChallengeRowData = {
@@ -21,7 +21,8 @@ type ChallengeRowData = {
 
 export default function ChallengesScreen() {
   const { normalize, horizontalPadding, verticalScale } = useResponsive();
-  const { challenges, loading, canSeedDefaults, seedDefaults, join, leave } = useChallenges(30);
+  const isFocused = useIsScreenFocused();
+  const { challenges, loading, canSeedDefaults, seedDefaults, join, leave } = useChallenges(30, isFocused);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {

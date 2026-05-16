@@ -2,7 +2,9 @@ export const webUrl = (process.env.NEXT_PUBLIC_WEB_URL ?? 'https://www.pushcount
 export const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.CONVEX_URL ?? '';
 export const convexSiteUrl = process.env.CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? '';
 
-export const appStoreUrl = process.env.NEXT_PUBLIC_APP_STORE_URL ?? '';
+export const appStoreUrl =
+  process.env.NEXT_PUBLIC_APP_STORE_URL ??
+  'https://apps.apple.com/us/app/push-counter-pushup-coach/id6765990895';
 export const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'support@nexfiy.com';
 export const iosBundleId = process.env.NEXT_PUBLIC_IOS_BUNDLE_ID ?? 'com.aipushupcoach.app';
 export const appleTeamId = process.env.APPLE_TEAM_ID ?? process.env.NEXT_PUBLIC_APPLE_TEAM_ID ?? 'U7JF269T76';

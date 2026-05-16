@@ -11,7 +11,7 @@ type NativeImagePickerModule = {
   getMediaLibraryPermissionsAsync: (writeOnly?: boolean) => Promise<NativePermissionResponse>;
   requestMediaLibraryPermissionsAsync: (writeOnly?: boolean) => Promise<NativePermissionResponse>;
   launchImageLibraryAsync: (options?: {
-    mediaTypes?: 'Images' | 'Videos' | 'All';
+    mediaTypes?: Array<'images' | 'videos' | 'livePhotos'>;
     allowsEditing?: boolean;
     aspect?: [number, number];
     quality?: number;
@@ -220,7 +220,7 @@ export async function pickAndUploadAvatar(): Promise<string | null> {
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: 'Images',
+    mediaTypes: ['images'],
     allowsEditing: true,
     aspect: [1, 1],
     quality: 0.8,

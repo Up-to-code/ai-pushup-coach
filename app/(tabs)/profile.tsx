@@ -9,7 +9,7 @@ import { getMondayWeekStart, useFriendComparison, useProfileRange, type TimePeri
 import { useSocialCounts } from '../../src/features/social/hooks';
 import { useSocialInbox } from '../../src/features/notifications/hooks';
 import { colors, spacing, typography } from '../../src/theme';
-import { useResponsive } from '../../src/hooks';
+import { useIsScreenFocused, useResponsive } from '../../src/hooks';
 import { ProBadge, SimpleLineChart } from '../../src/components';
 import { canUseProfileRange, resolveProfileRangeForAccess, useSubscription } from '../../src/subscriptions';
 
@@ -82,11 +82,12 @@ function formatWeekRange(offset: number) {
 export default function ProfileScreen() {
   const router = useRouter();
   const { horizontalPadding } = useResponsive();
+  const isFocused = useIsScreenFocused();
   const screenWidth = Dimensions.get('window').width;
   const user = useUserStore((state) => state.user);
   const { isPro, showPaywall } = useSubscription();
-  const { counts } = useSocialCounts();
-  const { inbox } = useSocialInbox(10);
+  const { counts } = useSocialCounts(isFocused);
+  const { inbox } = useSocialInbox(10, isFocused);
   const [activeTab, setActiveTab] = useState<ProfileTab>('stats');
   const [period, setPeriod] = useState<TimePeriod>('W');
   const [periodOffset, setPeriodOffset] = useState(0);
@@ -94,9 +95,9 @@ export default function ProfileScreen() {
   const profileAccessRange = resolveProfileRangeForAccess(period, periodOffset, isPro);
   const visiblePeriod = profileAccessRange.period as TimePeriod;
   const visibleOffset = profileAccessRange.offset;
-  const { range: profileRange, loading: profileLoading } = useProfileRange(visiblePeriod, visibleOffset);
-  const { range: allTimeRange } = useProfileRange(isPro ? 'ALL' : 'W', 0);
-  const { comparison: friendComparison } = useFriendComparison('W', 0);
+  const { range: profileRange, loading: profileLoading } = useProfileRange(visiblePeriod, visibleOffset, isFocused);
+  const { range: allTimeRange } = useProfileRange(isPro ? 'ALL' : 'W', 0, isFocused);
+  const { comparison: friendComparison } = useFriendComparison('W', 0, isFocused);
   const rawDisplayName = user.displayName || user.name;
   const displayName = rawDisplayName.length > 4 ? `${rawDisplayName.slice(0, 4)}...` : rawDisplayName;
   const chartWidth = screenWidth - horizontalPadding * 2;
