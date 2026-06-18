@@ -9,11 +9,13 @@ export interface Settings {
   workoutReminderEnabled: boolean;
   missedReminderEnabled: boolean;
   habitNudgeEnabled: boolean;
+  appleHealthWorkoutExportEnabled: boolean;
   allowGuestMode: boolean;
   defaultWorkoutTime: string;
   defaultCameraMode: 'faceFocus' | 'fullScene';
   theme: 'dark' | 'mirror';
   accentColor: string;
+  languageLocale: string;
 }
 
 export interface OnboardingProfile {
@@ -49,11 +51,13 @@ const defaultSettings: Settings = {
   workoutReminderEnabled: true,
   missedReminderEnabled: true,
   habitNudgeEnabled: false,
+  appleHealthWorkoutExportEnabled: false,
   allowGuestMode: false,
   defaultWorkoutTime: '07:30',
   defaultCameraMode: 'faceFocus',
   theme: 'dark',
   accentColor: '#FF4D6D',
+  languageLocale: 'system',
 };
 
 const defaultOnboardingProfile: OnboardingProfile = {

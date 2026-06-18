@@ -4,6 +4,9 @@ import { requireMatchingIdentity } from './auth';
 import { assertRateLimit } from './rateLimit';
 import { applyWorkoutToChallenges } from './challenges';
 import { assertActiveUser, isPendingDeletion } from './deletedUsers';
+import { ensureAppUserForClientId, getReadableFitnessUserIdForClientId } from './leaderboardProfiles';
+import { capturePosthogEvent } from './posthog';
+import { buildWorkoutSubmittedProperties } from './posthogEvents';
 
 const workoutArgs = {
   clientUserId: v.string(),
@@ -139,12 +142,9 @@ export const submitWorkout = mutation({
     assertWorkoutBounds(args);
 
     const now = Date.now();
-    const user = await ctx.db
-      .query('users')
-      .withIndex('by_client_user_id', (q) => q.eq('clientUserId', args.clientUserId))
-      .unique();
+    const user = await ensureAppUserForClientId(ctx, args.clientUserId);
     if (!user) {
-      throw new Error('User must be synced before workout submission.');
+      throw new Error('Better Auth user must exist before workout submission.');
     }
     assertActiveUser(user);
 
@@ -188,16 +188,18 @@ export const submitWorkout = mutation({
       workoutId = await ctx.db.insert('workoutResults', { ...payload, createdAt: now });
     }
 
-    const shouldAddCompletedResult = !existing || (!existing.completed && args.completed);
-    const repDelta = shouldAddCompletedResult ? Math.max(0, args.reps - (existing?.reps ?? 0)) : 0;
-    const nextTotalReps = Math.max(user.totalReps, 0) + repDelta;
+    const wasCompleted = existing?.completed ?? false;
+    const shouldCountWorkout = args.completed && args.reps > 0;
+    const shouldAddCompletedResult = shouldCountWorkout && !wasCompleted;
+    const repDelta = shouldCountWorkout ? args.reps - (wasCompleted ? existing?.reps ?? 0 : 0) : 0;
+    const nextTotalReps = Math.max(0, Math.max(user.totalReps, 0) + repDelta);
     await ctx.db.patch(user._id, {
       totalReps: nextTotalReps,
-      bestReps: Math.max(user.bestReps, args.reps),
+      bestReps: shouldCountWorkout ? Math.max(user.bestReps, args.reps) : user.bestReps,
       updatedAt: now,
     });
 
-    if (args.completed) {
+    if (shouldCountWorkout) {
       const key = dayKey(date);
       const daily = await ctx.db
         .query('dailyStats')
@@ -206,7 +208,7 @@ export const submitWorkout = mutation({
 
       if (daily) {
         await ctx.db.patch(daily._id, {
-          reps: daily.reps + repDelta,
+          reps: Math.max(0, daily.reps + repDelta),
           workouts: shouldAddCompletedResult ? daily.workouts + 1 : daily.workouts,
           duration: shouldAddCompletedResult ? daily.duration + args.duration : Math.max(daily.duration, args.duration),
           calories: shouldAddCompletedResult ? daily.calories + args.calories : Math.max(daily.calories, args.calories),
@@ -230,6 +232,12 @@ export const submitWorkout = mutation({
     if (shouldAddCompletedResult && args.completed && repDelta > 0) {
       await applyWorkoutToChallenges(ctx, user._id, repDelta);
     }
+
+    await capturePosthogEvent(ctx, {
+      distinctId: user.clientUserId,
+      event: 'workout_submitted',
+      properties: buildWorkoutSubmittedProperties(user, args),
+    });
 
     return workoutId;
   },
@@ -267,11 +275,13 @@ export const historyForUser = query({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', targetClientUserId))
       .unique();
-    if (!target || isPendingDeletion(target)) return [];
+    if (target && isPendingDeletion(target)) return [];
+    const targetUserId = target?._id ?? await getReadableFitnessUserIdForClientId(ctx, targetClientUserId);
+    if (!targetUserId) return [];
 
     return await ctx.db
       .query('workoutResults')
-      .withIndex('by_user_date', (q) => q.eq('userId', target._id))
+      .withIndex('by_user_date', (q) => q.eq('userId', targetUserId))
       .order('desc')
       .take(Math.min(limit ?? 50, 100));
   },

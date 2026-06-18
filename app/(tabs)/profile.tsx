@@ -12,13 +12,14 @@ import { colors, spacing, typography } from '../../src/theme';
 import { useIsScreenFocused, useResponsive } from '../../src/hooks';
 import { ProBadge, SimpleLineChart } from '../../src/components';
 import { canUseProfileRange, resolveProfileRangeForAccess, useSubscription } from '../../src/subscriptions';
+import { useAppLocale } from '../../src/localization';
 
 type ProfileTab = 'stats' | 'history' | 'badges';
 
-const profileTabs: Array<{ id: ProfileTab; label: string; icon: string }> = [
-  { id: 'stats', label: 'Stats', icon: 'stats-chart' },
-  { id: 'history', label: 'History', icon: 'time-outline' },
-  { id: 'badges', label: 'Trophies', icon: 'trophy-outline' },
+const profileTabs: Array<{ id: ProfileTab; labelKey: 'profile.stats' | 'profile.history' | 'profile.trophies'; icon: string }> = [
+  { id: 'stats', labelKey: 'profile.stats', icon: 'stats-chart' },
+  { id: 'history', labelKey: 'profile.history', icon: 'time-outline' },
+  { id: 'badges', labelKey: 'profile.trophies', icon: 'trophy-outline' },
 ];
 
 const periods: TimePeriod[] = ['W', 'M', 'Y', 'ALL'];
@@ -49,38 +50,39 @@ function getDaysForPeriod(period: TimePeriod): number {
   }
 }
 
-function getPeriodLabel(period: TimePeriod): string {
+function getPeriodLabel(period: TimePeriod, t: ReturnType<typeof useAppLocale>['t'], locale: string): string {
   switch (period) {
-    case 'W': return 'THIS WEEK';
+    case 'W': return t('profile.thisWeek');
     case 'M': {
       const now = new Date();
-      return now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+      return now.toLocaleDateString(locale, { month: 'long', year: 'numeric' }).toUpperCase();
     }
-    case 'Y': return 'THIS YEAR';
-    case 'ALL': return 'ALL TIME';
+    case 'Y': return t('profile.thisYear');
+    case 'ALL': return t('profile.allTime');
   }
 }
 
-function getCompareLabel(period: TimePeriod): string {
+function getCompareLabel(period: TimePeriod, t: ReturnType<typeof useAppLocale>['t']): string {
   switch (period) {
-    case 'W': return 'vs last week';
-    case 'M': return 'vs last month';
-    case 'Y': return 'vs last year';
+    case 'W': return t('profile.vsLastWeek');
+    case 'M': return t('profile.vsLastMonth');
+    case 'Y': return t('profile.vsLastYear');
     case 'ALL': return '';
   }
 }
 
-function formatWeekRange(offset: number) {
+function formatWeekRange(offset: number, locale: string) {
   const base = new Date();
   base.setDate(base.getDate() - offset * 7);
   const start = getMondayWeekStart(base);
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
-  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  return `${start.toLocaleDateString(locale, { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString(locale, { month: 'short', day: 'numeric' })}`;
 }
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { t, locale } = useAppLocale();
   const { horizontalPadding } = useResponsive();
   const isFocused = useIsScreenFocused();
   const screenWidth = Dimensions.get('window').width;
@@ -114,17 +116,17 @@ export default function ProfileScreen() {
   }));
 
   const periodLabel = useMemo(() => {
-    if (visibleOffset === 0) return getPeriodLabel(visiblePeriod);
+    if (visibleOffset === 0) return getPeriodLabel(visiblePeriod, t, locale);
     const now = new Date();
     const target = new Date(now);
     target.setDate(target.getDate() - visibleOffset * days);
     if (visiblePeriod === 'W') {
-      return formatWeekRange(visibleOffset);
+      return formatWeekRange(visibleOffset, locale);
     }
-    if (visiblePeriod === 'M') return target.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
-    return getPeriodLabel(visiblePeriod);
-  }, [visiblePeriod, visibleOffset, days]);
-  const compareLabel = getCompareLabel(visiblePeriod);
+    if (visiblePeriod === 'M') return target.toLocaleDateString(locale, { month: 'long', year: 'numeric' }).toUpperCase();
+    return getPeriodLabel(visiblePeriod, t, locale);
+  }, [visiblePeriod, visibleOffset, days, locale, t]);
+  const compareLabel = getCompareLabel(visiblePeriod, t);
 
   /* Generate picker options */
   const pickerOptions = useMemo(() => {
@@ -136,16 +138,17 @@ export default function ProfileScreen() {
       target.setDate(target.getDate() - i * days);
       let label = '';
       if (visiblePeriod === 'W') {
-        label = i === 0 ? `This Week (${formatWeekRange(i)})` : i === 1 ? `Last Week (${formatWeekRange(i)})` : formatWeekRange(i);
+        const range = formatWeekRange(i, locale);
+        label = i === 0 ? `${t('profile.thisWeek')} (${range})` : i === 1 ? `${t('profile.vsLastWeek').replace(/^vs /i, '')} (${range})` : range;
       } else if (visiblePeriod === 'M') {
-        label = i === 0 ? 'This Month' : i === 1 ? 'Last Month' : target.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        label = i === 0 ? t('profile.thisMonth') : i === 1 ? t('profile.vsLastMonth').replace(/^vs /i, '') : target.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
       } else {
-        label = i === 0 ? 'This Year' : `${new Date().getFullYear() - i}`;
+        label = i === 0 ? t('profile.thisYear') : `${new Date().getFullYear() - i}`;
       }
       opts.push({ label, offset: i });
     }
     return opts;
-  }, [visiblePeriod, days]);
+  }, [visiblePeriod, days, locale, t]);
 
   const promptPro = async () => {
     try {
@@ -212,9 +215,9 @@ export default function ProfileScreen() {
         <View style={styles.bioBlock}>
           {user.bio ? <Text style={styles.bio}>{user.bio}</Text> : null}
           <View style={styles.socialStats}>
-            <Text style={styles.socialStatText}>{counts?.followersCount ?? 0} followers</Text>
-            <Text style={styles.socialStatText}>{counts?.followingCount ?? 0} following</Text>
-            <Text style={styles.socialStatText}>{counts?.friendsCount ?? 0} friends</Text>
+            <Text style={styles.socialStatText}>{t('profile.followers', { count: counts?.followersCount ?? 0 })}</Text>
+            <Text style={styles.socialStatText}>{t('profile.following', { count: counts?.followingCount ?? 0 })}</Text>
+            <Text style={styles.socialStatText}>{t('profile.friends', { count: counts?.friendsCount ?? 0 })}</Text>
           </View>
         </View>
 
@@ -234,7 +237,7 @@ export default function ProfileScreen() {
                   color={active ? colors.textPrimary : colors.textMuted}
                   style={{ marginRight: 6 }}
                 />
-                <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
+                <Text style={[styles.tabText, active && styles.tabTextActive]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{t(tab.labelKey)}</Text>
               </Pressable>
             );
           })}
@@ -290,8 +293,8 @@ export default function ProfileScreen() {
             {/* Chart */}
             {profileLoading ? (
               <View style={styles.emptyPanel}>
-                <Text style={styles.emptyTitle}>Loading real workout data</Text>
-                <Text style={styles.emptyText}>Profile is reading completed workouts saved on this device.</Text>
+                <Text style={styles.emptyTitle}>{t('profile.loadingRealData')}</Text>
+                <Text style={styles.emptyText}>{t('profile.readingDeviceWorkouts')}</Text>
               </View>
             ) : chartData.length > 1 ? (
               <View style={styles.chartCard}>
@@ -299,19 +302,19 @@ export default function ProfileScreen() {
               </View>
             ) : (
               <View style={styles.emptyPanel}>
-                <Text style={styles.emptyTitle}>No sessions in this period</Text>
-                <Text style={styles.emptyText}>Complete a workout and your real stats will appear here.</Text>
+                <Text style={styles.emptyTitle}>{t('profile.noSessionsPeriod')}</Text>
+                <Text style={styles.emptyText}>{t('profile.completeWorkoutStats')}</Text>
               </View>
             )}
 
             {/* Stat Cards 2x2 */}
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
-                <Text style={styles.statCardLabel}>Total Pushups</Text>
+                <Text style={styles.statCardLabel}>{t('profile.totalPushups')}</Text>
                 <View style={styles.statCardBody}>
                   <Ionicons name="barbell" size={22} color={colors.accent} />
                   <View>
-                    <Text style={styles.statCardValue}>{current.totalReps} <Text style={styles.statCardUnit}>Reps</Text></Text>
+                    <Text style={styles.statCardValue}>{current.totalReps} <Text style={styles.statCardUnit}>{t('profile.repsUnit')}</Text></Text>
                     {previous && (
                       <Text style={[styles.statCardCompare, { color: getCompareColor(current.totalReps, previous.totalReps) }]}>
                         {formatCompare(current.totalReps, previous.totalReps)} vs {previous.totalReps}
@@ -322,7 +325,7 @@ export default function ProfileScreen() {
               </View>
 
               <View style={styles.statCard}>
-                <Text style={styles.statCardLabel}>Total Duration</Text>
+                <Text style={styles.statCardLabel}>{t('profile.totalDuration')}</Text>
                 <View style={styles.statCardBody}>
                   <Ionicons name="time-outline" size={22} color={colors.accent} />
                   <View>
@@ -337,7 +340,7 @@ export default function ProfileScreen() {
               </View>
 
               <View style={styles.statCard}>
-                <Text style={styles.statCardLabel}>Calories</Text>
+                <Text style={styles.statCardLabel}>{t('profile.calories')}</Text>
                 <View style={styles.statCardBody}>
                   <Ionicons name="flame-outline" size={22} color={colors.accent} />
                   <View>
@@ -352,7 +355,7 @@ export default function ProfileScreen() {
               </View>
 
               <View style={styles.statCard}>
-                <Text style={styles.statCardLabel}>Practice Days</Text>
+                <Text style={styles.statCardLabel}>{t('profile.practiceDays')}</Text>
                 <View style={styles.statCardBody}>
                   <Ionicons name="calendar-outline" size={22} color={colors.accent} />
                   <View>
@@ -372,28 +375,28 @@ export default function ProfileScreen() {
               <View style={styles.statMini}>
                 <Ionicons name="speedometer-outline" size={18} color={colors.accent} />
                 <Text style={styles.statMiniValue}>{current.avgSpeed}</Text>
-                <Text style={styles.statMiniLabel}>reps/min</Text>
+                <Text style={styles.statMiniLabel}>{t('profile.repsPerMinute')}</Text>
               </View>
               <View style={styles.statMiniDivider} />
               <View style={styles.statMini}>
                 <Ionicons name="flash" size={18} color={colors.accent} />
                 <Text style={styles.statMiniValue}>{current.bestSession}</Text>
-                <Text style={styles.statMiniLabel}>best session</Text>
+                <Text style={styles.statMiniLabel}>{t('profile.bestSession')}</Text>
               </View>
               <View style={styles.statMiniDivider} />
               <View style={styles.statMini}>
                 <Ionicons name="trending-up" size={18} color={colors.accent} />
                 <Text style={styles.statMiniValue}>{user.streak}</Text>
-                <Text style={styles.statMiniLabel}>streak</Text>
+                <Text style={styles.statMiniLabel}>{t('profile.streak')}</Text>
               </View>
             </View>
 
             <View style={styles.friendCompare}>
               <View style={styles.friendCompareHeader}>
                 <View>
-                  <Text style={styles.friendCompareEyebrow}>Friends this week</Text>
+                  <Text style={styles.friendCompareEyebrow}>{t('profile.friendsThisWeek')}</Text>
                   <Text style={styles.friendCompareTitle}>
-                    {friendComparison?.friendsCount ? `#${friendComparison.rank} among friends` : 'No mutual friends yet'}
+                    {friendComparison?.friendsCount ? t('profile.amongFriends', { rank: friendComparison.rank }) : t('profile.noMutualFriends')}
                   </Text>
                 </View>
                 <Ionicons name="people-outline" size={20} color={colors.accent} />
@@ -401,23 +404,23 @@ export default function ProfileScreen() {
               <View style={styles.friendCompareGrid}>
                 <View style={styles.friendMetric}>
                   <Text style={styles.friendMetricValue}>{friendComparison?.score ?? 0}</Text>
-                  <Text style={styles.friendMetricLabel}>your reps</Text>
+                  <Text style={styles.friendMetricLabel}>{t('profile.yourReps')}</Text>
                 </View>
                 <View style={styles.friendMetric}>
                   <Text style={styles.friendMetricValue}>{friendComparison?.friendAverage ?? 0}</Text>
-                  <Text style={styles.friendMetricLabel}>friend avg</Text>
+                  <Text style={styles.friendMetricLabel}>{t('profile.friendAvg')}</Text>
                 </View>
                 <View style={styles.friendMetric}>
                   <Text style={styles.friendMetricValue}>{friendComparison?.deltaToNext ?? 0}</Text>
-                  <Text style={styles.friendMetricLabel}>to next</Text>
+                  <Text style={styles.friendMetricLabel}>{t('profile.toNext')}</Text>
                 </View>
               </View>
               <Text style={styles.friendCompareNote}>
                 {friendComparison?.friendsCount
                   ? friendComparison.deltaToNext > 0
-                    ? `${friendComparison.deltaToNext} reps reaches the next friend ahead.`
-                    : 'You are holding the top friend score right now.'
-                  : 'Mutual follows become friends and unlock comparison here.'}
+                    ? t('profile.repsToNextFriend', { count: friendComparison.deltaToNext })
+                    : t('profile.topFriendScore')
+                  : t('profile.mutualFollowsNote')}
               </Text>
             </View>
           </>
@@ -434,7 +437,7 @@ export default function ProfileScreen() {
                 <View style={styles.rowCopy}>
                   <Text style={styles.rowTitle}>{session.reps} reps</Text>
                   <Text style={styles.rowMeta}>
-                    {new Date(session.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {new Date(session.date).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' })}
                     {'  •  '}
                     {formatDuration(session.duration)}
                   </Text>
@@ -445,8 +448,8 @@ export default function ProfileScreen() {
               </View>
             )) : (
               <View style={styles.emptyPanel}>
-                <Text style={styles.emptyTitle}>No history yet</Text>
-                <Text style={styles.emptyText}>Your completed sessions will show here after saving.</Text>
+                <Text style={styles.emptyTitle}>{t('profile.noHistory')}</Text>
+                <Text style={styles.emptyText}>{t('profile.historyBody')}</Text>
               </View>
             )}
             {!isPro ? (
@@ -454,10 +457,10 @@ export default function ProfileScreen() {
                 <Ionicons name="lock-closed-outline" size={18} color={colors.accent} />
                 <View style={styles.proLockCopy}>
                   <View style={styles.proLockTitleRow}>
-                    <Text style={styles.proLockTitle}>Older history</Text>
+                    <Text style={styles.proLockTitle}>{t('profile.olderHistory')}</Text>
                     <ProBadge />
                   </View>
-                  <Text style={styles.proLockText}>Free users can view this week. Pro unlocks previous weeks, months, years, and all-time history.</Text>
+                  <Text style={styles.proLockText}>{t('profile.olderHistoryBody')}</Text>
                 </View>
               </Pressable>
             ) : null}
@@ -483,7 +486,7 @@ export default function ProfileScreen() {
           <Pressable style={styles.sheetContainer} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>
-              {visiblePeriod === 'W' ? 'Select Week' : visiblePeriod === 'M' ? 'Select Month' : 'Select Year'}
+              {visiblePeriod === 'W' ? t('profile.selectWeek') : visiblePeriod === 'M' ? t('profile.selectMonth') : t('profile.selectYear')}
             </Text>
             <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
               {pickerOptions.map((opt) => {

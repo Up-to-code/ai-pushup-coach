@@ -4,6 +4,7 @@ import { requireMatchingIdentity } from './auth';
 import { assertRateLimit } from './rateLimit';
 import type { Id } from './_generated/dataModel';
 import { assertActiveUser, isPendingDeletion } from './deletedUsers';
+import { ensureAppUserForClientId } from './leaderboardProfiles';
 
 const seedChallenges = [
   {
@@ -71,12 +72,12 @@ export const seedDefaults = mutation({
   args: { clientUserId: v.string() },
   handler: async (ctx, { clientUserId }) => {
     await requireMatchingIdentity(ctx, clientUserId);
-    const user = await getUser(ctx, clientUserId);
-    if (!user) throw new Error('User must exist before seeding challenges.');
+    const user = await ensureAppUserForClientId(ctx, clientUserId);
+    if (!user) return { ok: false as const, status: 'missingUser' as const };
     assertActiveUser(user);
     await assertRateLimit(ctx, { userId: user._id, bucket: 'seedChallenges', limit: 3, windowMs: 60 * 60 * 1000 });
     await ensureSeedChallenges(ctx);
-    return { ok: true };
+    return { ok: true as const, status: 'seeded' as const };
   },
 });
 
@@ -120,7 +121,7 @@ export const join = mutation({
   handler: async (ctx, { clientUserId, challengeId }) => {
     await requireMatchingIdentity(ctx, clientUserId);
 
-    const user = await getUser(ctx, clientUserId);
+    const user = await ensureAppUserForClientId(ctx, clientUserId);
     const challenge = await ctx.db.get(challengeId);
     if (!user || !challenge) throw new Error('Challenge not found.');
     assertActiveUser(user);
@@ -151,7 +152,7 @@ export const leave = mutation({
   handler: async (ctx, { clientUserId, challengeId }) => {
     await requireMatchingIdentity(ctx, clientUserId);
 
-    const user = await getUser(ctx, clientUserId);
+    const user = await ensureAppUserForClientId(ctx, clientUserId);
     if (!user) throw new Error('User not found.');
     assertActiveUser(user);
     const existing = await ctx.db

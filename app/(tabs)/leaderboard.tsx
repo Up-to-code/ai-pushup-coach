@@ -4,20 +4,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { useLeaderboard, type LeaderboardPeriod, type LeaderboardScope } from '../../src/features/leaderboard/hooks';
+import { useAppLocale } from '../../src/localization';
 import { colors, typography } from '../../src/theme';
 import { useIsScreenFocused, useResponsive } from '../../src/hooks';
 
-const rankTabs: Array<{ id: LeaderboardScope; label: string }> = [
-  { id: 'global', label: 'Global' },
-  { id: 'country', label: 'Country' },
-  { id: 'friends', label: 'Friends' },
+const rankTabs: Array<{ id: LeaderboardScope; labelKey: 'common.global' | 'common.country' | 'common.friends' }> = [
+  { id: 'global', labelKey: 'common.global' },
+  { id: 'country', labelKey: 'common.country' },
+  { id: 'friends', labelKey: 'common.friends' },
 ];
 
-const periodTabs: Array<{ id: LeaderboardPeriod; label: string; shortLabel: string }> = [
-  { id: 'W', label: 'Week', shortLabel: 'Week' },
-  { id: 'M', label: 'Month', shortLabel: 'Month' },
-  { id: 'Y', label: 'Year', shortLabel: 'Year' },
-  { id: 'ALL', label: 'All', shortLabel: 'All' },
+const periodTabs: Array<{ id: LeaderboardPeriod; labelKey: 'common.week' | 'common.month' | 'common.year' | 'common.all' }> = [
+  { id: 'W', labelKey: 'common.week' },
+  { id: 'M', labelKey: 'common.month' },
+  { id: 'Y', labelKey: 'common.year' },
+  { id: 'ALL', labelKey: 'common.all' },
 ];
 
 const getFlagEmoji = (countryCode?: string) => {
@@ -29,19 +30,24 @@ const getFlagEmoji = (countryCode?: string) => {
 
 export default function LeaderboardScreen() {
   const router = useRouter();
+  const { t } = useAppLocale();
   const { normalize, verticalScale } = useResponsive();
   const isFocused = useIsScreenFocused();
   const [scope, setScope] = useState<LeaderboardScope>('global');
   const [period, setPeriod] = useState<LeaderboardPeriod>('W');
-  const { rows, loading, isGlobalCountryFallback } = useLeaderboard(scope, period, 75, isFocused);
-  const activePeriod = periodTabs.find((tab) => tab.id === period) ?? periodTabs[0];
+  const { rows, loading, isGlobalCountryFallback, diagnostics } = useLeaderboard(scope, period, 75, isFocused);
+
+  React.useEffect(() => {
+    if (!__DEV__ || !isFocused) return;
+    console.log('[leaderboard:screen]', diagnostics);
+  }, [diagnostics, isFocused]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={[styles.header, { paddingHorizontal: normalize(24), marginTop: verticalScale(16) }]}>
-        <Text style={[styles.title, { fontSize: normalize(34) }]}>Rank</Text>
+        <Text style={[styles.title, { fontSize: normalize(34) }]}>{t('leaderboard.title')}</Text>
         <Text style={[styles.subtitle, { fontSize: normalize(15) }]}>
-          {isGlobalCountryFallback ? 'Select a country in profile to unlock rank.' : `Your progress against the world.`}
+          {isGlobalCountryFallback ? t('leaderboard.subtitleCountryLocked') : t('leaderboard.subtitleGlobal')}
         </Text>
 
         <View style={[styles.periodTabs, { marginTop: verticalScale(16) }]}>
@@ -54,7 +60,7 @@ export default function LeaderboardScreen() {
                 onPress={() => setPeriod(tab.id)}
               >
                 <Text style={[styles.periodTabText, { fontSize: normalize(13) }, active && styles.periodTabTextActive]}>
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </Text>
               </Pressable>
             );
@@ -95,19 +101,19 @@ export default function LeaderboardScreen() {
                   <Text style={[styles.nameText, { fontSize: normalize(17) }]} numberOfLines={1}>{entry.name}</Text>
                   <Text style={{ fontSize: normalize(14) }}>{getFlagEmoji(entry.countryCode)}</Text>
                 </View>
-                {entry.isCurrentUser ? <Text style={[styles.youText, { fontSize: normalize(11) }]}>YOU</Text> : null}
+                {entry.isCurrentUser ? <Text style={[styles.youText, { fontSize: normalize(11) }]}>{t('leaderboard.you')}</Text> : null}
               </View>
               <View style={styles.scoreColumn}>
                 <Text style={[styles.scoreText, { fontSize: normalize(18) }]}>{entry.score.toLocaleString()}</Text>
-                <Text style={[styles.scoreLabel, { fontSize: normalize(11) }]}>REPS</Text>
+                <Text style={[styles.scoreLabel, { fontSize: normalize(11) }]}>{t('workout.reps')}</Text>
               </View>
             </Pressable>
           ))
         ) : (
           <View style={styles.stateBox}>
-            <Text style={[styles.stateTitle, { fontSize: normalize(18) }]}>No ranks yet</Text>
+            <Text style={[styles.stateTitle, { fontSize: normalize(18) }]}>{t('leaderboard.emptyTitle')}</Text>
             <Text style={[styles.stateText, { fontSize: normalize(14) }]}>
-              Start your first session to join the board.
+              {t('leaderboard.emptyBody')}
             </Text>
           </View>
         )}
@@ -133,7 +139,7 @@ export default function LeaderboardScreen() {
                     { fontSize: normalize(13) },
                     active && styles.floatingTabTextActive
                   ]}>
-                    {tab.label}
+                    {t(tab.labelKey)}
                   </Text>
                 </Pressable>
               );

@@ -4,9 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { borderRadius, colors, typography } from '../../src/theme';
 import { useSettingsStore } from '../../src/store';
+import { useAppLocale } from '../../src/localization';
 
 export default function TabLayout() {
   const hasCompletedOnboarding = useSettingsStore((state) => state.hasCompletedOnboarding);
+  const { t } = useAppLocale();
 
   if (!hasCompletedOnboarding) {
     return (
@@ -33,21 +35,21 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'My Plan',
+            title: t('tabs.plan'),
             tabBarIcon: ({ color }) => <Ionicons name="clipboard-outline" size={22} color={color} />,
           }}
         />
         <Tabs.Screen
           name="challenges"
           options={{
-            title: 'Challenges',
+            title: t('tabs.challenges'),
             tabBarIcon: ({ color }) => <Ionicons name="trophy-outline" size={22} color={color} />,
           }}
         />
         <Tabs.Screen
           name="practice"
           options={{
-            title: 'Pushups',
+            title: t('tabs.practice'),
             tabBarLabel: '',
             tabBarIcon: ({ focused }) => (
               <View style={styles.centerButtonWrap}>
@@ -65,14 +67,14 @@ export default function TabLayout() {
         <Tabs.Screen
           name="leaderboard"
           options={{
-            title: 'Rank',
+            title: t('tabs.rank'),
             tabBarIcon: ({ color }) => <Ionicons name="podium-outline" size={22} color={color} />,
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
-            title: 'Profile',
+            title: t('tabs.profile'),
             tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={22} color={color} />,
           }}
         />

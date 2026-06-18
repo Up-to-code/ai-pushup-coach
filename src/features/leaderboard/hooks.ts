@@ -1,9 +1,13 @@
 import { useConvexAuth, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useBetterAuth } from '../../auth';
+import { useBetterAuth, useCurrentUser } from '../../auth';
 import { useClientUserId } from '../shared/currentUser';
 import { useUserStore } from '../../store';
 import type { TimePeriod } from '../profile/hooks';
+import {
+  normalizeLeaderboardCountryCode,
+  resolveLeaderboardCountryCode,
+} from './country';
 
 export type LeaderboardScope = 'global' | 'country' | 'friends';
 export type LeaderboardPeriod = TimePeriod;
@@ -40,10 +44,21 @@ function toRows(rows: Array<{
 export function useLeaderboard(scope: LeaderboardScope, period: LeaderboardPeriod = 'W', limit = 50, enabled = true) {
   const clientUserId = useClientUserId();
   const { isSignedIn } = useBetterAuth();
+  const { remoteUser, loading: currentUserLoading } = useCurrentUser();
   const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
-  const countryCode = useUserStore((state) => state.user.countryCode);
+  const localCountryCode = useUserStore((state) => state.user.countryCode);
+  const remoteCountryCode = remoteUser?.countryCode;
+  const normalizedRemoteCountryCode = normalizeLeaderboardCountryCode(remoteCountryCode);
+  const normalizedLocalCountryCode = normalizeLeaderboardCountryCode(localCountryCode);
+  const countryCode = resolveLeaderboardCountryCode({
+    isSignedIn,
+    localCountryCode,
+    remoteCountryCode,
+  });
   const needsAuth = scope === 'friends';
-  const skipAuthQuery = !enabled || (needsAuth && (!isSignedIn || !isConvexAuthenticated));
+  const waitingForSignedInCountry = scope === 'country' && isSignedIn && currentUserLoading;
+  const waitingForFriendsAuth = enabled && needsAuth && isSignedIn && isConvexAuthLoading;
+  const skipAuthQuery = !enabled || waitingForSignedInCountry || (needsAuth && (!isSignedIn || !isConvexAuthenticated));
   const rows = useQuery(
     api.leaderboard.rankedLeaderboard,
     skipAuthQuery
@@ -59,7 +74,19 @@ export function useLeaderboard(scope: LeaderboardScope, period: LeaderboardPerio
 
   return {
     rows: toRows(rows, clientUserId),
-    loading: !skipAuthQuery && (isConvexAuthLoading || rows === undefined),
+    loading: waitingForSignedInCountry || waitingForFriendsAuth || (!skipAuthQuery && rows === undefined),
     isGlobalCountryFallback: scope === 'country' && countryCode === 'GLOBAL',
+    diagnostics: {
+      scope,
+      period,
+      clientUserId,
+      localCountryCode: normalizedLocalCountryCode,
+      remoteCountryCode: normalizedRemoteCountryCode,
+      countryCode,
+      countrySource: isSignedIn ? 'backend' as const : 'local' as const,
+      rowsCount: rows?.length ?? 0,
+      skipped: skipAuthQuery,
+      convexAuthLoading: isConvexAuthLoading,
+    },
   };
 }

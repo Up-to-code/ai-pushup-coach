@@ -46,7 +46,7 @@ describe('resolveAuthStatus', () => {
     ).toBe('guest');
   });
 
-  it('resolves a valid Better Auth session before deletion state finishes loading', () => {
+  it('waits for backend account state before resolving a signed-in session', () => {
     expect(
       resolveAuthStatus({
         authLoaded: true,
@@ -56,7 +56,18 @@ describe('resolveAuthStatus', () => {
         clientUserId: 'user_123',
         deletionState: null,
       })
-    ).toBe('signedIn');
+    ).toBe('loading');
+
+    expect(
+      resolveAuthStatus({
+        authLoaded: true,
+        settingsHydrated: true,
+        isSignedIn: true,
+        allowGuestMode: false,
+        clientUserId: 'user_123',
+        deletionState: { status: 'missing' },
+      })
+    ).toBe('loading');
 
     expect(
       resolveAuthStatus({

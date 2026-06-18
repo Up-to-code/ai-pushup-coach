@@ -1,8 +1,10 @@
 import {
   adapty,
+  createPaywallView,
   type AdaptyPaywall,
   type AdaptyPaywallProduct,
   type AdaptyProfile,
+  type EventHandlers,
 } from 'react-native-adapty';
 import {
   ADAPTY_PUBLIC_SDK_KEY,
@@ -201,6 +203,30 @@ export async function getCurrentPaywallProducts(): Promise<{
   }
 }
 
+export async function getCurrentPaywall(): Promise<AdaptyPaywall> {
+  try {
+    return await adapty.getPaywall(PAYWALL_PLACEMENT_ID);
+  } catch (error) {
+    normalizeAdaptyError(error);
+  }
+}
+
+export async function presentPaywallBuilder(
+  paywall: AdaptyPaywall,
+  handlers: Partial<EventHandlers>
+): Promise<void> {
+  try {
+    const view = await createPaywallView(paywall, {
+      prefetchProducts: true,
+      loadTimeoutMs: 10000,
+    });
+    view.setEventHandlers(handlers);
+    await view.present({ iosPresentationStyle: 'full_screen' });
+  } catch (error) {
+    normalizeAdaptyError(error);
+  }
+}
+
 export function getConfiguredProducts(
   products: AdaptyPaywallProduct[]
 ): Record<ProductIdentifierKey, AdaptyPaywallProduct | null> {
@@ -224,14 +250,6 @@ export async function purchaseProProduct(product: AdaptyPaywallProduct): Promise
 export async function restorePurchases(): Promise<AdaptyProfile> {
   try {
     return await adapty.restorePurchases();
-  } catch (error) {
-    normalizeAdaptyError(error);
-  }
-}
-
-export async function logPaywallShown(paywall: AdaptyPaywall): Promise<void> {
-  try {
-    await adapty.logShowPaywall(paywall);
   } catch (error) {
     normalizeAdaptyError(error);
   }

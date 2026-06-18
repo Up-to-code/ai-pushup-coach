@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,8 @@ import { borderRadius, colors, spacing, typography } from '../../src/theme';
 import { useResponsive } from '../../src/hooks';
 import { formatPreferredTime, getCurrentPlanDay } from '../../src/utils';
 import { cancelPlanNotifications, syncNotificationsForPlan } from '../../src/services/notifications';
+import { useAppLocale } from '../../src/localization';
+import { localizePlanName } from '../../src/localization/planNames';
 
 function groupWeeks(days: Day[]) {
   const weeks: Day[][] = [];
@@ -19,17 +21,18 @@ function groupWeeks(days: Day[]) {
   return weeks;
 }
 
-function dayLabel(date: string) {
-  return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+function dayLabel(date: string, locale: string) {
+  return new Date(`${date}T12:00:00`).toLocaleDateString(locale, { weekday: 'short', day: 'numeric' });
 }
 
-function repsLabel(day: Day | null) {
-  if (!day || day.status === 'rest') return 'Recovery';
+function repsLabel(day: Day | null, recoveryLabel: string) {
+  if (!day || day.status === 'rest') return recoveryLabel;
   return day.sets?.join('-') ?? `${day.targetReps ?? 0} reps`;
 }
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t, locale } = useAppLocale();
   const { horizontalPadding } = useResponsive();
   const user = useUserStore((state) => state.user);
   const settings = useSettingsStore((state) => state.settings);
@@ -40,12 +43,6 @@ export default function HomeScreen() {
   const updateSetupDraft = usePlanStore((state) => state.updateSetupDraft);
   const markCurrentDayStarted = usePlanStore((state) => state.markCurrentDayStarted);
   const [expandedWeek, setExpandedWeek] = useState(0);
-
-  useEffect(() => {
-    if (!plan) {
-      router.replace('/onboarding');
-    }
-  }, [plan, router]);
 
   const currentDay = getCurrentPlanDay(plan);
   const planDays = Array.isArray(plan?.days) ? plan.days : [];
@@ -93,8 +90,8 @@ export default function HomeScreen() {
       await showPaywall();
     } catch (error) {
       Alert.alert(
-        'Pro feature',
-        error instanceof Error ? error.message : 'Upgrade to Pro to rebuild and customize your plan.'
+        t('home.proFeatureTitle'),
+        error instanceof Error ? error.message : t('home.proFeatureBody')
       );
     }
   };
@@ -104,12 +101,12 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={[styles.emptyState, { paddingHorizontal: horizontalPadding }]}>
           <Ionicons name="calendar-outline" size={34} color={colors.accent} />
-          <Text style={styles.emptyTitle}>Set up your plan</Text>
+          <Text style={styles.emptyTitle}>{t('home.setUpPlan')}</Text>
           <Text style={styles.emptyText}>
-            Choose your level, training days, goal, and time to build the first push-up plan.
+            {t('home.setUpPlanBody')}
           </Text>
           <NeonButton
-            title="Start setup"
+            title={t('home.startSetup')}
             onPress={() => router.replace('/onboarding' as any)}
             testID="start-plan-setup"
           />
@@ -122,15 +119,15 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
-          <Text style={styles.title}>My plan</Text>
-          <Text style={styles.planName}>{plan.name}</Text>
+          <Text style={styles.title}>{t('home.title')}</Text>
+          <Text style={styles.planName}>{localizePlanName(plan.name, t)}</Text>
         </View>
 
         <View style={[styles.todayCard, { marginHorizontal: horizontalPadding }]}>
           <View style={styles.todayHeader}>
             <View style={styles.todayTitleBox}>
-              <Text style={styles.todayLabel}>{currentDay?.status === 'rest' ? 'Recovery' : 'Today'}</Text>
-              <Text style={styles.todayTitle}>{currentDay ? `Day ${currentDay.day}: ${repsLabel(currentDay)}` : 'Plan ready'}</Text>
+              <Text style={styles.todayLabel}>{currentDay?.status === 'rest' ? t('home.recovery') : t('home.today')}</Text>
+              <Text style={styles.todayTitle}>{currentDay ? `${t('home.day', { number: currentDay.day })}: ${repsLabel(currentDay, t('home.recovery'))}` : t('home.planReady')}</Text>
             </View>
             <Text style={styles.todayTime}>{formatPreferredTime(preferredTime)}</Text>
           </View>
@@ -138,21 +135,21 @@ export default function HomeScreen() {
           <View style={styles.todayDetailsRow}>
             <View style={styles.todayDetailItem}>
               <Ionicons name="repeat" size={16} color={colors.textSecondary} />
-              <Text style={styles.todayDetailText}>{currentDay?.sets?.length ?? 0} sets</Text>
+              <Text style={styles.todayDetailText}>{t('home.sets', { count: currentDay?.sets?.length ?? 0 })}</Text>
             </View>
             <View style={styles.todayDetailItem}>
               <Ionicons name="timer-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.todayDetailText}>{currentDay?.restTime ?? 0}s rest</Text>
+              <Text style={styles.todayDetailText}>{t('home.restSeconds', { count: currentDay?.restTime ?? 0 })}</Text>
             </View>
           </View>
 
           {currentDay?.status === 'rest' ? (
             <View style={styles.restPanel}>
-              <Text style={styles.restText}>Recovery day.</Text>
+              <Text style={styles.restText}>{t('home.recoveryDay')}</Text>
             </View>
           ) : (
             <Pressable style={styles.todayStartButton} onPress={handleStartSession}>
-              <Text style={styles.todayStartText}>Start session</Text>
+              <Text style={styles.todayStartText}>{t('home.startSession')}</Text>
               <Ionicons name="arrow-forward" size={18} color={colors.background} />
             </Pressable>
           )}
@@ -162,15 +159,15 @@ export default function HomeScreen() {
           <View style={styles.progressStatsRow}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{progress}%</Text>
-              <Text style={styles.statLabel}>Progress</Text>
+              <Text style={styles.statLabel}>{t('home.progress')}</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{plan.completedDays}</Text>
-              <Text style={styles.statLabel}>Done</Text>
+              <Text style={styles.statLabel}>{t('home.done')}</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{trainingDays.length}</Text>
-              <Text style={styles.statLabel}>Days/wk</Text>
+              <Text style={styles.statLabel}>{t('home.daysPerWeek')}</Text>
             </View>
           </View>
           <View style={styles.miniTrack}>
@@ -181,7 +178,7 @@ export default function HomeScreen() {
         {weeks.map((week, weekIndex) => (
           <View key={weekIndex} style={[styles.weekContainer, { marginHorizontal: horizontalPadding }]}>
             <Pressable style={styles.weekHeader} onPress={() => setExpandedWeek(expandedWeek === weekIndex ? -1 : weekIndex)}>
-              <Text style={styles.weekTitle}>Week {weekIndex + 1}</Text>
+              <Text style={styles.weekTitle}>{t('home.week', { number: weekIndex + 1 })}</Text>
               <Text style={styles.weekRatio}>{week.filter((day) => day.status === 'completed').length}/{week.filter((day) => day.status !== 'rest').length}</Text>
             </Pressable>
 
@@ -190,12 +187,12 @@ export default function HomeScreen() {
                 {week.map((day) => (
                   <View key={day.day} style={[styles.dayCard, day.status === 'current' && styles.dayCardCurrent]}>
                     <View style={styles.dayLabelBox}>
-                      <Text style={styles.dayLabelText}>{dayLabel(day.date)}</Text>
+                      <Text style={styles.dayLabelText}>{dayLabel(day.date, locale)}</Text>
                       <Text style={styles.dayNumber}>{day.day}</Text>
                     </View>
                     <View style={styles.dayDetails}>
-                      <Text style={styles.dayReps}>{repsLabel(day)}</Text>
-                      <Text style={styles.dayRestText}>{day.status === 'rest' ? 'Recovery day' : `${day.restTime}s rest`}</Text>
+                      <Text style={styles.dayReps}>{repsLabel(day, t('home.recovery'))}</Text>
+                      <Text style={styles.dayRestText}>{day.status === 'rest' ? t('home.recoveryDay') : t('home.restSeconds', { count: day.restTime ?? 0 })}</Text>
                     </View>
                     <Ionicons
                       name={day.status === 'completed' ? 'checkmark-circle' : day.status === 'current' ? 'play-circle' : day.status === 'rest' ? 'moon' : 'lock-closed-outline'}
@@ -213,11 +210,11 @@ export default function HomeScreen() {
           {!isPro ? (
             <View style={styles.changePlanProRow}>
               <ProBadge />
-              <Text style={styles.changePlanProText}>Plan rebuilds and customization</Text>
+              <Text style={styles.changePlanProText}>{t('home.planRebuilds')}</Text>
             </View>
           ) : null}
           <NeonButton
-            title="Change plan"
+            title={t('home.changePlan')}
             variant="outline"
             onPress={() => {
               if (!isPro) {

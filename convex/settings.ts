@@ -2,6 +2,7 @@ import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
 import { assertActiveUser } from './deletedUsers';
+import { ensureAppUserForClientId } from './leaderboardProfiles';
 
 function valuesEqual(left: unknown, right: unknown) {
   if (Object.is(left, right)) {
@@ -36,12 +37,9 @@ export const upsertSettings = mutation({
   handler: async (ctx, args) => {
     await requireMatchingIdentity(ctx, args.clientUserId);
 
-    const user = await ctx.db
-      .query('users')
-      .withIndex('by_client_user_id', (q) => q.eq('clientUserId', args.clientUserId))
-      .unique();
+    const user = await ensureAppUserForClientId(ctx, args.clientUserId);
     if (!user) {
-      throw new Error('User must be synced before settings.');
+      return { ok: false as const, status: 'missingUser' as const };
     }
     assertActiveUser(user);
 
@@ -72,10 +70,11 @@ export const upsertSettings = mutation({
         });
       }
 
-      return existing._id;
+      return { ok: true as const, status: 'updated' as const, id: existing._id };
     }
 
-    return await ctx.db.insert('userSettings', { ...payload, updatedAt: Date.now() });
+    const id = await ctx.db.insert('userSettings', { ...payload, updatedAt: Date.now() });
+    return { ok: true as const, status: 'created' as const, id };
   },
 });
 

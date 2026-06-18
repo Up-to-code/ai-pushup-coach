@@ -3,10 +3,12 @@ import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAnalytics } from '../../src/analytics';
 import { NeonButton } from '../../src/components';
 import { useWorkoutStore, useSettingsStore, type WorkoutType } from '../../src/store';
 import { resolveCameraModeForAccess, useSubscription } from '../../src/subscriptions';
 import { borderRadius, colors, spacing, typography } from '../../src/theme';
+import { useAppLocale } from '../../src/localization';
 
 function parseNumberParam(value: string | string[] | undefined) {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -27,7 +29,9 @@ function parseSetsParam(value: string | string[] | undefined) {
 }
 
 export default function TrainingSetupScreen() {
+  const posthog = useAnalytics();
   const router = useRouter();
+  const { t } = useAppLocale();
   const params = useLocalSearchParams();
   const startWorkout = useWorkoutStore((state) => state.startWorkout);
   const { settings, hasCompletedOnboarding } = useSettingsStore();
@@ -40,10 +44,12 @@ export default function TrainingSetupScreen() {
   }, [hasCompletedOnboarding, router]);
 
   const type = (Array.isArray(params.type) ? params.type[0] : params.type || 'open') as WorkoutType;
-  const title = (Array.isArray(params.title) ? params.title[0] : params.title) || 'Start session';
-  const subtitle =
-    (Array.isArray(params.subtitle) ? params.subtitle[0] : params.subtitle) ||
-    'Classic 3 sets with recovery';
+  const modeCopy = {
+    sets: { title: t('practice.setsTitle'), subtitle: t('practice.setsSubtitle') },
+    open: { title: t('practice.openTitle'), subtitle: t('practice.openSubtitle') },
+    timer: { title: t('practice.timerTitle'), subtitle: t('practice.timerSubtitle') },
+    limit: { title: t('practice.limitTitle'), subtitle: t('practice.limitSubtitle') },
+  }[type] ?? { title: t('training.startSession'), subtitle: t('practice.setsSubtitle') };
   const goal = parseNumberParam(params.goal);
   const restTime = parseNumberParam(params.restTime);
   const sets = parseSetsParam(params.sets);
@@ -57,24 +63,24 @@ export default function TrainingSetupScreen() {
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>PREPARE SESSION</Text>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          <Text style={styles.eyebrow}>{t('training.prepare')}</Text>
+          <Text style={styles.title}>{modeCopy.title}</Text>
+          <Text style={styles.subtitle}>{modeCopy.subtitle}</Text>
         </View>
 
         <View style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
             <Ionicons name="fitness-outline" size={20} color={colors.accent} />
-            <Text style={styles.summaryTitle}>Workout Details</Text>
+            <Text style={styles.summaryTitle}>{t('training.details')}</Text>
           </View>
           <View style={styles.detailsList}>
-            <DetailRow label="Mode" value={type.toUpperCase()} />
-            {goal ? <DetailRow label="Goal" value={`${goal} reps`} /> : null}
-            {sets?.length ? <DetailRow label="Structure" value={`${sets.join('-')} reps`} /> : null}
-            {restTime ? <DetailRow label="Rest" value={`${restTime}s`} /> : null}
+            <DetailRow label={t('training.mode')} value={type.toUpperCase()} />
+            {goal ? <DetailRow label={t('training.goal')} value={t('training.repsValue', { count: goal })} /> : null}
+            {sets?.length ? <DetailRow label={t('training.structure')} value={`${sets.join('-')} ${t('profile.repsUnit').toLowerCase()}`} /> : null}
+            {restTime ? <DetailRow label={t('training.rest')} value={t('training.secondsValue', { count: restTime })} /> : null}
             <DetailRow 
-              label="Camera" 
-              value={cameraMode === 'faceFocus' ? 'Face Focus' : 'Full Scene'}
+              label={t('training.camera')} 
+              value={cameraMode === 'faceFocus' ? t('settings.faceFocus') : t('settings.fullScene')}
               isDimmed
             />
           </View>
@@ -83,15 +89,16 @@ export default function TrainingSetupScreen() {
         <View style={styles.tipCard}>
           <Ionicons name="bulb-outline" size={18} color={colors.warning} />
           <Text style={styles.tipText}>
-            Position your device 1.5m away on the floor for best tracking.
+            {t('training.tip')}
           </Text>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
         <NeonButton
-          title="Start live session"
+          title={t('training.startLive')}
           onPress={() => {
+            posthog.capture('workout_started', { type, camera_mode: cameraMode });
             startWorkout(type, cameraMode, goal, sets, restTime);
             router.replace('/workout-session');
           }}

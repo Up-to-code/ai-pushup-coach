@@ -1,7 +1,7 @@
 export type AuthStatus = 'loading' | 'signedOut' | 'guest' | 'signedIn' | 'pendingDeletion';
 
 export type DeletionStateLike = {
-  status: 'missing' | 'active' | 'pendingDeletion';
+  status: 'missing' | 'active' | 'pendingDeletion' | 'unauthenticated' | 'mismatch';
 } | null | undefined;
 
 type ResolveAuthStatusInput = {
@@ -33,7 +33,11 @@ export function resolveAuthStatus({
     return 'loading';
   }
 
-  return deletionState?.status === 'pendingDeletion' ? 'pendingDeletion' : 'signedIn';
+  if (!deletionState || (deletionState.status !== 'active' && deletionState.status !== 'pendingDeletion')) {
+    return 'loading';
+  }
+
+  return deletionState.status === 'pendingDeletion' ? 'pendingDeletion' : 'signedIn';
 }
 
 export function getAuthEntryRoute(status: AuthStatus, hasCompletedOnboarding: boolean) {

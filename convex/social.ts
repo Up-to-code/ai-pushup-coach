@@ -3,6 +3,7 @@ import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
 import { assertRateLimit } from './rateLimit';
 import { assertActiveUser, isPendingDeletion } from './deletedUsers';
+import { ensureAppUserForClientId } from './leaderboardProfiles';
 
 async function getUserByClientId(ctx: QueryCtx | MutationCtx, clientUserId: string) {
   return await ctx.db
@@ -19,8 +20,8 @@ export const follow = mutation({
   handler: async (ctx, args) => {
     await requireMatchingIdentity(ctx, args.clientUserId);
 
-    const actor = await getUserByClientId(ctx, args.clientUserId);
-    const target = await getUserByClientId(ctx, args.targetClientUserId);
+    const actor = await ensureAppUserForClientId(ctx, args.clientUserId);
+    const target = await ensureAppUserForClientId(ctx, args.targetClientUserId);
     if (!actor || !target) throw new Error('Both users must exist before following.');
     assertActiveUser(actor);
     assertActiveUser(target);
@@ -78,8 +79,8 @@ export const unfollow = mutation({
   handler: async (ctx, args) => {
     await requireMatchingIdentity(ctx, args.clientUserId);
 
-    const actor = await getUserByClientId(ctx, args.clientUserId);
-    const target = await getUserByClientId(ctx, args.targetClientUserId);
+    const actor = await ensureAppUserForClientId(ctx, args.clientUserId);
+    const target = await ensureAppUserForClientId(ctx, args.targetClientUserId);
     if (!actor || !target) throw new Error('Both users must exist before unfollowing.');
     assertActiveUser(actor);
 

@@ -3,16 +3,27 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useConvexAuth, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { useAnalytics } from '../../src/analytics';
+import { useAuth } from '../../src/auth';
 import { NeonButton } from '../../src/components';
 import { usePlanStore, useSettingsStore, useUserStore, useWorkoutStore } from '../../src/store';
 import { borderRadius, colors, spacing, typography } from '../../src/theme';
-import { getCoachMessage, getCurrentPlanDay, formatPreferredTime } from '../../src/utils';
+import { getCurrentPlanDay, formatPreferredTime } from '../../src/utils';
 import { syncNotificationsForPlan } from '../../src/services/notifications';
+import { savePushupWorkoutToAppleHealth, shouldExportWorkoutToAppleHealth } from '../../src/services/appleHealth';
+import { useAppLocale } from '../../src/localization';
 
 export default function WorkoutCompleteScreen() {
+  const posthog = useAnalytics();
+  const { t } = useAppLocale();
   const router = useRouter();
+  const auth = useAuth();
+  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
+  const submitWorkout = useMutation(api.workouts.submitWorkout);
   const { workoutId } = useLocalSearchParams<{ workoutId?: string }>();
-  const { currentWorkout, lastCompletedWorkout, workouts } = useWorkoutStore();
+  const { currentWorkout, lastCompletedWorkout, markWorkoutAppleHealthSynced, markWorkoutSynced, workouts } = useWorkoutStore();
   const navigationStartedRef = useRef(false);
   const [workoutSnapshot, setWorkoutSnapshot] = useState(() =>
     workouts.find((w) => w.id === workoutId) ??
@@ -24,12 +35,13 @@ export default function WorkoutCompleteScreen() {
   const settings = useSettingsStore((s) => s.settings);
   const plan = usePlanStore((s) => s.plan);
   const updatePlan = usePlanStore((s) => s.updatePlan);
+  const convexUserId = auth.clientUserId ?? user.id;
+  const canSyncConvex = Boolean(auth.status === 'signedIn' && isConvexAuthenticated && auth.clientUserId);
 
   const reps = workoutSnapshot?.reps ?? 0;
   const duration = workoutSnapshot?.duration ?? 0;
   const calories = Math.round(reps * 0.29);
   const qualityScore = workoutSnapshot?.qualityScore ?? 84;
-  const coachMessage = getCoachMessage('workoutComplete', user, plan, workouts);
 
   // Next upcoming workout day
   const nextDay = plan?.days.find((day, idx) => idx > (plan.currentDayIndex ?? 0) && day.status !== 'rest');
@@ -52,10 +64,78 @@ export default function WorkoutCompleteScreen() {
     return () => clearTimeout(fallback);
   }, [router, workoutSnapshot]);
 
-  const saveAndGo = (href: string) => {
+  const saveAndGo = async (href: string) => {
     if (saving || navigationStartedRef.current || !workoutSnapshot) return;
     navigationStartedRef.current = true;
     setSaving(true);
+    const completedWorkoutId = workoutSnapshot.id;
+
+    try {
+      if (canSyncConvex && reps > 0 && completedWorkoutId && !workoutSnapshot.synced) {
+        await submitWorkout({
+          clientUserId: convexUserId,
+          clientWorkoutId: completedWorkoutId,
+          date: workoutSnapshot.date || new Date().toISOString(),
+          type: workoutSnapshot.type || 'open',
+          trainingCameraMode: workoutSnapshot.trainingCameraMode || 'faceFocus',
+          reps,
+          duration,
+          calories,
+          completed: true,
+          goal: workoutSnapshot.goal,
+          sets: workoutSnapshot.sets,
+          restTime: workoutSnapshot.restTime,
+          formFeedbackState: workoutSnapshot.formFeedbackState,
+          cameraPresentationState: workoutSnapshot.cameraPresentationState,
+          qualityScore,
+        });
+        markWorkoutSynced(completedWorkoutId);
+      }
+
+      if (reps > 0) {
+        posthog.capture('workout_completed', {
+          reps,
+          duration,
+          calories,
+          quality_score: qualityScore,
+          workout_type: workoutSnapshot.type ?? null,
+          camera_mode: workoutSnapshot.trainingCameraMode ?? null,
+        });
+      }
+
+      if (settings.appleHealthWorkoutExportEnabled && completedWorkoutId && shouldExportWorkoutToAppleHealth(workoutSnapshot as any)) {
+        const result = await savePushupWorkoutToAppleHealth(workoutSnapshot as any);
+        if (result.ok) {
+          markWorkoutAppleHealthSynced(completedWorkoutId);
+          setWorkoutSnapshot((snapshot) =>
+            snapshot?.id === completedWorkoutId
+              ? { ...snapshot, appleHealthSyncedAt: Date.now() }
+              : snapshot
+          );
+          posthog.capture('apple_health_workout_exported', {
+            workout_id: completedWorkoutId,
+            reps,
+            duration,
+            calories,
+          });
+        } else if (result.status !== 'skipped') {
+          console.warn('Apple Health workout export skipped or failed', result);
+          posthog.capture('apple_health_workout_export_failed', {
+            workout_id: completedWorkoutId,
+            status: result.status,
+            reps,
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('Convex workout final save failed', error);
+      posthog.captureError(error, {
+        screen: 'workout_complete',
+        action: 'save_workout',
+        workout_id: completedWorkoutId ?? null,
+        reps,
+      });
+    }
 
     router.replace(href as any);
 
@@ -82,38 +162,38 @@ export default function WorkoutCompleteScreen() {
           <Ionicons name="checkmark-circle" size={40} color={colors.accent} />
         </View>
 
-        <Text style={styles.title}>{reps > 0 ? 'Amazing work' : 'Session incomplete'}</Text>
+        <Text style={styles.title}>{reps > 0 ? t('workoutComplete.amazingTitle') : t('workoutComplete.incompleteTitle')}</Text>
         <Text style={styles.subtitle}>
-          {reps > 0 ? coachMessage : 'This attempt won’t count toward your plan or leaderboard.'}
+          {reps > 0 ? t('workoutComplete.amazingBody') : t('workoutComplete.incompleteBody')}
         </Text>
 
         {/* Big number */}
         <Text style={styles.hugeNumber}>{reps}</Text>
-        <Text style={styles.unit}>pushups</Text>
+        <Text style={styles.unit}>{t('workoutComplete.pushups')}</Text>
 
         {/* Metrics row (no cards) */}
         <View style={styles.metricsRow}>
           <View style={styles.metricItem}>
             <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
             <Text style={styles.metricValue}>{formatTime(duration)}</Text>
-            <Text style={styles.metricLabel}>Duration</Text>
+            <Text style={styles.metricLabel}>{t('workoutComplete.duration')}</Text>
           </View>
           <View style={styles.metricItem}>
             <Ionicons name="flame-outline" size={20} color={colors.textSecondary} />
             <Text style={styles.metricValue}>{calories}</Text>
-            <Text style={styles.metricLabel}>Calories</Text>
+            <Text style={styles.metricLabel}>{t('workoutComplete.calories')}</Text>
           </View>
           <View style={styles.metricItem}>
             <Ionicons name="shield-checkmark-outline" size={20} color={colors.textSecondary} />
             <Text style={styles.metricValue}>{qualityScore}%</Text>
-            <Text style={styles.metricLabel}>Quality</Text>
+            <Text style={styles.metricLabel}>{t('workoutComplete.quality')}</Text>
           </View>
           <View style={styles.metricItem}>
             <Ionicons name="camera-outline" size={20} color={colors.textSecondary} />
             <Text style={styles.metricValue}>
-              {workoutSnapshot?.trainingCameraMode === 'fullScene' ? 'Full' : 'Face'}
+              {workoutSnapshot?.trainingCameraMode === 'fullScene' ? t('workoutComplete.fullCamera') : t('workoutComplete.faceCamera')}
             </Text>
-            <Text style={styles.metricLabel}>Camera</Text>
+            <Text style={styles.metricLabel}>{t('workoutComplete.camera')}</Text>
           </View>
         </View>
 
@@ -122,8 +202,8 @@ export default function WorkoutCompleteScreen() {
           <View style={styles.nextHint}>
             <Text style={styles.nextText}>
               {nextDay?.scheduledAt
-                ? `Next: Day ${nextDay.day} at ${formatPreferredTime(plan.preferredTime ?? '07:30')}`
-                : 'Plan complete – you’re on fire 🔥'}
+                ? t('workoutComplete.nextSession', { day: nextDay.day, time: formatPreferredTime(plan.preferredTime ?? '07:30') })
+                : t('workoutComplete.planComplete')}
             </Text>
           </View>
         )}
@@ -131,7 +211,7 @@ export default function WorkoutCompleteScreen() {
         {/* Actions */}
         <View style={styles.actions}>
           <NeonButton
-            title={saving ? 'Saving…' : reps > 0 ? 'Done' : 'Close'}
+            title={saving ? t('common.saving') : reps > 0 ? t('common.done') : t('common.close')}
             onPress={() => saveAndGo('/')}
             disabled={saving}
           />
@@ -141,7 +221,7 @@ export default function WorkoutCompleteScreen() {
             disabled={saving}
           >
             <Ionicons name="stats-chart" size={18} color={colors.accent} />
-            <Text style={styles.linkText}>View profile</Text>
+            <Text style={styles.linkText}>{t('workoutComplete.viewProfile')}</Text>
           </Pressable>
         </View>
       </ScrollView>

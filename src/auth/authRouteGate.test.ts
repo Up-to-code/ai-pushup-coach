@@ -66,4 +66,10 @@ describe('getAuthRedirectTarget', () => {
     expect(target('signedIn', ['(stack)', 'restore-account'], { hasCompletedOnboarding: true })).toBe('/(tabs)');
     expect(target('pendingDeletion', ['(stack)', 'settings'], { hasCompletedOnboarding: true })).toBe('/restore-account');
   });
+
+  it('replaces auth/onboarding routes after successful authorization so swipe-back cannot reopen them', () => {
+    expect(target('signedIn', ['(auth)', 'sign-in'], { hasCompletedOnboarding: true })).toBe('/(tabs)');
+    expect(target('signedIn', ['(stack)', 'onboarding'], { hasCompletedOnboarding: false, hasPlan: true })).toBeNull();
+    expect(target('signedOut', ['(stack)', 'onboarding'], { hasCompletedOnboarding: true })).toBe('/sign-in');
+  });
 });

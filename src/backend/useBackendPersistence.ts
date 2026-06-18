@@ -18,6 +18,20 @@ type ProfileInput = Pick<
   | 'createdAt'
 >;
 
+const lastProfileSaveByUser = new Map<string, string>();
+const lastSettingsSaveByUser = new Map<string, string>();
+
+function stableSignature(value: Record<string, unknown>) {
+  return JSON.stringify(
+    Object.keys(value)
+      .sort()
+      .reduce<Record<string, unknown>>((result, key) => {
+        result[key] = value[key];
+        return result;
+      }, {})
+  );
+}
+
 export function useSaveBackendProfile() {
   const { isLoaded, isSignedIn, userId } = useBetterAuth();
   const { isAuthenticated } = useConvexAuth();
@@ -29,7 +43,7 @@ export function useSaveBackendProfile() {
         return;
       }
 
-      await upsertProfile({
+      const payload = {
         clientUserId: userId,
         name: profile.name,
         displayName: profile.displayName,
@@ -41,7 +55,14 @@ export function useSaveBackendProfile() {
         countryName: profile.countryName,
         avatar: profile.avatar,
         createdAt: profile.createdAt,
-      });
+      };
+      const signature = stableSignature(payload);
+      if (lastProfileSaveByUser.get(userId) === signature) {
+        return;
+      }
+
+      lastProfileSaveByUser.set(userId, signature);
+      await upsertProfile(payload);
     },
     [isAuthenticated, isLoaded, isSignedIn, upsertProfile, userId]
   );
@@ -58,7 +79,7 @@ export function useSaveBackendSettings() {
         return;
       }
 
-      await upsertSettings({
+      const payload = {
         clientUserId: userId,
         soundEnabled: settings.soundEnabled,
         hapticsEnabled: settings.hapticsEnabled,
@@ -70,7 +91,14 @@ export function useSaveBackendSettings() {
         habitNudgeEnabled: settings.habitNudgeEnabled,
         defaultWorkoutTime: settings.defaultWorkoutTime,
         defaultCameraMode: settings.defaultCameraMode,
-      });
+      };
+      const signature = stableSignature(payload);
+      if (lastSettingsSaveByUser.get(userId) === signature) {
+        return;
+      }
+
+      lastSettingsSaveByUser.set(userId, signature);
+      await upsertSettings(payload);
     },
     [isAuthenticated, isLoaded, isSignedIn, upsertSettings, userId]
   );

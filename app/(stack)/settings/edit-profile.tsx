@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { borderRadius, colors, layout, spacing, typography } from '../../../src/theme';
 import { useUserStore } from '../../../src/store';
 import { useSaveBackendProfile } from '../../../src/backend';
+import { useAppLocale } from '../../../src/localization';
 import { getCountryByCode, getFlagEmoji } from '../../../src/data/countries';
 import { CFEView, NeonButton, StackHeader } from '../../../src/components';
 import { authClient } from '../../../src/auth/authClient';
@@ -12,6 +13,7 @@ import { pickAndUploadAvatar } from '../../../src/utils/uploadthing';
 
 export default function EditProfileScreen() {
   const router = useRouter();
+  const { t } = useAppLocale();
   const { user, updateUser } = useUserStore();
   const saveBackendProfile = useSaveBackendProfile();
 
@@ -32,7 +34,7 @@ export default function EditProfileScreen() {
         setAvatarUrl(url);
         updateUser(nextUser);
         await saveBackendProfile(nextUser);
-        Alert.alert('Done', 'Avatar uploaded and saved.');
+        Alert.alert(t('profile.alertAvatarSavedTitle'), t('profile.alertAvatarSavedBody'));
       }
     } finally {
       setIsUploading(false);
@@ -48,7 +50,7 @@ export default function EditProfileScreen() {
       const avatar = avatarUrl || undefined;
 
       // 1. Update the Auth Provider (BetterAuth/Clerk) first
-      // This ensures that on reload, BetterAuthUserSync pulls the correct data.
+      // Keep Better Auth identity aligned with the explicit profile save.
       await authClient.updateUser({
         name: displayName,
         image: avatar,
@@ -72,7 +74,7 @@ export default function EditProfileScreen() {
       router.back();
     } catch (error) {
       console.error('Failed to update profile:', error);
-      Alert.alert('Error', 'Failed to save profile changes. Please try again.');
+      Alert.alert(t('profile.alertSaveFailedTitle'), t('profile.alertSaveFailedBody'));
     } finally {
       setIsSaving(false);
     }
@@ -88,8 +90,8 @@ export default function EditProfileScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <StackHeader 
-          title="Edit Profile" 
-          subtitle="Update your identity and avatar."
+          title={t('profile.editTitle')}
+          subtitle={t('profile.editSubtitle')}
           onBack={() => router.back()}
         />
 
@@ -113,41 +115,41 @@ export default function EditProfileScreen() {
               </View>
             )}
           </Pressable>
-          <Text style={styles.avatarHint}>Tap to change photo</Text>
+          <Text style={styles.avatarHint}>{t('profile.avatarHint')}</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Identity</Text>
+            <Text style={styles.sectionTitle}>{t('profile.identity')}</Text>
           </View>
           
           <Field 
-            label="DISPLAY NAME" 
+            label={t('profile.displayName')}
             value={name} 
             onChangeText={setName} 
-            placeholder="Your name" 
+            placeholder={t('profile.namePlaceholder')}
             maxLength={32} 
           />
           
           <Field 
-            label="COACH NICKNAME" 
+            label={t('profile.coachNickname')}
             value={nickname} 
             onChangeText={setNickname} 
-            placeholder="How coach addresses you" 
+            placeholder={t('profile.coachPlaceholder')}
             maxLength={32} 
           />
           
           <Field 
-            label="BIO" 
+            label={t('profile.bio')}
             value={bio} 
             onChangeText={setBio} 
-            placeholder="A short note about yourself" 
+            placeholder={t('profile.bioPlaceholder')}
             maxLength={120} 
             multiline 
           />
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Connections</Text>
+            <Text style={styles.sectionTitle}>{t('profile.connections')}</Text>
           </View>
 
           <Pressable 
@@ -155,8 +157,8 @@ export default function EditProfileScreen() {
             onPress={() => router.push('/settings/social-links' as any)}
           >
             <View style={styles.navItemContent}>
-              <Text style={styles.fieldLabel}>SOCIAL LINKS</Text>
-              <Text style={styles.navItemValue}>Manage your X, GitHub, and more</Text>
+              <Text style={styles.fieldLabel}>{t('profile.socialLinks')}</Text>
+              <Text style={styles.navItemValue}>{t('profile.socialLinksValue')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </Pressable>
@@ -166,9 +168,9 @@ export default function EditProfileScreen() {
             onPress={() => router.push('/settings/country' as any)}
           >
             <View style={styles.navItemContent}>
-              <Text style={styles.fieldLabel}>COUNTRY</Text>
+              <Text style={styles.fieldLabel}>{t('profile.country')}</Text>
               <Text style={styles.navItemValue}>
-                {getFlagEmoji(selectedCountry.code)}  {selectedCountry.code === 'GLOBAL' ? 'Global / Earth' : selectedCountry.name}
+                {getFlagEmoji(selectedCountry.code)}  {selectedCountry.code === 'GLOBAL' ? t('country.globalEarth') : selectedCountry.name}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -176,7 +178,7 @@ export default function EditProfileScreen() {
         </View>
 
         <NeonButton 
-          title={isSaving ? "Saving..." : "Save Changes"} 
+          title={isSaving ? t('common.saving') : t('profile.saveChanges')}
           onPress={handleSave} 
           style={styles.saveButton}
           disabled={isSaving}
@@ -256,7 +258,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   avatarOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',

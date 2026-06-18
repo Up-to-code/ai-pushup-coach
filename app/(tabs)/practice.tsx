@@ -2,39 +2,43 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useAnalytics } from '../../src/analytics';
 import { colors, typography, spacing } from '../../src/theme';
 import { PracticeModeCard } from '../../src/components/PracticeModeCard';
 import { useResponsive } from '../../src/hooks';
+import { useAppLocale, type TranslationKey } from '../../src/localization';
 
 const practiceModes = [
   {
     type: 'sets' as const,
-    title: 'Sets Workout',
-    subtitle: 'Classic 3 sets with recovery',
+    titleKey: 'practice.setsTitle',
+    subtitleKey: 'practice.setsSubtitle',
     icon: '🏋️',
   },
   {
     type: 'open' as const,
-    title: 'Open Goal',
-    subtitle: 'Push until you drop',
+    titleKey: 'practice.openTitle',
+    subtitleKey: 'practice.openSubtitle',
     icon: '🎯',
   },
   {
     type: 'timer' as const,
-    title: 'Reps Per Minute',
-    subtitle: 'Max reps in 60 seconds',
+    titleKey: 'practice.timerTitle',
+    subtitleKey: 'practice.timerSubtitle',
     icon: '⏱️',
   },
   {
     type: 'limit' as const,
-    title: 'Daily Session',
-    subtitle: 'Quick 10-minute focus',
+    titleKey: 'practice.limitTitle',
+    subtitleKey: 'practice.limitSubtitle',
     icon: '📅',
   },
-];
+] satisfies Array<{ type: 'sets' | 'open' | 'timer' | 'limit'; titleKey: TranslationKey; subtitleKey: TranslationKey; icon: string }>;
 
 export default function TrainScreen() {
+  const posthog = useAnalytics();
   const router = useRouter();
+  const { t } = useAppLocale();
   const { horizontalPadding } = useResponsive();
   const trainingSetupRoute = '/training-setup' as any;
 
@@ -50,12 +54,12 @@ export default function TrainScreen() {
       default: goal = undefined;
     }
 
+    posthog.capture('practice_mode_selected', { mode: mode.type, title: t(mode.titleKey) });
+
     router.push({
       pathname: trainingSetupRoute,
       params: {
         type: mode.type,
-        title: mode.title,
-        subtitle: mode.subtitle,
         goal: goal?.toString(),
         sets: sets ? JSON.stringify(sets) : undefined,
         restTime: restTime?.toString(),
@@ -70,7 +74,7 @@ export default function TrainScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: horizontalPadding }]}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Pushups</Text>
+          <Text style={styles.title}>{t('practice.title')}</Text>
         </View>
 
         <View style={styles.modesGrid}>
@@ -78,8 +82,8 @@ export default function TrainScreen() {
             <PracticeModeCard
               key={mode.type}
               type={mode.type}
-              title={mode.title}
-              subtitle={mode.subtitle}
+              title={t(mode.titleKey)}
+              subtitle={t(mode.subtitleKey)}
               icon={mode.icon}
               onPress={() => handleModeSelect(mode)}
             />

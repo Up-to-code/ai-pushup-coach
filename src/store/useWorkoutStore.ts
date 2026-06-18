@@ -29,6 +29,7 @@ export interface Workout {
   cameraPresentationState?: CameraPresentationState;
   qualityScore?: number;
   synced?: boolean;
+  appleHealthSyncedAt?: number;
 }
 
 interface WorkoutState {
@@ -56,6 +57,7 @@ interface WorkoutState {
   resumeWorkout: () => void;
   clearWorkouts: () => void;
   markWorkoutSynced: (id: string) => void;
+  markWorkoutAppleHealthSynced: (id: string, syncedAt?: number) => void;
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -208,6 +210,20 @@ export const useWorkoutStore = create<WorkoutState>()(
           workouts: state.workouts.map((w) =>
             w.id === id ? { ...w, synced: true } : w
           ),
+          lastCompletedWorkout:
+            state.lastCompletedWorkout?.id === id
+              ? { ...state.lastCompletedWorkout, synced: true }
+              : state.lastCompletedWorkout,
+        })),
+      markWorkoutAppleHealthSynced: (id, syncedAt = Date.now()) =>
+        set((state) => ({
+          workouts: state.workouts.map((w) =>
+            w.id === id ? { ...w, appleHealthSyncedAt: syncedAt } : w
+          ),
+          lastCompletedWorkout:
+            state.lastCompletedWorkout?.id === id
+              ? { ...state.lastCompletedWorkout, appleHealthSyncedAt: syncedAt }
+              : state.lastCompletedWorkout,
         })),
     }),
     {

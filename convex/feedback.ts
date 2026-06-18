@@ -4,6 +4,9 @@ import { requireMatchingIdentity } from './auth';
 import { assertRateLimit } from './rateLimit';
 import { assertActiveUser, isPendingDeletion } from './deletedUsers';
 import type { Id } from './_generated/dataModel';
+import { ensureAppUserForClientId, getReadableFitnessUserIdForClientId } from './leaderboardProfiles';
+import { capturePosthogEvent } from './posthog';
+import { buildFeedbackSubmittedProperties, buildFeedbackVoteProperties } from './posthogEvents';
 
 async function getUser(ctx: QueryCtx | MutationCtx, clientUserId: string) {
   return await ctx.db
@@ -20,6 +23,10 @@ function fingerprint(kind: 'feature' | 'bug', title: string) {
   return `${kind}:${title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()}`;
 }
 
+async function isExistingUserId(ctx: QueryCtx, userId: Id<'users'>) {
+  return Boolean(await ctx.db.get(userId));
+}
+
 export const list = query({
   args: {
     clientUserId: v.string(),
@@ -29,7 +36,9 @@ export const list = query({
     await requireMatchingIdentity(ctx, clientUserId);
 
     const user = await getUser(ctx, clientUserId);
-    if (!user || isPendingDeletion(user)) return [];
+    if (user && isPendingDeletion(user)) return [];
+    const readableUserId = user?._id ?? await getReadableFitnessUserIdForClientId(ctx, clientUserId);
+    if (!readableUserId) return [];
 
     const rows = await ctx.db
       .query('feedbackRequests')
@@ -39,15 +48,39 @@ export const list = query({
 
     const votes = await ctx.db
       .query('feedbackVotes')
-      .withIndex('by_user', (q) => q.eq('userId', user._id))
+      .withIndex('by_user', (q) => q.eq('userId', readableUserId))
       .take(1000);
     const votedRequestIds = new Set<Id<'feedbackRequests'>>();
     votes.forEach((vote) => votedRequestIds.add(vote.requestId));
+    const mineRequestIds = new Set<Id<'feedbackRequests'>>();
+    let hasExactMine = false;
+    for (const request of rows) {
+      if (request.authorUserId === readableUserId) {
+        mineRequestIds.add(request._id);
+        hasExactMine = true;
+      }
+    }
+
+    if (!hasExactMine) {
+      const authorIds = Array.from(new Set(rows.map((row) => row.authorUserId)));
+      const existingAuthorIds = new Set<Id<'users'>>();
+      for (const authorId of authorIds) {
+        if (await isExistingUserId(ctx, authorId)) {
+          existingAuthorIds.add(authorId);
+        }
+      }
+
+      rows.forEach((request) => {
+        if (!existingAuthorIds.has(request.authorUserId)) {
+          mineRequestIds.add(request._id);
+        }
+      });
+    }
 
     return rows.map((request) => ({
       ...request,
       voted: votedRequestIds.has(request._id),
-      isMine: request.authorUserId === user._id,
+      isMine: mineRequestIds.has(request._id),
     }));
   },
 });
@@ -62,7 +95,7 @@ export const submit = mutation({
   handler: async (ctx, args) => {
     await requireMatchingIdentity(ctx, args.clientUserId);
 
-    const user = await getUser(ctx, args.clientUserId);
+    const user = await ensureAppUserForClientId(ctx, args.clientUserId);
     if (!user) throw new Error('User must exist before sending feedback.');
     assertActiveUser(user);
 
@@ -93,6 +126,11 @@ export const submit = mutation({
         details: details ?? existing.details,
         updatedAt: now,
       });
+      await capturePosthogEvent(ctx, {
+        distinctId: user.clientUserId,
+        event: 'feedback_submitted',
+        properties: buildFeedbackSubmittedProperties(user, { kind: args.kind, status: 'updated' }),
+      });
       return existing._id;
     }
 
@@ -112,6 +150,11 @@ export const submit = mutation({
       userId: user._id,
       createdAt: now,
     });
+    await capturePosthogEvent(ctx, {
+      distinctId: user.clientUserId,
+      event: 'feedback_submitted',
+      properties: buildFeedbackSubmittedProperties(user, { kind: args.kind, status: 'created' }),
+    });
     return requestId;
   },
 });
@@ -125,7 +168,7 @@ export const setVote = mutation({
   handler: async (ctx, { clientUserId, requestId, voted }) => {
     await requireMatchingIdentity(ctx, clientUserId);
 
-    const user = await getUser(ctx, clientUserId);
+    const user = await ensureAppUserForClientId(ctx, clientUserId);
     const request = await ctx.db.get(requestId);
     if (!user || !request) throw new Error('Feedback request not found.');
     assertActiveUser(user);
@@ -152,6 +195,14 @@ export const setVote = mutation({
       await ctx.db.patch(requestId, {
         voteCount: request.voteCount + 1,
         updatedAt: now,
+      });
+      await capturePosthogEvent(ctx, {
+        distinctId: user.clientUserId,
+        event: 'feedback_voted',
+        properties: buildFeedbackVoteProperties(user, {
+          kind: request.kind,
+          voteCount: request.voteCount + 1,
+        }),
       });
     } else if (!voted && existing) {
       await ctx.db.delete(existing._id);

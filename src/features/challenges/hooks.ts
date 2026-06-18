@@ -9,7 +9,6 @@ export function useChallenges(limit = 25, enabled = true) {
   const { authLoading, canUseAuthenticatedBackend } = useAuthenticatedBackendState();
   const shouldQuery = enabled && canUseAuthenticatedBackend;
   const rows = useQuery(api.challenges.list, shouldQuery ? { clientUserId, limit } : 'skip');
-  const seedMutation = useMutation(api.challenges.seedDefaults);
   const joinMutation = useMutation(api.challenges.join);
   const leaveMutation = useMutation(api.challenges.leave);
   const requireAuthenticatedBackend = useCallback(() => {
@@ -21,11 +20,6 @@ export function useChallenges(limit = 25, enabled = true) {
   return {
     challenges: canUseAuthenticatedBackend ? rows : undefined,
     loading: authLoading || (shouldQuery && rows === undefined),
-    canSeedDefaults: shouldQuery,
-    seedDefaults: useCallback(() => {
-      requireAuthenticatedBackend();
-      return seedMutation({ clientUserId });
-    }, [clientUserId, requireAuthenticatedBackend, seedMutation]),
     join: useCallback((challengeId: Id<'challenges'>) => {
       requireAuthenticatedBackend();
       return joinMutation({ clientUserId, challengeId });

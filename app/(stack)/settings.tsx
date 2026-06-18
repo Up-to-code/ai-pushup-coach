@@ -12,8 +12,12 @@ import { useSaveBackendSettings } from '../../src/backend';
 import { ProBadge } from '../../src/components';
 import { canUseFullSceneCamera, PRODUCT_IDENTIFIERS, useSubscription } from '../../src/subscriptions';
 import { appWebUrl, privacyUrl, supportUrl, termsUrl } from '../../src/config/links';
+import { supportedLanguages, useAppLocale } from '../../src/localization';
+import { localizePlanName } from '../../src/localization/planNames';
+import type { TranslationKey } from '../../src/localization/translations';
 import { usePlanStore, useSettingsStore, useUserStore, type Day } from '../../src/store';
 import { cancelPlanNotifications, requestNotificationPermission, syncNotificationsForPlan } from '../../src/services/notifications';
+import { isAppleHealthAvailable, requestAppleHealthWorkoutPermission, type AppleHealthStatus } from '../../src/services/appleHealth';
 import { formatPreferredTime } from '../../src/utils';
 
 const APP_STORE_SUBSCRIPTIONS_URL = 'https://apps.apple.com/account/subscriptions';
@@ -30,12 +34,17 @@ function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
-function formatSubscriptionPlanLabel(productIdentifier: string | null) {
-  if (!productIdentifier) return 'Pro';
-  if (productIdentifier === 'development-pro') return 'Development Pro';
-  if (productIdentifier === PRODUCT_IDENTIFIERS.yearly) return 'Pro Yearly';
-  if (productIdentifier === PRODUCT_IDENTIFIERS.monthly) return 'Pro Monthly';
-  return 'Pro';
+function formatSubscriptionPlanLabel(productIdentifier: string | null, t: (key: TranslationKey) => string) {
+  if (!productIdentifier) return t('settings.pro');
+  if (productIdentifier === 'development-pro') return t('settings.developmentPro');
+  if (productIdentifier === PRODUCT_IDENTIFIERS.yearly) return t('settings.proYearly');
+  if (productIdentifier === PRODUCT_IDENTIFIERS.monthly) return t('settings.proMonthly');
+  return t('settings.pro');
+}
+
+function formatLanguageLabel(languageLocale: string, systemLabel: string) {
+  if (!languageLocale || languageLocale === 'system') return systemLabel;
+  return supportedLanguages.find((language) => language.locale === languageLocale)?.nativeName ?? systemLabel;
 }
 
 function reschedulePlanDays(days: Day[], preferredTime: string) {
@@ -50,6 +59,7 @@ function reschedulePlanDays(days: Day[], preferredTime: string) {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { isRTL, t } = useAppLocale();
   const auth = useAuth();
   const isSignedIn = auth.status === 'signedIn' || auth.status === 'pendingDeletion';
   const userId = auth.clientUserId;
@@ -77,6 +87,13 @@ export default function SettingsScreen() {
   const [timeSaving, setTimeSaving] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [appleHealthStatus, setAppleHealthStatus] = useState<AppleHealthStatus>(
+    isAppleHealthAvailable()
+      ? settings.appleHealthWorkoutExportEnabled
+        ? 'connected'
+        : 'notConnected'
+      : 'unavailable'
+  );
 
   const saveSettings = async (nextSettings: typeof settings) => {
     updateSettings(nextSettings);
@@ -133,7 +150,7 @@ export default function SettingsScreen() {
     await saveSettings(nextSettings);
     await resyncNotifications(nextSettings);
     if (!granted) {
-      Alert.alert('Notifications are off', 'Enable notifications in iOS Settings to receive workout reminders.');
+      Alert.alert(t('settings.alertNotificationsOffTitle'), t('settings.alertNotificationsOffBody'));
     }
   };
 
@@ -143,10 +160,25 @@ export default function SettingsScreen() {
     await resyncNotifications(nextSettings);
   };
 
+  const toggleAppleHealthExport = async (enabled: boolean) => {
+    if (!enabled) {
+      setAppleHealthStatus(isAppleHealthAvailable() ? 'notConnected' : 'unavailable');
+      updateAndSaveSettings({ appleHealthWorkoutExportEnabled: false });
+      return;
+    }
+
+    const status = await requestAppleHealthWorkoutPermission();
+    setAppleHealthStatus(status);
+    updateAndSaveSettings({ appleHealthWorkoutExportEnabled: status === 'connected' });
+    if (status === 'permissionNeeded') {
+      Alert.alert(t('settings.appleHealthPermissionTitle'), t('settings.appleHealthPermissionBody'));
+    }
+  };
+
   const saveWorkoutTime = async () => {
     const preferredTime = cleanTime(timeDraft);
     if (!isValidTime(preferredTime)) {
-      Alert.alert('Check the time', 'Use 24-hour format, for example 07:30 or 18:15.');
+      Alert.alert(t('settings.alertCheckTimeTitle'), t('settings.alertCheckTimeBody'));
       return;
     }
     setTimeSaving(true);
@@ -163,7 +195,7 @@ export default function SettingsScreen() {
       }
     } catch (error) {
       console.warn(error);
-      Alert.alert('Time saved', 'The workout time was saved, but reminders could not be refreshed right now.');
+      Alert.alert(t('settings.alertTimeSavedTitle'), t('settings.alertTimeSavedBody'));
     } finally {
       setTimeDraft(preferredTime);
       setTimeSaving(false);
@@ -179,9 +211,9 @@ export default function SettingsScreen() {
 
     try {
       await restore();
-      Alert.alert('Restore complete', 'Your subscription status has been refreshed.');
+      Alert.alert(t('settings.alertRestoreCompleteTitle'), t('settings.alertRestoreCompleteBody'));
     } catch {
-      Alert.alert('Restore unavailable', 'We could not restore purchases right now. Your local app access is unchanged.');
+      Alert.alert(t('settings.alertRestoreUnavailableTitle'), t('settings.alertRestoreUnavailableBody'));
     }
   };
 
@@ -190,21 +222,21 @@ export default function SettingsScreen() {
 
     if (!paywallAvailable) {
       Alert.alert(
-        'Pro setup required',
+        t('settings.alertProSetupTitle'),
         subscriptionError ??
-          'Apple StoreKit is not returning the subscription products yet. Restart the device and try again later, or test from a fresh TestFlight build.'
+          t('settings.alertProSetupBody')
       );
       return;
     }
 
     try {
       const unlocked = await showPaywall();
-      if (unlocked) Alert.alert('Pro unlocked', 'Your subscription status has been refreshed.');
+      if (unlocked) Alert.alert(t('settings.alertProUnlockedTitle'), t('settings.alertProUnlockedBody'));
     } catch (error) {
       console.warn('Paywall failed', error);
       Alert.alert(
-        'Could not open paywall',
-        error instanceof Error ? error.message : 'Check your connection and Adapty setup, then try again.'
+        t('settings.alertPaywallFailedTitle'),
+        error instanceof Error ? error.message : t('settings.alertPaywallFailedBody')
       );
     }
   };
@@ -216,7 +248,7 @@ export default function SettingsScreen() {
       try {
         await Linking.openURL(APP_STORE_SUBSCRIPTIONS_URL);
       } catch {
-        Alert.alert('Could not open subscriptions', 'Open iOS Settings, tap your Apple ID, then Subscriptions to manage your plan.');
+        Alert.alert(t('settings.alertSubscriptionsFailedTitle'), t('settings.alertSubscriptionsFailedBody'));
       }
       return;
     }
@@ -227,7 +259,7 @@ export default function SettingsScreen() {
       try {
         await Linking.openURL(APP_STORE_SUBSCRIPTIONS_URL);
       } catch {
-        Alert.alert('Could not open subscriptions', 'Open iOS Settings, tap your Apple ID, then Subscriptions to manage your plan.');
+        Alert.alert(t('settings.alertSubscriptionsFailedTitle'), t('settings.alertSubscriptionsFailedBody'));
       }
     }
   };
@@ -248,7 +280,7 @@ export default function SettingsScreen() {
       router.replace('/sign-in' as any);
     } catch (error) {
       console.warn('Logout failed', error);
-      Alert.alert('Could not log out', 'Check your connection and try again.');
+      Alert.alert(t('settings.alertLogoutFailedTitle'), t('settings.alertLogoutFailedBody'));
     } finally {
       setLoggingOut(false);
     }
@@ -256,14 +288,14 @@ export default function SettingsScreen() {
 
   const confirmDeleteAccount = () => {
     Alert.alert(
-      isSignedIn ? 'Delete account and data?' : 'Clear local data?',
+      isSignedIn ? t('settings.confirmDeleteTitle') : t('settings.confirmClearTitle'),
       isSignedIn
-        ? 'Your profile will be hidden immediately and your local data will be cleared. Synced data can be restored for 30 days. Active App Store subscriptions must still be managed from your Apple account.'
-        : 'This clears workout history, settings, onboarding, and local app data on this device.',
+        ? t('settings.confirmDeleteBody')
+        : t('settings.confirmClearBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: isSignedIn ? 'Delete account' : 'Clear data',
+          text: isSignedIn ? t('settings.deleteAccount') : t('settings.clearLocalData'),
           style: 'destructive',
           onPress: async () => {
             setDeletingAccount(true);
@@ -280,8 +312,8 @@ export default function SettingsScreen() {
             } catch (error) {
               console.warn('Account deletion failed', error);
               Alert.alert(
-                'Could not delete account',
-                'Check your connection and try again. If it still fails, use the support link on the Push Counter website.'
+                t('settings.alertDeleteFailedTitle'),
+                t('settings.alertDeleteFailedBody')
               );
             } finally {
               setDeletingAccount(false);
@@ -299,20 +331,27 @@ export default function SettingsScreen() {
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={22} color="#fff" />
           </Pressable>
-          <Text style={styles.title}>Settings</Text>
+          <Text style={styles.title}>{t('settings.title')}</Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Section title="Account">
-            <NavRow icon="person-outline" label="Edit profile" value={user.displayName || user.name} onPress={() => router.push('/settings/edit-profile' as any)} />
+          <Section icon="person-circle-outline" title={t('settings.account')} isRTL={isRTL}>
+            <NavRow icon="person-outline" label={t('settings.editProfile')} value={user.displayName || user.name} onPress={() => router.push('/settings/edit-profile' as any)} />
             <Divider />
-            <NavRow icon="flag-outline" label="Country" value={user.countryName} onPress={() => router.push('/settings/country' as any)} />
+            <NavRow icon="flag-outline" label={t('settings.country')} value={user.countryName} onPress={() => router.push('/settings/country' as any)} />
+            <Divider />
+            <NavRow
+              icon="language-outline"
+              label={t('settings.language')}
+              value={formatLanguageLabel(settings.languageLocale, t('settings.languageSystem'))}
+              onPress={() => router.push('/settings/language' as any)}
+            />
             {settings.allowGuestMode && (
               <>
                 <Divider />
                 <ActionRow
                   icon="log-in-outline"
-                  label="Use signed-in account"
+                  label={t('settings.useSignedInAccount')}
                   onPress={() => {
                     setAllowGuestMode(false);
                     router.replace('/sign-in' as any);
@@ -322,10 +361,12 @@ export default function SettingsScreen() {
             )}
           </Section>
 
-          <Section title="Training">
-            <InfoRow label="Current plan" value={plan ? plan.name : 'No plan'} />
+          <Section icon="barbell-outline" title={t('settings.training')} isRTL={isRTL}>
+            <InfoRow label={t('settings.currentPlan')} value={plan ? localizePlanName(plan.name, t) : t('settings.noPlan')} />
             <Divider />
             <TimeRow
+              workoutTimeLabel={t('settings.workoutTime')}
+              saveLabel={t('common.save')}
               value={timeDraft}
               displayValue={formatPreferredTime(preferredTime)}
               changed={timeChanged}
@@ -336,7 +377,7 @@ export default function SettingsScreen() {
             <Divider />
             <NavRow
               icon={isPro ? 'calendar-outline' : 'lock-closed-outline'}
-              label="Rebuild plan"
+              label={t('settings.rebuildPlan')}
               badge={!isPro}
               onPress={() => {
                 if (!isPro) {
@@ -356,44 +397,58 @@ export default function SettingsScreen() {
             />
           </Section>
 
-          <Section title="Reminders">
+          <Section icon="notifications-outline" title={t('settings.reminders')} isRTL={isRTL}>
             <ToggleRow
-              label="Workout reminders"
-              description="Notify me at my selected workout time."
+              label={t('settings.workoutReminders')}
+              description={t('settings.workoutReminderDescription')}
               value={settings.notificationsEnabled && settings.workoutReminderEnabled}
               onChange={(value) => (value ? toggleNotifications(true) : updateReminderSetting('workoutReminderEnabled', false))}
             />
             <Divider />
             <ToggleRow
-              label="Missed workout follow-up"
-              description="Send one local reminder if I have not started after 30 minutes."
+              label={t('settings.missedReminder')}
+              description={t('settings.missedReminderDescription')}
               value={settings.notificationsEnabled && settings.missedReminderEnabled}
               onChange={(value) => updateReminderSetting('missedReminderEnabled', value)}
               disabled={!settings.notificationsEnabled}
             />
             <Divider />
             <ToggleRow
-              label="Gentle habit nudge"
-              description="Send one extra local prompt later on training days."
+              label={t('settings.habitNudge')}
+              description={t('settings.habitNudgeDescription')}
               value={settings.notificationsEnabled && settings.habitNudgeEnabled}
               onChange={(value) => updateReminderSetting('habitNudgeEnabled', value)}
               disabled={!settings.notificationsEnabled}
             />
           </Section>
 
-          <Section title="Workout feedback">
-            <ToggleRow label="Sound" description="Count reps aloud during sessions." value={settings.soundEnabled} onChange={(soundEnabled) => updateAndSaveSettings({ soundEnabled })} />
+          <Section icon="pulse-outline" title={t('settings.workoutFeedback')} isRTL={isRTL}>
+            <ToggleRow label={t('settings.sound')} description={t('settings.soundDescription')} value={settings.soundEnabled} onChange={(soundEnabled) => updateAndSaveSettings({ soundEnabled })} />
             <Divider />
-            <ToggleRow label="Haptics" description="Confirm counted reps with vibration." value={settings.hapticsEnabled} onChange={(hapticsEnabled) => updateAndSaveSettings({ hapticsEnabled })} />
+            <ToggleRow label={t('settings.haptics')} description={t('settings.hapticsDescription')} value={settings.hapticsEnabled} onChange={(hapticsEnabled) => updateAndSaveSettings({ hapticsEnabled })} />
           </Section>
 
-          <Section title="Session behavior">
+          <Section icon="heart-outline" title={t('settings.appleHealth')} isRTL={isRTL}>
+            <ToggleRow
+              label={t('settings.appleHealthExport')}
+              description={t('settings.appleHealthExportDescription')}
+              value={settings.appleHealthWorkoutExportEnabled && appleHealthStatus === 'connected'}
+              onChange={(value) => {
+                void toggleAppleHealthExport(value);
+              }}
+              disabled={appleHealthStatus === 'unavailable'}
+            />
+            <Divider />
+            <InfoRow label={t('settings.status')} value={t(`settings.appleHealthStatus.${appleHealthStatus}` as TranslationKey)} />
+          </Section>
+
+          <Section icon="scan-circle-outline" title={t('settings.sessionBehavior')} isRTL={isRTL}>
             <ChoiceRow
-              label="Camera focus mode"
-              description="Face Focus tracks your head height. Full Scene uses the whole frame."
+              label={t('settings.cameraFocusMode')}
+              description={t('settings.cameraFocusDescription')}
               options={[
-                { label: 'Face Focus', value: 'faceFocus' },
-                { label: 'Full Scene', value: 'fullScene' }
+                { label: t('settings.faceFocus'), value: 'faceFocus' },
+                { label: t('settings.fullScene'), value: 'fullScene' }
               ]}
               value={settings.defaultCameraMode}
               lockedValues={isPro ? [] : ['fullScene']}
@@ -407,15 +462,15 @@ export default function SettingsScreen() {
             />
           </Section>
 
-          <Section title="Subscription">
+          <Section icon="diamond-outline" title={t('settings.subscription')} isRTL={isRTL}>
             <InfoRow
-              label="Plan"
-              value={subscriptionLoading ? 'Checking...' : isPro ? formatSubscriptionPlanLabel(activeProductIdentifier) : 'Free'}
+              label={t('settings.plan')}
+              value={subscriptionLoading ? t('settings.checking') : isPro ? formatSubscriptionPlanLabel(activeProductIdentifier, t) : t('settings.free')}
             />
             {subscriptionError && (
               <>
                 <Divider />
-                <InfoRow label="Status" value={subscriptionConfigured ? 'Offline safe mode' : 'Not configured'} />
+                <InfoRow label={t('settings.status')} value={subscriptionConfigured ? t('settings.offlineSafeMode') : t('settings.notConfigured')} />
               </>
             )}
             {!isPro && (
@@ -426,10 +481,10 @@ export default function SettingsScreen() {
                   icon="sparkles-outline"
                   label={
                     subscriptionLoading
-                      ? 'Loading paywall...'
+                      ? t('settings.loadingPaywall')
                       : paywallAvailable
-                        ? 'Upgrade to Pro'
-                        : 'Setup required'
+                        ? t('settings.upgradeToPro')
+                        : t('settings.setupRequired')
                   }
                   badge={paywallAvailable}
                   onPress={openPaywall}
@@ -440,39 +495,39 @@ export default function SettingsScreen() {
             <ActionRow
               disabled={subscriptionLoading || !subscriptionConfigured}
               icon="refresh-outline"
-              label="Restore purchases"
+              label={t('settings.restorePurchases')}
               onPress={restoreSubscription}
             />
             <Divider />
             <ActionRow
               disabled={subscriptionLoading}
               icon="card-outline"
-              label="Manage subscription"
+              label={t('settings.manageSubscription')}
               onPress={openAppStoreSubscriptions}
             />
           </Section>
 
-          <Section title="Privacy and legal">
-            <NavRow icon="camera-outline" label="Camera and workout data" onPress={() => router.push('/legal/data-camera' as any)} />
+          <Section icon="shield-checkmark-outline" title={t('settings.privacyLegal')} isRTL={isRTL}>
+            <NavRow icon="camera-outline" label={t('settings.cameraData')} onPress={() => router.push('/legal/data-camera' as any)} />
             <Divider />
-            <ActionRow icon="document-text-outline" label="Privacy Policy" onPress={() => openWebUrl(privacyUrl)} />
+            <ActionRow icon="document-text-outline" label={t('settings.privacyPolicy')} onPress={() => openWebUrl(privacyUrl)} />
             <Divider />
-            <ActionRow icon="reader-outline" label="Terms of Use" onPress={() => openWebUrl(termsUrl)} />
+            <ActionRow icon="reader-outline" label={t('settings.termsOfUse')} onPress={() => openWebUrl(termsUrl)} />
             <Divider />
-            <NavRow icon="chatbubbles-outline" label="Feature requests and bugs" onPress={() => router.push('/settings/feedback' as any)} />
+            <NavRow icon="chatbubbles-outline" label={t('settings.feedback')} onPress={() => router.push('/settings/feedback' as any)} />
             <Divider />
-            <ActionRow icon="help-circle-outline" label="Support" onPress={() => openWebUrl(supportUrl)} />
+            <ActionRow icon="help-circle-outline" label={t('settings.support')} onPress={() => openWebUrl(supportUrl)} />
             <Divider />
-            <ActionRow icon="open-outline" label="Open Push Counter website" onPress={openAppWebsite} />
+            <ActionRow icon="open-outline" label={t('settings.openWebsite')} onPress={openAppWebsite} />
           </Section>
 
-          <Section title="Data control">
+          <Section icon="server-outline" title={t('settings.dataControl')} isRTL={isRTL}>
             {isSignedIn && (
               <>
                 <ActionRow
                   disabled={loggingOut}
                   icon="log-out-outline"
-                  label={loggingOut ? 'Logging out...' : 'Log out'}
+                  label={loggingOut ? t('settings.loggingOut') : t('settings.logOut')}
                   onPress={logOut}
                 />
                 <Divider />
@@ -482,18 +537,18 @@ export default function SettingsScreen() {
               destructive
               disabled={deletingAccount}
               icon="trash-outline"
-              label={deletingAccount ? 'Deleting...' : isSignedIn ? 'Delete account and data' : 'Clear local data'}
+              label={deletingAccount ? t('settings.deleting') : isSignedIn ? t('settings.deleteAccount') : t('settings.clearLocalData')}
               onPress={confirmDeleteAccount}
             />
           </Section>
 
           {__DEV__ && (
-            <Section title="Developer options">
-              <NavRow icon="bug-outline" label="Debug logs" onPress={() => router.push('/debug-logs' as any)} />
+            <Section icon="code-slash-outline" title={t('settings.developerOptions')} isRTL={isRTL}>
+              <NavRow icon="bug-outline" label={t('settings.debugLogs')} onPress={() => router.push('/debug-logs' as any)} />
               <Divider />
               <ActionRow
                 icon="refresh-circle-outline"
-                label="Redo onboarding"
+                label={t('settings.redoOnboarding')}
                 onPress={() => {
                   useSettingsStore.getState().resetOnboarding();
                   router.replace('/');
@@ -507,9 +562,12 @@ export default function SettingsScreen() {
   );
 }
 
-const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+const Section = ({ icon, title, children, isRTL }: { icon: string; title: string; children: React.ReactNode; isRTL?: boolean }) => (
   <View style={styles.section}>
-    <Text style={styles.sectionTitle}>{title}</Text>
+    <View style={[styles.sectionHeader, isRTL && styles.rowReverse]}>
+      <Ionicons name={icon as any} size={15} color="rgba(255,255,255,0.48)" />
+      <Text style={[styles.sectionTitle, isRTL && styles.textRtl]}>{title}</Text>
+    </View>
     <View style={styles.sectionBody}>{children}</View>
   </View>
 );
@@ -518,12 +576,14 @@ const Divider = () => <View style={styles.divider} />;
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <View style={styles.infoRow}>
-    <Text style={styles.rowLabel}>{label}</Text>
+    <Text style={styles.rowLabel} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.86}>{label}</Text>
     <Text style={styles.infoValue} numberOfLines={1}>{value}</Text>
   </View>
 );
 
-const TimeRow = ({ value, displayValue, changed, saving, onChange, onSave }: {
+const TimeRow = ({ workoutTimeLabel, saveLabel, value, displayValue, changed, saving, onChange, onSave }: {
+  workoutTimeLabel: string;
+  saveLabel: string;
   value: string;
   displayValue: string;
   changed: boolean;
@@ -538,7 +598,7 @@ const TimeRow = ({ value, displayValue, changed, saving, onChange, onSave }: {
   return (
     <View style={styles.timeRow}>
       <View style={styles.timeCopy}>
-        <Text style={styles.rowLabel}>Workout time</Text>
+      <Text style={styles.rowLabel} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.86}>{workoutTimeLabel}</Text>
         <Text style={styles.rowValue}>{displayValue}</Text>
       </View>
       <View style={styles.timeEditor}>
@@ -557,7 +617,7 @@ const TimeRow = ({ value, displayValue, changed, saving, onChange, onSave }: {
         />
         {changed && (
           <Pressable style={styles.saveTimeButton} onPress={onSave} disabled={saving}>
-            <Text style={styles.saveTimeText}>{saving ? '...' : 'Save'}</Text>
+            <Text style={styles.saveTimeText}>{saving ? '...' : saveLabel}</Text>
           </Pressable>
         )}
       </View>
@@ -569,7 +629,7 @@ const NavRow = ({ badge, icon, label, value, onPress }: { badge?: boolean; icon:
   <Pressable style={({ pressed }) => [styles.navRow, pressed && styles.rowPressed]} onPress={onPress}>
     <View style={styles.navLabel}>
       <Ionicons name={icon as any} size={20} color="rgba(255,255,255,0.6)" />
-      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowLabel} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.86}>{label}</Text>
     </View>
     <View style={styles.navValue}>
       {badge ? <ProBadge /> : null}
@@ -594,7 +654,7 @@ const ActionRow = ({ badge, disabled, destructive, icon, label, onPress }: {
   >
     <View style={styles.navLabel}>
       <Ionicons name={icon as any} size={20} color={destructive ? '#fb7185' : 'rgba(255,255,255,0.6)'} />
-      <Text style={[styles.rowLabel, destructive && styles.destructiveText]}>{label}</Text>
+      <Text style={[styles.rowLabel, destructive && styles.destructiveText]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.86}>{label}</Text>
     </View>
     <View style={styles.navValue}>
       {badge ? <ProBadge /> : null}
@@ -612,7 +672,7 @@ const ToggleRow = ({ label, description, value, disabled, onChange }: {
 }) => (
   <View style={[styles.toggleRow, disabled && styles.disabledRow]}>
     <View style={styles.toggleCopy}>
-      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowLabel} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.86}>{label}</Text>
       <Text style={styles.rowDescription}>{description}</Text>
     </View>
     <Switch
@@ -636,7 +696,7 @@ const ChoiceRow = ({ label, description, options, value, lockedValues = [], onCh
 }) => (
   <View style={styles.choiceRow}>
     <View style={styles.toggleCopy}>
-      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowLabel} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.86}>{label}</Text>
       <Text style={styles.rowDescription}>{description}</Text>
     </View>
     <View style={styles.pillsContainer}>
@@ -686,42 +746,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 28, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
-  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 112, gap: 28 },
-  section: { gap: 10 },
-  sectionTitle: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.5)', marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  title: { fontSize: 28, fontWeight: '700', color: '#fff' },
+  content: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 112, gap: 24 },
+  section: { gap: 9 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 4 },
+  sectionTitle: { fontSize: 12, fontWeight: '800', color: 'rgba(255,255,255,0.52)', textTransform: 'uppercase', letterSpacing: 0.6 },
   sectionBody: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.035)',
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.075)',
     overflow: 'hidden',
   },
-  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, minHeight: 56 },
-  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, minHeight: 56 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, minHeight: 54 },
+  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, minHeight: 54 },
   rowPressed: { backgroundColor: 'rgba(255,255,255,0.05)' },
-  navLabel: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  navLabel: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 },
   navValue: { flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: '50%' },
-  rowLabel: { fontSize: 16, fontWeight: '500', color: '#fff' },
+  rowLabel: { fontSize: 15, lineHeight: 20, fontWeight: '700', color: '#fff', flexShrink: 1 },
   destructiveText: { color: '#fb7185' },
-  rowValue: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.6)' },
+  rowValue: { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.58)' },
   infoValue: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.68)', flex: 1, textAlign: 'right', marginLeft: 16 },
-  rowDescription: { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.5)', marginTop: 2, lineHeight: 16 },
+  rowDescription: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.48)', marginTop: 3, lineHeight: 17 },
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginLeft: 16 },
   timeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, minHeight: 64, gap: 12 },
   timeCopy: { flex: 1 },
   timeEditor: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   saveTimeButton: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#f43f5e', borderRadius: 20, minWidth: 60, alignItems: 'center' },
   saveTimeText: { fontSize: 14, fontWeight: '600', color: '#fff' },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, gap: 16 },
   disabledRow: { opacity: 0.5 },
-  toggleCopy: { flex: 1 },
+  toggleCopy: { flex: 1, minWidth: 0 },
   choiceRow: { paddingHorizontal: 16, paddingVertical: 14, gap: 12 },
-  pillsContainer: { flexDirection: 'row', gap: 8, backgroundColor: 'rgba(255,255,255,0.04)', padding: 4, borderRadius: 40 },
-  pill: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 32 },
+  pillsContainer: { flexDirection: 'row', gap: 8, backgroundColor: 'rgba(255,255,255,0.045)', padding: 4, borderRadius: 14 },
+  pill: { flex: 1, paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center', borderRadius: 10 },
   pillContent: { minHeight: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   pillActive: { backgroundColor: '#f43f5e' },
   pillLocked: { opacity: 0.58 },
   pillText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.6)' },
   pillTextActive: { color: '#fff' },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRtl: { textAlign: 'right', writingDirection: 'rtl' },
 });

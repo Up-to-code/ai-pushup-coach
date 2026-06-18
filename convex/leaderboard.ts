@@ -3,6 +3,13 @@ import type { Id } from './_generated/dataModel';
 import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
 import { isPendingDeletion, isPublicUser } from './deletedUsers';
+import { getLeaderboardProfilesFromBetterAuth, type LeaderboardProfile } from './leaderboardProfiles';
+import {
+  filterLeaderboardScope,
+  isRealCountryCode,
+  normalizeCountryCode,
+  rankLeaderboardRows,
+} from './leaderboardLogic';
 
 const comparisonPeriod = v.union(v.literal('W'), v.literal('M'), v.literal('Y'));
 const leaderboardPeriod = v.union(v.literal('W'), v.literal('M'), v.literal('Y'), v.literal('ALL'));
@@ -46,38 +53,60 @@ function getRangeForPeriod(period: ComparisonPeriod, offset = 0, now = Date.now(
   return { start: start.getTime(), end: end.getTime() };
 }
 
+function getStatTime(dayKey: string) {
+  return new Date(`${dayKey}T00:00:00.000Z`).getTime();
+}
+
+function getEffectiveNowForStats(stats: Array<{ dayKey: string }>) {
+  if (stats.length === 0) return Date.now();
+  return Math.max(...stats.map((stat) => getStatTime(stat.dayKey)));
+}
+
+function getEffectiveNowForTimestamps(timestamps: number[]) {
+  if (timestamps.length === 0) return Date.now();
+  return Math.max(...timestamps);
+}
+
 async function scoreUserForPeriod(
   ctx: QueryCtx,
-  userId: Id<'users'>,
+  userId: Id<'users'> | undefined,
   period: LeaderboardPeriod
 ) {
+  if (!userId) return 0;
   if (period === 'ALL') return null;
-  const range = getRangeForPeriod(period);
-  const stats = await ctx.db
-    .query('dailyStats')
-    .withIndex('by_user_day', (q) => q.eq('userId', userId))
-    .take(365);
+  const [stats, workouts] = await Promise.all([
+    ctx.db
+      .query('dailyStats')
+      .withIndex('by_user_day', (q) => q.eq('userId', userId))
+      .take(365),
+    ctx.db
+      .query('workoutResults')
+      .withIndex('by_user_date', (q) => q.eq('userId', userId))
+      .take(1000),
+  ]);
+  const range = getRangeForPeriod(period, 0, getEffectiveNowForStats(stats));
+  const workoutRange = getRangeForPeriod(
+    period,
+    0,
+    getEffectiveNowForTimestamps(workouts.filter((row) => row.completed).map((row) => row.date))
+  );
 
-  return stats
+  const statScore = stats
     .filter((stat) => {
-      const statTime = new Date(stat.dayKey).getTime();
+      const statTime = getStatTime(stat.dayKey);
       return statTime >= range.start && statTime <= range.end;
     })
     .reduce((sum, stat) => sum + stat.reps, 0);
+  const workoutScore = workouts
+    .filter((row) => row.completed && row.date >= workoutRange.start && row.date <= workoutRange.end)
+    .reduce((sum, row) => sum + row.reps, 0);
+
+  return Math.max(statScore, workoutScore);
 }
 
 async function rankUsersForPeriod(
   ctx: QueryCtx,
-  users: Array<{
-    _id: Id<'users'>;
-    clientUserId: string;
-    name: string;
-    displayName?: string;
-    countryCode: string;
-    avatar?: string;
-    totalReps: number;
-    deletionStatus?: 'active' | 'pendingDeletion';
-  }>,
+  users: LeaderboardProfile[],
   period: LeaderboardPeriod,
   limit?: number
 ) {
@@ -90,14 +119,13 @@ async function rankUsersForPeriod(
         displayName: user.displayName,
         countryCode: user.countryCode,
         avatar: user.avatar,
-        totalReps: periodScore ?? user.totalReps,
+        totalReps: user.totalReps,
+        periodScore,
       };
     })
   );
 
-  return rows
-    .sort((a, b) => b.totalReps - a.totalReps)
-    .slice(0, Math.min(limit ?? 25, 100));
+  return rankLeaderboardRows(rows, period, limit);
 }
 
 export const rankedLeaderboard = query({
@@ -109,6 +137,8 @@ export const rankedLeaderboard = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { scope, period = 'W', clientUserId, countryCode, limit }) => {
+    const selectedCountryCode = normalizeCountryCode(countryCode);
+
     if (scope === 'friends') {
       if (!clientUserId) return [];
       await requireMatchingIdentity(ctx, clientUserId);
@@ -144,44 +174,42 @@ export const rankedLeaderboard = query({
     }
 
     if (period === 'ALL') {
-      if (scope === 'country' && countryCode && countryCode !== 'GLOBAL') {
+      if (scope === 'country') {
+        if (!isRealCountryCode(selectedCountryCode)) return [];
         const rows = await ctx.db
           .query('users')
-          .withIndex('by_country_total_reps', (q) => q.eq('countryCode', countryCode))
+          .withIndex('by_country_total_reps', (q) => q.eq('countryCode', selectedCountryCode!))
           .order('desc')
           .take(500);
-        return rows.filter(isPublicUser).slice(0, Math.min(limit ?? 25, 100));
+        return rankLeaderboardRows(rows.filter(isPublicUser), 'ALL', limit);
       }
 
-      const rows = await ctx.db
-        .query('users')
-        .withIndex('by_total_reps')
-        .order('desc')
-        .take(500);
-      return rows.filter(isPublicUser).slice(0, Math.min(limit ?? 25, 100));
+      const rows = await getLeaderboardProfilesFromBetterAuth(ctx, 500);
+      return rankLeaderboardRows(rows.filter(isPublicUser), 'ALL', limit);
     }
 
-    const users =
-      scope === 'country' && countryCode && countryCode !== 'GLOBAL'
-        ? await ctx.db
-            .query('users')
-            .withIndex('by_country_total_reps', (q) => q.eq('countryCode', countryCode))
-            .take(500)
-        : await ctx.db.query('users').take(500);
+    if (scope === 'country') {
+      if (!isRealCountryCode(selectedCountryCode)) return [];
+      const users = await ctx.db
+        .query('users')
+        .withIndex('by_country_total_reps', (q) => q.eq('countryCode', selectedCountryCode!))
+        .order('desc')
+        .take(500);
+      return rankUsersForPeriod(ctx, users.filter(isPublicUser), period, limit);
+    }
 
-    return rankUsersForPeriod(ctx, users.filter(isPublicUser), period, limit);
+    const users = await getLeaderboardProfilesFromBetterAuth(ctx, 500);
+    const scopedUsers = filterLeaderboardScope(users, scope, selectedCountryCode);
+
+    return rankUsersForPeriod(ctx, scopedUsers.filter(isPublicUser), period, limit);
   },
 });
 
 export const globalLeaderboard = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }) => {
-    const rows = await ctx.db
-      .query('users')
-      .withIndex('by_total_reps')
-      .order('desc')
-      .take(500);
-    return rows.filter(isPublicUser).slice(0, Math.min(limit ?? 25, 100));
+    const rows = await getLeaderboardProfilesFromBetterAuth(ctx, 500);
+    return rankLeaderboardRows(rows.filter(isPublicUser), 'ALL', limit);
   },
 });
 
@@ -191,12 +219,14 @@ export const countryLeaderboard = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, { countryCode, limit }) => {
+    const selectedCountryCode = normalizeCountryCode(countryCode);
+    if (!isRealCountryCode(selectedCountryCode)) return [];
     const rows = await ctx.db
       .query('users')
-      .withIndex('by_country_total_reps', (q) => q.eq('countryCode', countryCode))
+      .withIndex('by_country_total_reps', (q) => q.eq('countryCode', selectedCountryCode!))
       .order('desc')
       .take(500);
-    return rows.filter(isPublicUser).slice(0, Math.min(limit ?? 25, 100));
+    return rankLeaderboardRows(rows.filter(isPublicUser), 'ALL', limit);
   },
 });
 
@@ -231,10 +261,11 @@ export const friendsLeaderboard = query({
       .map((row) => row.followerUserId);
 
     const rows = await Promise.all([user._id, ...friendIds].map((id) => ctx.db.get(id)));
-    return rows
-      .filter((row): row is NonNullable<typeof row> => row !== null && isPublicUser(row))
-      .sort((a, b) => b.totalReps - a.totalReps)
-      .slice(0, Math.min(limit ?? 25, 100));
+    return rankLeaderboardRows(
+      rows.filter((row): row is NonNullable<typeof row> => row !== null && isPublicUser(row)),
+      'ALL',
+      limit
+    );
   },
 });
 
@@ -250,11 +281,20 @@ export const countrySnapshot = query({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', clientUserId))
       .unique();
+    const selectedCountryCode = normalizeCountryCode(countryCode);
+    if (!isRealCountryCode(selectedCountryCode)) {
+      return {
+        userScore: user?.totalReps ?? 0,
+        countryAverage: 0,
+        deltaToBeat: 0,
+        countrySize: 0,
+      };
+    }
     const users = (await ctx.db
       .query('users')
-      .withIndex('by_country_total_reps', (q) => q.eq('countryCode', countryCode))
+      .withIndex('by_country_total_reps', (q) => q.eq('countryCode', selectedCountryCode!))
       .order('desc')
-      .take(1000)).filter(isPublicUser);
+      .take(1000)).filter((row) => isPublicUser(row) && row.totalReps > 0);
 
     const countryAverage =
       users.length === 0
@@ -266,6 +306,50 @@ export const countrySnapshot = query({
       countryAverage,
       deltaToBeat: Math.max(0, countryAverage - (user?.totalReps ?? 0)),
       countrySize: users.length,
+    };
+  },
+});
+
+export const debugSnapshot = query({
+  args: {
+    clientUserId: v.string(),
+    countryCode: v.optional(v.string()),
+  },
+  handler: async (ctx, { clientUserId, countryCode }) => {
+    await requireMatchingIdentity(ctx, clientUserId);
+
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_client_user_id', (q) => q.eq('clientUserId', clientUserId))
+      .unique();
+    const authUsers = await getLeaderboardProfilesFromBetterAuth(ctx, 500);
+    const selectedCountryCode = normalizeCountryCode(countryCode ?? user?.countryCode ?? 'GLOBAL') ?? 'GLOBAL';
+    const countryUsers = isRealCountryCode(selectedCountryCode)
+      ? authUsers.filter((row) => row.countryCode === selectedCountryCode)
+      : [];
+    const rankedCountryRows = await rankUsersForPeriod(ctx, countryUsers, 'W', 10);
+    const rankedGlobalRows = await rankUsersForPeriod(ctx, authUsers, 'W', 10);
+
+    return {
+      requestedClientUserId: clientUserId,
+      appUserFound: Boolean(user),
+      appUser: user
+        ? {
+            countryCode: user.countryCode,
+            countryName: user.countryName,
+            totalReps: user.totalReps,
+            bestReps: user.bestReps,
+            updatedAt: user.updatedAt,
+            deletionStatus: user.deletionStatus ?? 'active',
+          }
+        : null,
+      selectedCountryCode,
+      selectedCountryIsReal: isRealCountryCode(selectedCountryCode),
+      authProfilesCount: authUsers.length,
+      selectedCountryProfilesCount: countryUsers.length,
+      currentUserInSelectedCountry: countryUsers.some((row) => row.clientUserId === clientUserId),
+      weekCountryRows: rankedCountryRows,
+      weekGlobalRows: rankedGlobalRows,
     };
   },
 });
@@ -310,7 +394,7 @@ export const friendComparison = query({
       .filter((row) => row.status === 'active' && followingIds.has(row.followerUserId))
       .map((row) => row.followerUserId)
       .slice(0, 100);
-    const range = getRangeForPeriod(period ?? 'W', Math.max(0, Math.min(offset ?? 0, 120)));
+    const requestedPeriod = period ?? 'W';
     const ids = [user._id, ...friendIds].slice(0, Math.min(limit ?? 100, 100));
 
     const rows = await Promise.all(ids.map(async (id) => {
@@ -320,9 +404,14 @@ export const friendComparison = query({
         .query('dailyStats')
         .withIndex('by_user_day', (q) => q.eq('userId', id))
         .take(365);
+      const range = getRangeForPeriod(
+        requestedPeriod,
+        Math.max(0, Math.min(offset ?? 0, 120)),
+        getEffectiveNowForStats(stats)
+      );
       const score = stats
         .filter((stat) => {
-          const statTime = new Date(stat.dayKey).getTime();
+          const statTime = getStatTime(stat.dayKey);
           return statTime >= range.start && statTime <= range.end;
         })
         .reduce((sum, stat) => sum + stat.reps, 0);

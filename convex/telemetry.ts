@@ -3,6 +3,8 @@ import { v } from 'convex/values';
 import { requireMatchingIdentity } from './auth';
 import { assertRateLimit } from './rateLimit';
 import { assertActiveUser } from './deletedUsers';
+import { isRealCountryCode } from './leaderboardLogic';
+import { summarizeFeatureHealth } from './appHealth';
 
 export const logWorkoutEvent = mutation({
   args: {
@@ -33,7 +35,7 @@ export const logWorkoutEvent = mutation({
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', args.clientUserId))
       .unique();
     if (!user) {
-      throw new Error('User must exist before telemetry submission.');
+      return null;
     }
     assertActiveUser(user);
     
@@ -47,8 +49,8 @@ export const logWorkoutEvent = mutation({
       .query('workoutResults')
       .withIndex('by_client_workout_id', (q) => q.eq('clientWorkoutId', args.clientWorkoutId))
       .unique();
-    if (!user || !workout) {
-      throw new Error('User and workout must exist before telemetry submission.');
+    if (!workout) {
+      return null;
     }
 
     return await ctx.db.insert('workoutEvents', {
@@ -86,7 +88,7 @@ export const logFaceTrackingSample = mutation({
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', args.clientUserId))
       .unique();
     if (!user) {
-      throw new Error('User must exist before tracking sample submission.');
+      return null;
     }
     assertActiveUser(user);
 
@@ -100,8 +102,8 @@ export const logFaceTrackingSample = mutation({
       .query('workoutResults')
       .withIndex('by_client_workout_id', (q) => q.eq('clientWorkoutId', args.clientWorkoutId))
       .unique();
-    if (!user || !workout) {
-      throw new Error('User and workout must exist before tracking sample submission.');
+    if (!workout) {
+      return null;
     }
 
     return await ctx.db.insert('faceTrackingSamples', {
@@ -241,6 +243,131 @@ export const recentFaceTrackingIssues = query({
           faceHeight: row.faceHeight,
           timestamp: row.timestamp,
         })),
+    };
+  },
+});
+
+export const appHealthSnapshot = query({
+  args: {
+    clientUserId: v.string(),
+  },
+  handler: async (ctx, { clientUserId }) => {
+    await requireMatchingIdentity(ctx, clientUserId);
+
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_client_user_id', (q) => q.eq('clientUserId', clientUserId))
+      .unique();
+
+    if (!user) {
+      const features = summarizeFeatureHealth({
+        hasUser: false,
+        hasRealCountry: false,
+        hasSettings: false,
+        workoutsCount: 0,
+        completedWorkoutsCount: 0,
+        dailyStatsCount: 0,
+        workoutEventsCount: 0,
+        trackingSamplesCount: 0,
+        challengeCount: 0,
+        challengeMembershipCount: 0,
+        feedbackCount: 0,
+        feedbackVoteCount: 0,
+        followersCount: 0,
+        followingCount: 0,
+        unreadNotificationsCount: 0,
+        posthogConfigured: Boolean(process.env.POSTHOG_API_KEY && process.env.POSTHOG_HOST),
+      });
+
+      return {
+        clientUserId,
+        generatedAt: Date.now(),
+        user: null,
+        counts: null,
+        features,
+      };
+    }
+
+    assertActiveUser(user);
+
+    const [
+      settings,
+      workouts,
+      dailyStats,
+      workoutEvents,
+      trackingSamples,
+      challenges,
+      challengeMemberships,
+      feedbackRequests,
+      feedbackVotes,
+      followers,
+      following,
+      notifications,
+    ] = await Promise.all([
+      ctx.db.query('userSettings').withIndex('by_user_id', (q) => q.eq('userId', user._id)).unique(),
+      ctx.db.query('workoutResults').withIndex('by_user_date', (q) => q.eq('userId', user._id)).take(1000),
+      ctx.db.query('dailyStats').withIndex('by_user_day', (q) => q.eq('userId', user._id)).take(1000),
+      ctx.db.query('workoutEvents').withIndex('by_user_time', (q) => q.eq('userId', user._id)).take(1000),
+      ctx.db.query('faceTrackingSamples').withIndex('by_user_time', (q) => q.eq('userId', user._id)).take(1000),
+      ctx.db.query('challenges').take(1000),
+      ctx.db.query('challengeMembers').withIndex('by_user', (q) => q.eq('userId', user._id)).take(1000),
+      ctx.db.query('feedbackRequests').withIndex('by_author', (q) => q.eq('authorUserId', user._id)).take(1000),
+      ctx.db.query('feedbackVotes').withIndex('by_user', (q) => q.eq('userId', user._id)).take(1000),
+      ctx.db.query('follows').withIndex('by_following', (q) => q.eq('followingUserId', user._id)).take(1000),
+      ctx.db.query('follows').withIndex('by_follower', (q) => q.eq('followerUserId', user._id)).take(1000),
+      ctx.db.query('socialNotifications').withIndex('by_recipient_time', (q) => q.eq('recipientUserId', user._id)).take(1000),
+    ]);
+    const activeFollowers = followers.filter((row) => row.status === 'active').length;
+    const activeFollowing = following.filter((row) => row.status === 'active').length;
+    const unreadNotifications = notifications.filter((row) => !row.readAt).length;
+    const completedWorkouts = workouts.filter((row) => row.completed).length;
+    const features = summarizeFeatureHealth({
+      hasUser: true,
+      hasRealCountry: isRealCountryCode(user.countryCode),
+      hasSettings: Boolean(settings),
+      workoutsCount: workouts.length,
+      completedWorkoutsCount: completedWorkouts,
+      dailyStatsCount: dailyStats.length,
+      workoutEventsCount: workoutEvents.length,
+      trackingSamplesCount: trackingSamples.length,
+      challengeCount: challenges.length,
+      challengeMembershipCount: challengeMemberships.length,
+      feedbackCount: feedbackRequests.length,
+      feedbackVoteCount: feedbackVotes.length,
+      followersCount: activeFollowers,
+      followingCount: activeFollowing,
+      unreadNotificationsCount: unreadNotifications,
+      posthogConfigured: Boolean(process.env.POSTHOG_API_KEY && process.env.POSTHOG_HOST),
+    });
+
+    return {
+      clientUserId,
+      generatedAt: Date.now(),
+      user: {
+        countryCode: user.countryCode,
+        countryName: user.countryName,
+        totalReps: user.totalReps,
+        bestReps: user.bestReps,
+        proStatus: user.proStatus,
+        subscriptionStatus: user.subscriptionStatus,
+        deletionStatus: user.deletionStatus ?? 'active',
+        updatedAt: user.updatedAt,
+      },
+      counts: {
+        workouts: workouts.length,
+        completedWorkouts,
+        dailyStats: dailyStats.length,
+        workoutEvents: workoutEvents.length,
+        trackingSamples: trackingSamples.length,
+        challenges: challenges.length,
+        challengeMemberships: challengeMemberships.length,
+        feedbackRequests: feedbackRequests.length,
+        feedbackVotes: feedbackVotes.length,
+        followers: activeFollowers,
+        following: activeFollowing,
+        unreadNotifications,
+      },
+      features,
     };
   },
 });

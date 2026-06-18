@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useAnalytics } from '../../src/analytics';
 import { useChallenges } from '../../src/features/challenges/hooks';
 import { colors, typography } from '../../src/theme';
 import { useIsScreenFocused, useResponsive } from '../../src/hooks';
 import type { Id } from '../../convex/_generated/dataModel';
+import { useAppLocale } from '../../src/localization';
 
 type ChallengeRowData = {
   _id: Id<'challenges'>;
@@ -20,26 +22,24 @@ type ChallengeRowData = {
 };
 
 export default function ChallengesScreen() {
+  const posthog = useAnalytics();
+  const { t } = useAppLocale();
   const { normalize, horizontalPadding, verticalScale } = useResponsive();
   const isFocused = useIsScreenFocused();
-  const { challenges, loading, canSeedDefaults, seedDefaults, join, leave } = useChallenges(30, isFocused);
+  const { challenges, loading, join, leave } = useChallenges(30, isFocused);
   const [busyId, setBusyId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!loading && canSeedDefaults && challenges?.length === 0) {
-      void seedDefaults().catch((error) => console.warn('Challenge seed failed', error));
-    }
-  }, [canSeedDefaults, challenges, loading, seedDefaults]);
 
   const toggleJoin = async (challenge: ChallengeRowData) => {
     if (busyId) return;
     setBusyId(challenge._id);
+    const eventName = challenge.joined ? 'challenge_left' : 'challenge_joined';
     try {
       if (challenge.joined) {
         await leave(challenge._id);
       } else {
         await join(challenge._id);
       }
+      posthog.capture(eventName, { challenge_id: challenge._id, title: challenge.title, category: challenge.category });
     } catch (error) {
       console.warn('Challenge action failed', error);
     } finally {
@@ -58,7 +58,7 @@ export default function ChallengesScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingHorizontal: normalize(24) }]}
         >
           <View style={[styles.header, { marginBottom: verticalScale(24) }]}>
-            <Text style={[styles.title, { fontSize: normalize(34) }]}>Challenges</Text>
+            <Text style={[styles.title, { fontSize: normalize(34) }]}>{t('challenges.title')}</Text>
           </View>
 
           <View style={styles.list}>
@@ -74,6 +74,7 @@ export default function ChallengesScreen() {
                   busy={busyId === challenge._id}
                   onPress={() => toggleJoin(challenge)}
                   normalize={normalize}
+                  labels={{ done: t('common.done'), join: t('challenges.join'), leave: t('challenges.leave') }}
                 />
               ))
             ) : (
@@ -81,7 +82,7 @@ export default function ChallengesScreen() {
                 <View style={[styles.emptyIcon, { width: normalize(72), height: normalize(72), borderRadius: normalize(36) }]}>
                   <Ionicons name="trophy-outline" size={normalize(32)} color="rgba(255,255,255,0.2)" />
                 </View>
-                <Text style={[styles.stateTitle, { fontSize: normalize(18) }]}>No challenges yet</Text>
+                <Text style={[styles.stateTitle, { fontSize: normalize(18) }]}>{t('challenges.emptyTitle')}</Text>
               </View>
             )}
           </View>
@@ -96,17 +97,19 @@ function ChallengeRow({
   busy,
   onPress,
   normalize,
+  labels,
 }: {
   challenge: ChallengeRowData;
   busy: boolean;
   onPress: () => void;
   normalize: (v: number) => number;
+  labels: { done: string; join: string; leave: string };
 }) {
   const progress = Math.min(1, challenge.progressReps / Math.max(1, challenge.goalReps));
   const progressLabel = `${challenge.progressReps}/${challenge.goalReps}`;
   const completed = Boolean(challenge.completedAt);
 
-  const pillLabel = completed ? 'Done' : challenge.joined ? 'Leave' : 'Join';
+  const pillLabel = completed ? labels.done : challenge.joined ? labels.leave : labels.join;
   const pillColor = completed ? colors.success : '#fff';
   const textColor = completed ? '#fff' : '#000';
 
@@ -169,7 +172,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
   scrollContent: {

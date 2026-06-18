@@ -1,5 +1,4 @@
 export { authClient } from './authClient';
-export { BetterAuthUserSync } from './BetterAuthUserSync';
 export { AuthRoutingGate } from './AuthRoutingGate';
 export { getAuthRedirectTarget } from './authRouteGate';
 export { clearBetterAuthExpoCache } from './betterAuthExpoStorage';

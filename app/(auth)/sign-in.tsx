@@ -13,9 +13,11 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useAnalytics } from '../../src/analytics';
 import { useAuth } from '../../src/auth';
 import { privacyUrl, termsUrl } from '../../src/config/links';
 import { useResponsive } from '../../src/hooks/useResponsive';
+import { useAppLocale } from '../../src/localization';
 import { colors, spacing, typography } from '../../src/theme';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -31,8 +33,10 @@ function isAuthCancel(error: unknown) {
 }
 
 export default function SignInScreen() {
+  const posthog = useAnalytics();
   const auth = useAuth();
   const { normalize } = useResponsive();
+  const { t } = useAppLocale();
   const [signingInProvider, setSigningInProvider] = useState<SocialProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isSigningIn = signingInProvider !== null || auth.authActionStatus !== 'idle';
@@ -51,6 +55,7 @@ export default function SignInScreen() {
   const signInWithSocial = useCallback(async (provider: SocialProvider) => {
     setSigningInProvider(provider);
     setError(null);
+    posthog.capture('sign_in_attempted', { provider });
 
     try {
       const { error } =
@@ -62,15 +67,16 @@ export default function SignInScreen() {
         console.warn('Auth social sign-in error', error);
         throw new Error(error.message || error.code || 'Social sign-in failed.');
       }
+      posthog.capture('sign_in_completed', { provider });
     } catch (err) {
       if (!isAuthCancel(err)) {
         console.warn('OAuth failed', err);
-        setError('Could not finish sign in. Please try again.');
+        setError(t('auth.signInFailed'));
       }
     } finally {
       setSigningInProvider(null);
     }
-  }, [auth]);
+  }, [auth, posthog]);
 
   return (
     <ImageBackground source={require('../../assets/bg.png')} style={styles.root}>
@@ -81,10 +87,10 @@ export default function SignInScreen() {
           <View style={[styles.hero, { paddingHorizontal: normalize(40) }]}>
             <Animated.View entering={FadeInDown.duration(600)} style={styles.titleBlock}>
               <Text style={[styles.headlineSmall, { fontSize: normalize(48), lineHeight: normalize(52) }]}>
-                Ready to{'\n'}start?
+                {t('auth.readyStart')}
               </Text>
               <Text style={[styles.subtitle, { fontSize: normalize(18), lineHeight: normalize(26) }]}>
-                Your plan is ready. Sign in to keep it saved and continue from any device.
+                {t('auth.signInSubtitle')}
               </Text>
             </Animated.View>
           </View>
@@ -110,7 +116,7 @@ export default function SignInScreen() {
                     ) : (
                       <Ionicons name="logo-apple" size={normalize(19)} color="#FFF" />
                     )}
-                    <Text style={[styles.btnLabel, { fontSize: normalize(16) }]}>Continue with Apple</Text>
+                    <Text style={[styles.btnLabel, { fontSize: normalize(16) }]}>{t('auth.continueApple')}</Text>
                   </Pressable>
 
                   <Pressable
@@ -129,7 +135,7 @@ export default function SignInScreen() {
                     ) : (
                       <Ionicons name="logo-google" size={normalize(19)} color="#111" />
                     )}
-                    <Text style={[styles.btnLabel, styles.btnLabelDark, { fontSize: normalize(16) }]}>Continue with Google</Text>
+                    <Text style={[styles.btnLabel, styles.btnLabelDark, { fontSize: normalize(16) }]}>{t('auth.continueGoogle')}</Text>
                   </Pressable>
 
                 </View>
@@ -137,13 +143,13 @@ export default function SignInScreen() {
                 {error ? <Text style={styles.error}>{error}</Text> : null}
 
                 <View style={styles.legal}>
-                  <Text style={[styles.legalTxt, { fontSize: normalize(12) }]}>By continuing, you agree to the </Text>
+                  <Text style={[styles.legalTxt, { fontSize: normalize(12) }]}>{t('auth.legalPrefix')}</Text>
                   <Pressable onPress={() => openLegalLink(termsUrl)}>
-                    <Text style={[styles.legalLink, { fontSize: normalize(12) }]}>Terms</Text>
+                    <Text style={[styles.legalLink, { fontSize: normalize(12) }]}>{t('auth.terms')}</Text>
                   </Pressable>
-                  <Text style={[styles.legalTxt, { fontSize: normalize(12) }]}> and </Text>
+                  <Text style={[styles.legalTxt, { fontSize: normalize(12) }]}>{t('auth.legalMiddle')}</Text>
                   <Pressable onPress={() => openLegalLink(privacyUrl)}>
-                    <Text style={[styles.legalLink, { fontSize: normalize(12) }]}>Privacy</Text>
+                    <Text style={[styles.legalLink, { fontSize: normalize(12) }]}>{t('auth.privacy')}</Text>
                   </Pressable>
                 </View>
               </Animated.View>
@@ -157,7 +163,7 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.4)' },
   safe: { flex: 1 },
   page: { flex: 1, justifyContent: 'space-between' },
   hero: { flex: 1, justifyContent: 'center', alignItems: 'flex-start' },

@@ -3,10 +3,12 @@ import { convex } from '@convex-dev/better-auth/plugins';
 import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import type { BetterAuthOptions } from 'better-auth';
+import { anyApi } from 'convex/server';
 import { components } from './_generated/api';
 import type { DataModel } from './_generated/dataModel';
 import type { MutationCtx, QueryCtx } from './_generated/server';
 import authConfig from './auth.config';
+import { ensureAppUserFromBetterAuthUser } from './leaderboardProfiles';
 
 const siteUrl = process.env.SITE_URL ?? process.env.CONVEX_SITE_URL;
 
@@ -60,7 +62,22 @@ function getTrustedOrigins() {
   return Array.from(new Set(origins));
 }
 
-export const authComponent = createClient<DataModel>(components.betterAuth);
+export const authComponent = createClient<DataModel>(components.betterAuth, {
+  authFunctions: {
+    onCreate: (anyApi as any).auth.onCreate,
+    onUpdate: (anyApi as any).auth.onUpdate,
+  },
+  triggers: {
+    user: {
+      onCreate: async (ctx, authUser) => {
+        await ensureAppUserFromBetterAuthUser(ctx, authUser);
+      },
+      onUpdate: async (ctx, newUser) => {
+        await ensureAppUserFromBetterAuthUser(ctx, newUser);
+      },
+    },
+  },
+});
 
 type AppleProfileLike = {
   sub?: string | null;
@@ -132,6 +149,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) =>
   });
 
 export const { getAuthUser } = authComponent.clientApi();
+export const { onCreate, onUpdate } = authComponent.triggersApi();
 
 export async function requireMatchingIdentity(
   ctx: MutationCtx | QueryCtx,

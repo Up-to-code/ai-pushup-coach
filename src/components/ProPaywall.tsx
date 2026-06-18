@@ -1,6 +1,7 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  ImageBackground,
   Linking,
   Pressable,
   ScrollView,
@@ -14,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { type AdaptyPaywallProduct } from 'react-native-adapty';
 import { type ProductIdentifierKey } from '../subscriptions/config';
 import { privacyUrl, termsUrl } from '../config/links';
+import { useAppLocale, type TranslationKey } from '../localization';
+
+const PAYWALL_BACKGROUND = require('../../assets/auth-bg.png');
 
 export type ProPaywallProps = {
   busyKey: ProductIdentifierKey | 'restore' | null;
@@ -25,6 +29,18 @@ export type ProPaywallProps = {
   isScreen?: boolean;
 };
 
+type Benefit = {
+  icon: keyof typeof Ionicons.glyphMap;
+  labelKey: TranslationKey;
+};
+
+const BENEFITS: Benefit[] = [
+  { icon: 'camera-outline', labelKey: 'paywall.benefit.camera' },
+  { icon: 'fitness-outline', labelKey: 'paywall.benefit.plans' },
+  { icon: 'stats-chart-outline', labelKey: 'paywall.benefit.progress' },
+  { icon: 'scan-outline', labelKey: 'paywall.benefit.fullScene' },
+];
+
 export function ProPaywall({
   busyKey,
   message,
@@ -35,8 +51,9 @@ export function ProPaywall({
   isScreen = false,
 }: ProPaywallProps) {
   const { height, width } = useWindowDimensions();
-  const isTinyHeight = height < 680;
-  const isNarrowWidth = width < 390;
+  const { isRTL, t } = useAppLocale();
+  const isTinyHeight = height < 700;
+  const isNarrowWidth = width < 380;
 
   const options = useMemo(
     () =>
@@ -60,482 +77,509 @@ export function ProPaywall({
   }, [defaultSelectedKey]);
 
   const selectedOption = options.find((option) => option.key === selectedKey) ?? options[0] ?? null;
-  const selectedCtaText = selectedOption ? getPrimaryCtaText(selectedOption.key, selectedOption.product) : 'Continue';
+  const selectedCtaText = selectedOption
+    ? t('paywall.ctaWithPrice', { price: getProductPrice(selectedOption.product) })
+    : t('paywall.choosePlan');
 
   return (
-    <SafeAreaView edges={['bottom', 'top']} style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        style={styles.scrollView}
-      >
-        <View style={styles.paywallCard}>
-          <View style={styles.paywallHeader}>
-            <View style={styles.proBadgeHeader}>
-              <Ionicons name="diamond" size={12} color="#ff4d6d" />
-              <Text style={styles.proBadgeHeaderText}>Try premium</Text>
-            </View>
+    <ImageBackground source={PAYWALL_BACKGROUND} resizeMode="cover" style={styles.background}>
+      <View style={styles.blackout} />
+      <View style={styles.sideShade} />
+      <SafeAreaView edges={['bottom', 'top']} style={styles.container}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.scrollContent,
+            isTinyHeight && styles.scrollContentCompact,
+            isScreen && styles.screenScrollContent,
+          ]}
+          style={styles.scrollView}
+        >
+          <View style={styles.contentWrap}>
             {!isScreen && (
-              <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="rgba(255, 255, 255, 0.42)" />
+              <Pressable
+                accessibilityLabel={t('common.close')}
+                accessibilityRole="button"
+                onPress={onClose}
+                style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+              >
+                <Ionicons name="close" size={20} color="#ffffff" />
               </Pressable>
             )}
-          </View>
 
-          <View style={styles.paywallIntro}>
-            <Text style={[styles.paywallTitle, isTinyHeight && styles.paywallTitleTiny]}>
-              Master your push-ups.
-            </Text>
-          </View>
+            <View style={[styles.heroCopy, isRTL && styles.rtlBlock]}>
+              <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.78}
+                numberOfLines={2}
+                style={[styles.title, isTinyHeight && styles.titleCompact, isRTL && styles.rtlText]}
+              >
+                {t('paywall.title')}
+              </Text>
+              <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                numberOfLines={3}
+                style={[styles.subtitle, isRTL && styles.rtlText]}
+              >
+                {t('paywall.subtitle')}
+              </Text>
+            </View>
 
-          <View style={styles.benefitsList}>
-            <BenefitItem
-              icon="calendar-outline"
-              title="Custom Plans"
-              description="Rebuild your schedule anytime."
-            />
-            <BenefitItem
-              icon="camera-outline"
-              title="Full Scene"
-              description="Rep detection from any angle."
-            />
-            <BenefitItem
-              icon="stats-chart-outline"
-              title="Deep History"
-              description="Monthly and yearly progress."
-            />
-          </View>
-
-          <View style={styles.productList}>
-            {options.map(({ key, product }) => {
-              const priceLabel = getProductPriceWithPeriod(product, key);
-              const usesStackedPrice = isNarrowWidth || priceLabel.length >= 16;
-
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={busyKey !== null}
-                  key={product.vendorProductId}
-                  onPress={() => setSelectedKey(key)}
-                  style={({ pressed }: { pressed: boolean }) => [
-                    styles.productButton,
-                    selectedKey === key && styles.selectedProductButton,
-                    pressed && styles.pressedButton,
-                  ]}
-                >
-                  <View style={[styles.selectionDot, selectedKey === key && styles.selectionDotActive]}>
-                    {selectedKey === key && <View style={styles.selectionDotInner} />}
-                  </View>
-                  <View style={styles.productContent}>
-                    <View style={[styles.productHeaderRow, usesStackedPrice && styles.productHeaderStacked]}>
-                      <View style={styles.productTextWrap}>
-                        <Text style={styles.productTitle} numberOfLines={1}>
-                          {getPlanName(key)}
-                        </Text>
-                        <Text style={styles.productSubtitle} numberOfLines={1}>
-                          {getProductSubtitle(product, key)}
-                        </Text>
-                      </View>
-                      <View style={[styles.priceWrap, usesStackedPrice && styles.priceWrapStacked]}>
-                        <Text
-                          adjustsFontSizeToFit
-                          minimumFontScale={0.7}
-                          numberOfLines={1}
-                          style={[
-                            styles.priceText,
-                            priceLabel.length >= 16 && styles.priceTextLong,
-                            usesStackedPrice && styles.priceTextStacked,
-                          ]}
-                        >
-                          {priceLabel}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {message ? <Text style={styles.paywallMessage} numberOfLines={2}>{message}</Text> : null}
-
-          <View style={styles.ctaContainer}>
-            <Pressable
-              accessibilityRole="button"
-              disabled={!selectedOption || busyKey !== null}
-              onPress={() => {
-                if (selectedOption) {
-                  void onPurchase(selectedOption.key, selectedOption.product);
-                }
-              }}
-              style={({ pressed }: { pressed: boolean }) => [
-                styles.primaryCta,
-                (!selectedOption || busyKey !== null) && styles.disabledButton,
-                pressed && styles.pressedButton,
-              ]}
-            >
-              {selectedOption && busyKey === selectedOption.key ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text adjustsFontSizeToFit minimumFontScale={0.76} numberOfLines={1} style={styles.primaryCtaText}>
-                  {selectedCtaText}
-                </Text>
-              )}
-            </Pressable>
-
-            <Text style={styles.trialInfo}>
-              {selectedOption ? getSubscriptionTermsText(selectedOption.key, selectedOption.product) : 'Choose a plan to continue.'}
-            </Text>
-          </View>
-
-          <View style={styles.paywallFooter}>
-            <Pressable
-              accessibilityRole="button"
-              disabled={busyKey !== null}
-              onPress={onRestore}
-              style={styles.restoreButton}
-            >
-              {busyKey === 'restore' ? (
-                <ActivityIndicator color="#f43f5e" />
-              ) : (
-                <Text style={styles.restoreText}>Restore purchases</Text>
-              )}
-            </Pressable>
-            <View style={styles.legalLinks}>
-              <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(termsUrl); }}>
-                <Text style={styles.legalLinkText}>Terms of Use</Text>
-              </Pressable>
-              <Text style={styles.legalSeparator}>·</Text>
-              <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(privacyUrl); }}>
-                <Text style={styles.legalLinkText}>Privacy Policy</Text>
-              </Pressable>
+            <View style={styles.benefitsList}>
+              {BENEFITS.map((benefit) => (
+                <BenefitItem
+                  icon={benefit.icon}
+                  isRTL={isRTL}
+                  key={benefit.labelKey}
+                  label={t(benefit.labelKey)}
+                />
+              ))}
             </View>
           </View>
+        </ScrollView>
+
+        <View style={styles.purchasePanel}>
+          <View style={styles.productList}>
+            {options.map(({ key, product }) => (
+              <PlanOption
+                busy={busyKey !== null}
+                isRTL={isRTL}
+                isSelected={selectedKey === key}
+                key={product.vendorProductId}
+                narrow={isNarrowWidth}
+                onPress={() => setSelectedKey(key)}
+                planName={t(key === 'yearly' ? 'paywall.yearlyPlan' : 'paywall.monthlyPlan')}
+                price={getProductPriceWithPeriod(product, key, t)}
+                badge={key === 'yearly' ? t('paywall.bestValue') : null}
+              />
+            ))}
+
+            {options.length === 0 ? (
+              <View style={styles.loadingProducts}>
+                <ActivityIndicator color="#f43f5e" />
+                <Text style={styles.loadingProductsText}>{t('paywall.loadingProducts')}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {message ? (
+            <Text style={styles.message} numberOfLines={2}>
+              {message}
+            </Text>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={!selectedOption || busyKey !== null}
+            onPress={() => {
+              if (selectedOption) {
+                void onPurchase(selectedOption.key, selectedOption.product);
+              }
+            }}
+            style={({ pressed }) => [
+              styles.primaryCta,
+              (!selectedOption || busyKey !== null) && styles.disabled,
+              pressed && styles.pressed,
+            ]}
+          >
+            {selectedOption && busyKey === selectedOption.key ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text adjustsFontSizeToFit minimumFontScale={0.76} numberOfLines={1} style={styles.primaryCtaText}>
+                {selectedCtaText}
+              </Text>
+            )}
+          </Pressable>
+
+          <Text style={[styles.disclosure, isRTL && styles.rtlText]} numberOfLines={3}>
+            {t('paywall.subscriptionDisclosure')}
+          </Text>
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={busyKey !== null}
+            onPress={onRestore}
+            style={styles.restoreButton}
+          >
+            {busyKey === 'restore' ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={styles.footerLinkText}>{t('paywall.restore')}</Text>
+            )}
+          </Pressable>
+
+          <View style={[styles.legalLinks, isRTL && styles.rowReverse]}>
+            <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(privacyUrl); }} style={styles.footerLink}>
+              <Text style={styles.footerLinkText}>{t('paywall.privacy')}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL(termsUrl); }} style={styles.footerLink}>
+              <Text style={styles.footerLinkText}>{t('paywall.terms')}</Text>
+            </Pressable>
+          </View>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
-function BenefitItem({ icon, title, description }: { icon: any; title: string; description: string }) {
+function BenefitItem({
+  icon,
+  isRTL,
+  label,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  isRTL: boolean;
+  label: string;
+}) {
   return (
-    <View style={styles.benefitItem}>
-      <View style={styles.benefitIconContainer}>
-        <Ionicons name={icon} size={18} color="#ff4d6d" />
+    <View style={[styles.benefitItem, isRTL && styles.rowReverse]}>
+      <View style={styles.checkCircle}>
+        <Ionicons name={icon} size={13} color="#f43f5e" />
       </View>
-      <View style={styles.benefitTextContainer}>
-        <Text style={styles.benefitTitle}>
-          {title} <Text style={styles.benefitDescription}>{description}</Text>
-        </Text>
-      </View>
+      <Text style={[styles.benefitText, isRTL && styles.rtlText]}>{label}</Text>
     </View>
   );
 }
 
-function getPlanName(key: ProductIdentifierKey): string {
-  return key === 'yearly' ? 'Yearly' : 'Monthly';
-}
-
-function getProductSubtitle(product: AdaptyPaywallProduct, key: ProductIdentifierKey): string {
-  const freeTrialPhase = product.subscription?.offer?.phases.find((phase) => phase.paymentMode === 'free_trial');
-  const trialPeriod = freeTrialPhase?.localizedNumberOfPeriods ?? freeTrialPhase?.localizedSubscriptionPeriod;
-  const trialLabel = trialPeriod ? `${trialPeriod} free, then billed yearly.` : '3 days free, then billed yearly.';
-
-  return key === 'yearly'
-    ? `${trialLabel} Renews automatically.`
-    : 'Billed monthly. Renews automatically.';
-}
-
-function getPrimaryCtaText(key: ProductIdentifierKey, product: AdaptyPaywallProduct): string {
-  return `Subscribe for ${getProductPriceWithPeriod(product, key)}`;
+function PlanOption({
+  badge,
+  busy,
+  isRTL,
+  isSelected,
+  narrow,
+  onPress,
+  planName,
+  price,
+}: {
+  badge: string | null;
+  busy: boolean;
+  isRTL: boolean;
+  isSelected: boolean;
+  narrow: boolean;
+  onPress: () => void;
+  planName: string;
+  price: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={busy}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.planButton,
+        isSelected && styles.planButtonSelected,
+        pressed && styles.pressed,
+      ]}
+    >
+      {badge ? (
+        <View style={[styles.bestBadge, isRTL ? styles.bestBadgeLeft : styles.bestBadgeRight]}>
+          <Text adjustsFontSizeToFit minimumFontScale={0.72} numberOfLines={1} style={styles.bestBadgeText}>
+            {badge}
+          </Text>
+        </View>
+      ) : null}
+      <View style={[styles.planRow, isRTL && styles.rowReverse, narrow && styles.planRowNarrow]}>
+        <Text adjustsFontSizeToFit minimumFontScale={0.75} numberOfLines={1} style={[styles.planName, isRTL && styles.rtlText]}>
+          {planName}
+        </Text>
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.65}
+          numberOfLines={narrow ? 2 : 1}
+          style={[styles.planPrice, isRTL && styles.rtlText]}
+        >
+          {price}
+        </Text>
+      </View>
+    </Pressable>
+  );
 }
 
 function getProductPrice(product: AdaptyPaywallProduct): string {
-  return product.price?.localizedString ?? 'Continue';
+  return product.price?.localizedString ?? '';
 }
 
-function getProductPriceWithPeriod(product: AdaptyPaywallProduct, key: ProductIdentifierKey): string {
-  const price = product.price?.localizedString;
-  const period = key === 'yearly' ? 'year' : 'month';
-
-  return price ? `${price}/${period}` : getPlanName(key);
-}
-
-function getSubscriptionTermsText(key: ProductIdentifierKey, product: AdaptyPaywallProduct): string {
+function getProductPriceWithPeriod(
+  product: AdaptyPaywallProduct,
+  key: ProductIdentifierKey,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+): string {
   const price = getProductPrice(product);
-
-  if (key === 'yearly') {
-    return `${price}/year after 3-day free trial. Renews automatically until canceled.`;
-  }
-
-  return `${price}/month. Renews automatically until canceled.`;
+  const period = t(key === 'yearly' ? 'paywall.perYear' : 'paywall.perMonth');
+  return price ? t('paywall.pricePerPeriod', { price, period }) : t(key === 'yearly' ? 'paywall.yearlyPlan' : 'paywall.monthlyPlan');
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  blackout: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.58)',
+  },
+  sideShade: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.18)',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#000',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    alignItems: 'center',
-    paddingBottom: 40,
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: 310,
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 18,
   },
-  paywallCard: {
+  screenScrollContent: {
+    paddingTop: 28,
+  },
+  scrollContentCompact: {
+    paddingBottom: 286,
+  },
+  contentWrap: {
     maxWidth: 520,
     width: '100%',
-  },
-  paywallHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 20,
-  },
-  proBadgeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 77, 109, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 99,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 77, 109, 0.2)',
-  },
-  proBadgeHeaderText: {
-    color: '#ff4d6d',
-    fontSize: 11,
-    fontWeight: '900',
+    alignSelf: 'center',
   },
   closeButton: {
     alignItems: 'center',
-    height: 32,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(18, 18, 18, 0.76)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 17,
+    borderWidth: 1,
+    height: 34,
     justifyContent: 'center',
-    width: 32,
+    marginBottom: 24,
+    width: 34,
   },
-  paywallIntro: {
-    marginBottom: 8,
+  heroCopy: {
+    alignItems: 'flex-start',
+    marginBottom: 18,
   },
-  paywallTitle: {
+  title: {
     color: '#ffffff',
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '900',
-    lineHeight: 38,
-    marginBottom: 8,
+    letterSpacing: 0,
+    lineHeight: 34,
+    maxWidth: 360,
   },
-  paywallTitleTiny: {
+  titleCompact: {
     fontSize: 27,
     lineHeight: 31,
-    marginBottom: 6,
+  },
+  subtitle: {
+    color: 'rgba(255, 255, 255, 0.84)',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 16,
+    marginTop: 8,
+    maxWidth: 390,
   },
   benefitsList: {
-    gap: 12,
-    marginBottom: 28,
-    marginTop: 12,
-  },
-  benefitItem: {
-    flexDirection: 'row',
-    gap: 16,
-    alignItems: 'flex-start',
-  },
-  benefitIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 77, 109, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 77, 109, 0.15)',
-  },
-  benefitTextContainer: {
-    flex: 1,
-  },
-  benefitTitle: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
-    lineHeight: 18,
-    marginBottom: 2,
-  },
-  benefitDescription: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontWeight: '500',
-    fontSize: 13,
-  },
-  productList: {
-    gap: 12,
-    marginBottom: 32,
-  },
-  productButton: {
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 16,
-    justifyContent: 'space-between',
-    minHeight: 72,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  selectedProductButton: {
-    borderColor: '#ff4d6d',
-    borderWidth: 2,
-  },
-  pressedButton: {
-    opacity: 0.82,
-  },
-  selectionDot: {
-    flexShrink: 0,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 12,
-    borderWidth: 2,
-    height: 24,
-    width: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selectionDotActive: {
-    backgroundColor: '#ff4d6d',
-    borderColor: '#ff4d6d',
-  },
-  selectionDotInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ffffff',
-  },
-  productTextWrap: {
-    flex: 1,
-    minWidth: 0,
-  },
-  productContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  productHeaderRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-  },
-  productHeaderStacked: {
-    alignItems: 'flex-start',
-    flexDirection: 'column',
-    gap: 8,
-  },
-  productTitle: {
-    color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '900',
-  },
-  productSubtitle: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 13,
-    fontWeight: '600',
+    gap: 9,
     marginTop: 2,
   },
-  priceWrap: {
-    alignItems: 'flex-end',
-    flexShrink: 1,
+  benefitItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  checkCircle: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    height: 20,
     justifyContent: 'center',
-    maxWidth: '58%',
-    minWidth: 0,
+    width: 20,
   },
-  priceWrapStacked: {
-    alignItems: 'flex-start',
-    maxWidth: '100%',
-    width: '100%',
-  },
-  priceText: {
+  benefitText: {
     color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '900',
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 17,
   },
-  priceTextLong: {
-    fontSize: 18,
+  purchasePanel: {
+    backgroundColor: 'rgba(0, 0, 0, 0.94)',
+    borderTopColor: 'rgba(255, 255, 255, 0.16)',
+    borderTopWidth: 1,
+    bottom: 0,
+    left: 0,
+    paddingBottom: 10,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    position: 'absolute',
+    right: 0,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.36,
+    shadowRadius: 18,
   },
-  priceTextStacked: {
-    lineHeight: 24,
+  productList: {
+    alignSelf: 'center',
+    gap: 10,
+    maxWidth: 520,
     width: '100%',
   },
-  paywallMessage: {
-    backgroundColor: 'rgba(252, 165, 165, 0.08)',
-    borderColor: 'rgba(252, 165, 165, 0.18)',
-    borderRadius: 12,
+  planButton: {
+    borderColor: 'rgba(255, 255, 255, 0.38)',
+    borderRadius: 7,
     borderWidth: 1,
-    color: '#fca5a5',
-    fontSize: 12,
-    fontWeight: '800',
-    lineHeight: 16,
-    marginBottom: 10,
+    minHeight: 48,
+    justifyContent: 'center',
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
-  ctaContainer: {
-    marginTop: 10,
-    gap: 16,
+  planButtonSelected: {
+    borderColor: '#f43f5e',
+  },
+  planRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  planRowNarrow: {
+    alignItems: 'flex-start',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  planName: {
+    color: '#ffffff',
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  planPrice: {
+    color: '#ffffff',
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: '900',
+    textAlign: 'right',
+  },
+  bestBadge: {
+    backgroundColor: '#3b82f6',
+    borderRadius: 4,
+    maxWidth: 118,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    position: 'absolute',
+    top: -10,
+  },
+  bestBadgeRight: {
+    right: 10,
+  },
+  bestBadgeLeft: {
+    left: 10,
+  },
+  bestBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  loadingProducts: {
+    alignItems: 'center',
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+    minHeight: 58,
+  },
+  loadingProductsText: {
+    color: 'rgba(255, 255, 255, 0.72)',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  message: {
+    alignSelf: 'center',
+    color: '#fecdd3',
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 16,
+    marginTop: 8,
+    maxWidth: 520,
+    textAlign: 'center',
+    width: '100%',
   },
   primaryCta: {
     alignItems: 'center',
-    backgroundColor: '#ff4d6d',
-    borderRadius: 16,
+    alignSelf: 'center',
+    backgroundColor: '#f43f5e',
+    borderRadius: 7,
+    height: 50,
     justifyContent: 'center',
-    minHeight: 56,
-    paddingHorizontal: 16,
+    marginTop: 10,
+    maxWidth: 520,
+    width: '100%',
   },
   primaryCtaText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '900',
     textAlign: 'center',
     width: '100%',
   },
-  disabledButton: {
-    opacity: 0.64,
-  },
-  trialInfo: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 13,
+  disclosure: {
+    alignSelf: 'center',
+    color: 'rgba(255, 255, 255, 0.58)',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 13,
+    marginTop: 8,
+    maxWidth: 520,
     textAlign: 'center',
-    fontWeight: '600',
-  },
-  paywallFooter: {
-    marginTop: 24,
-    gap: 8,
+    width: '100%',
   },
   restoreButton: {
     alignItems: 'center',
-    minHeight: 34,
+    alignSelf: 'center',
     justifyContent: 'center',
-  },
-  restoreText: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontSize: 14,
-    fontWeight: '600',
+    minHeight: 24,
+    minWidth: 92,
   },
   legalLinks: {
     alignItems: 'center',
+    alignSelf: 'center',
     flexDirection: 'row',
-    gap: 8,
+    gap: 34,
     justifyContent: 'center',
-    marginTop: 8,
-    minHeight: 22,
+    minHeight: 24,
   },
-  legalLinkText: {
-    color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 12,
-    fontWeight: '600',
+  footerLink: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 24,
+    minWidth: 70,
   },
-  legalSeparator: {
-    color: 'rgba(255, 255, 255, 0.2)',
-    fontSize: 12,
-    fontWeight: '900',
+  footerLinkText: {
+    color: 'rgba(255, 255, 255, 0.72)',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  disabled: {
+    opacity: 0.58,
+  },
+  pressed: {
+    opacity: 0.78,
+  },
+  rowReverse: {
+    flexDirection: 'row-reverse',
+  },
+  rtlBlock: {
+    alignItems: 'flex-end',
+  },
+  rtlText: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
 });

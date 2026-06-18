@@ -3,7 +3,7 @@
     "name": "Push Counter",
     "slug": "push-counter",
     "scheme": "pushcounter",
-    "version": "1.0.2",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -20,11 +20,14 @@
         "com.apple.security.application-groups": [
           "group.com.aipushupcoach.app"
         ],
-        "com.apple.developer.applesignin": ["Default"]
+        "com.apple.developer.applesignin": ["Default"],
+        "com.apple.developer.healthkit": true
       },
       "infoPlist": {
         "CFBundleDisplayName": "Push Counter",
         "NSCameraUsageDescription": "Push Counter uses the camera during live workouts to track push-up movement and count reps. Workout video is not saved to your photo library.",
+        "NSHealthShareUsageDescription": "Push Counter connects to Apple Health only when you choose to read workout activity for progress tracking.",
+        "NSHealthUpdateUsageDescription": "Push Counter connects to Apple Health only when you choose to save completed push-up workouts.",
         "NSMicrophoneUsageDescription": "Push Counter does not use microphone audio for workout tracking.",
         "NSPhotoLibraryUsageDescription": "Push Counter uses photo library access only when you choose a profile picture.",
         "NSPhotoLibraryAddUsageDescription": "Push Counter saves selected profile pictures only when you choose to update your avatar.",
@@ -51,7 +54,15 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
+      "expo-localization",
       "expo-notifications",
+      [
+        "react-native-health",
+        {
+          "healthSharePermission": "Push Counter connects to Apple Health only when you choose to read workout activity for progress tracking.",
+          "healthUpdatePermission": "Push Counter connects to Apple Health only when you choose to save completed push-up workouts."
+        }
+      ],
       "react-native-adapty",
       [
         "expo-secure-store",
@@ -73,7 +84,7 @@
             "minSdkVersion": 24
           },
           "ios": {
-            "deploymentTarget": "15.1"
+            "deploymentTarget": "16.4"
           }
         }
       ]

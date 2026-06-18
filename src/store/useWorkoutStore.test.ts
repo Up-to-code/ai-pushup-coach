@@ -60,6 +60,17 @@ describe('useWorkoutStore finish flow', () => {
     expect(nextState.lastCompletedWorkout?.reps).toBe(3);
   });
 
+  it('marks a completed workout as exported to Apple Health', () => {
+    useWorkoutStore.getState().startWorkout('open', 'faceFocus', 10);
+    useWorkoutStore.getState().incrementReps();
+    const finished = useWorkoutStore.getState().finishWorkout(true, { duration: 12 });
+
+    useWorkoutStore.getState().markWorkoutAppleHealthSynced(finished?.id ?? '', 1234);
+
+    expect(useWorkoutStore.getState().workouts[0].appleHealthSyncedAt).toBe(1234);
+    expect(useWorkoutStore.getState().lastCompletedWorkout?.appleHealthSyncedAt).toBe(1234);
+  });
+
   it('does not create a duplicate workout if finish is called again after session close', () => {
     useWorkoutStore.getState().startWorkout('open', 'faceFocus', 10);
     useWorkoutStore.getState().incrementReps();

@@ -8,18 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {
-  ActivityIndicator,
-  Linking,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Modal } from 'react-native';
 import { type AdaptyPaywallProduct, type AdaptyProfile } from 'react-native-adapty';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -32,18 +21,15 @@ import {
   getSubscriptionMetadata,
   getSubscriptionErrorMessage,
   isPushupCoachPro,
-  logPaywallShown,
   purchaseProProduct,
   restorePurchases,
   type SubscriptionMetadata,
 } from './adapty';
+import { ProPaywall } from '../components/ProPaywall';
+import { useAnalytics } from '../analytics';
 import { FORCE_PRO_FOR_TESTING, IS_ADAPTY_CONFIGURED, ProductIdentifierKey } from './config';
 import { useBetterAuth } from '../auth';
-import { privacyUrl, termsUrl } from '../config/links';
 import { useUserStore, type User } from '../store';
-import { ProPaywall } from '../components';
-
-const DEFAULT_TRIAL_LABEL = '3-day free trial';
 
 const signedOutSubscriptionMetadata = (): SubscriptionMetadata => ({
   proStatus: 'free',
@@ -83,6 +69,7 @@ type SubscriptionContextValue = {
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
 
 export function SubscriptionProvider({ children }: PropsWithChildren) {
+  const posthog = useAnalytics();
   const { isLoaded: authLoaded, isSignedIn, userId } = useBetterAuth();
   const appUserID = isSignedIn && userId ? userId : null;
   const accountUser = useUserStore((state) => state.user);
@@ -362,9 +349,49 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     }
   }, [appUserID, applyProfile, applySubscriptionMetadata, isForcedPro, subscriptionUserID]);
 
+  const purchaseFromPaywall = useCallback(
+    async (productKey: ProductIdentifierKey, product: AdaptyPaywallProduct) => {
+      setPaywallBusyKey(productKey);
+      setPaywallMessage(null);
+      posthog.capture('subscription_purchase_started', { vendor_product_id: product.vendorProductId });
+
+      try {
+        await buyPackage(product);
+        posthog.capture('subscription_purchased', { vendor_product_id: product.vendorProductId });
+        setPaywallVisible(false);
+      } catch (purchaseError) {
+        const message = getSubscriptionErrorMessage(purchaseError, 'Purchase failed. Please try again.');
+        posthog.capture('subscription_purchase_failed', {
+          vendor_product_id: product.vendorProductId,
+          message,
+        });
+        setPaywallMessage(message);
+      } finally {
+        setPaywallBusyKey(null);
+      }
+    },
+    [buyPackage, posthog]
+  );
+
+  const restoreFromPaywall = useCallback(async () => {
+    setPaywallBusyKey('restore');
+    setPaywallMessage(null);
+
+    try {
+      await restore();
+      posthog.capture('subscription_restored');
+      setPaywallVisible(false);
+    } catch (restoreError) {
+      const message = getSubscriptionErrorMessage(restoreError, 'Unable to restore purchases.');
+      posthog.capture('subscription_restore_failed', { message });
+      setPaywallMessage(message);
+    } finally {
+      setPaywallBusyKey(null);
+    }
+  }, [posthog, restore]);
+
   const showPaywall = useCallback(async () => {
     setError(null);
-    setPaywallMessage(null);
 
     if (isForcedPro) {
       applySubscriptionMetadata({
@@ -388,86 +415,38 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         return true;
       }
 
-      const { paywall, products: nextProducts } = await getCurrentPaywallProducts();
+      const { products: nextProducts } = await getCurrentPaywallProducts();
       setProducts(nextProducts);
       setProductPackages(getConfiguredProducts(nextProducts));
-
-      if (!nextProducts.length) {
-        throw new Error(getProductsUnavailableMessage());
-      }
-
-      await logPaywallShown(paywall);
+      setPaywallMessage(null);
       setPaywallVisible(true);
+      posthog.capture('paywall_viewed', { source: 'native_custom' });
       return false;
     } catch (paywallError) {
       const message = getSubscriptionErrorMessage(paywallError, 'Unable to open the paywall.');
       setError(message);
-      setPaywallMessage(message);
       throw new Error(message);
     }
-  }, [accountCanRefreshFromAdapty, accountIsPro, appUserID, applyProfile, applySubscriptionMetadata, isForcedPro, subscriptionUserID]);
-
-  const purchaseFromPaywall = useCallback(
-    async (productKey: ProductIdentifierKey, product: AdaptyPaywallProduct) => {
-      setPaywallBusyKey(productKey);
-      setPaywallMessage(null);
-
-      try {
-        const currentProfile = await configureSubscriptions(subscriptionUserID);
-        applyProfile(currentProfile, subscriptionUserID, { syncAccount: Boolean(appUserID && accountCanRefreshFromAdapty) });
-
-        if (isPushupCoachPro(currentProfile) && !accountIsPro) {
-          applyProfile(currentProfile, subscriptionUserID, { syncAccount: Boolean(appUserID) });
-          setPaywallVisible(false);
-          return;
-        }
-
-        const nextProfile = await purchaseProProduct(product);
-
-        if (nextProfile) {
-          applyProfile(nextProfile, subscriptionUserID, { syncAccount: Boolean(appUserID) });
-          setPaywallVisible(false);
-          return;
-        }
-
-        setPaywallMessage('Purchase was cancelled before completion.');
-      } catch (purchaseError) {
-        setPaywallMessage(getSubscriptionErrorMessage(purchaseError, 'Purchase failed. Please try again.'));
-      } finally {
-        setPaywallBusyKey(null);
-      }
-    },
-    [accountCanRefreshFromAdapty, accountIsPro, appUserID, applyProfile, subscriptionUserID]
-  );
-
-  const restoreFromPaywall = useCallback(async () => {
-    setPaywallBusyKey('restore');
-    setPaywallMessage(null);
-
-    try {
-      await restore();
-      setPaywallVisible(false);
-    } catch (restoreError) {
-      setPaywallMessage(getSubscriptionErrorMessage(restoreError, 'Unable to restore purchases.'));
-    } finally {
-      setPaywallBusyKey(null);
-    }
-  }, [restore]);
+  }, [accountCanRefreshFromAdapty, accountIsPro, appUserID, applyProfile, applySubscriptionMetadata, isForcedPro, posthog, subscriptionUserID]);
 
   const showCustomerCenter = useCallback(async () => {
     throw new Error('Adapty does not provide an in-app customer center. Open App Store subscriptions instead.');
   }, []);
 
   const scopedProfile = profileOwnerId === subscriptionUserID ? profile : null;
-  const accountScopedProfile = accountIsPro ? scopedProfile : null;
+  const profileHasProAccess = scopedProfile ? isPushupCoachPro(scopedProfile) : false;
+  const verifiedAccountIsPro =
+    accountIsPro &&
+    (accountUser.subscriptionProvider !== 'adapty' || profileHasProAccess);
+  const accountScopedProfile = verifiedAccountIsPro ? scopedProfile : null;
 
   const value = useMemo(
     () => ({
       profile: accountScopedProfile,
-      isPro: isForcedPro || accountIsPro,
+      isPro: isForcedPro || verifiedAccountIsPro,
       activeProductIdentifier: isForcedPro
         ? 'development-pro'
-        : accountIsPro
+        : verifiedAccountIsPro
           ? accountUser.activeProductIdentifier ?? null
           : null,
       products,
@@ -495,7 +474,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       restore,
       showCustomerCenter,
       showPaywall,
-      accountIsPro,
+      verifiedAccountIsPro,
       accountScopedProfile,
       accountUser.activeProductIdentifier,
     ]
@@ -504,15 +483,25 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   return (
     <SubscriptionContext.Provider value={value}>
       {children}
-      <Modal animationType="slide" onRequestClose={() => setPaywallVisible(false)} transparent={false} visible={paywallVisible}>
+      <Modal
+        animationType="slide"
+        onRequestClose={() => {
+          posthog.capture('paywall_closed');
+          setPaywallVisible(false);
+        }}
+        presentationStyle="fullScreen"
+        visible={paywallVisible}
+      >
         <ProPaywall
           busyKey={paywallBusyKey}
           message={paywallMessage}
-          onClose={() => setPaywallVisible(false)}
+          onClose={() => {
+            posthog.capture('paywall_closed');
+            setPaywallVisible(false);
+          }}
           onPurchase={purchaseFromPaywall}
           onRestore={restoreFromPaywall}
           productPackages={productPackages}
-          isScreen={false}
         />
       </Modal>
     </SubscriptionContext.Provider>
@@ -528,5 +517,3 @@ export function useSubscription() {
 
   return context;
 }
-
-const styles = StyleSheet.create({});

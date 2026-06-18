@@ -28,6 +28,7 @@ import {
   type FacePushupTrackerState,
 } from '../../src/utils/facePushupTracker';
 import { canProcessFaceMetrics, getSessionFinishKind, getSetCompletionAction, getSetProgress, type TrackableSessionState } from '../../src/utils';
+import { useAppLocale } from '../../src/localization';
 
 const DETECTION_STALE_MS = 1600;
 const NATIVE_PREVIEW_TIMEOUT_MS = 2200;
@@ -99,6 +100,7 @@ function getCoachCue({
   sessionState,
   trackingPhase,
   trackingProblem,
+  t,
 }: {
   cameraPresentationState: CameraPresentationState;
   faceCenterX: number;
@@ -110,12 +112,13 @@ function getCoachCue({
   sessionState: SessionState;
   trackingPhase: FaceTrackingPhase;
   trackingProblem: FaceTrackingProblem;
+  t: ReturnType<typeof useAppLocale>['t'];
 }): CoachCue {
   if (isPaused) {
     return {
       icon: 'pause-circle-outline',
-      title: 'Paused',
-      body: 'Resume when your face is centered.',
+      title: t('workout.pausedTitle'),
+      body: t('workout.pausedBody'),
       tone: 'neutral',
     };
   }
@@ -123,8 +126,8 @@ function getCoachCue({
   if (sessionState === 'resting') {
     return {
       icon: 'timer-outline',
-      title: `Rest ${restRemaining}s`,
-      body: nextSetTarget ? `Next target: ${nextSetTarget} clean reps.` : 'Last set is complete.',
+      title: t('workout.restTitle', { count: restRemaining }),
+      body: nextSetTarget ? t('workout.nextTarget', { count: nextSetTarget }) : t('workout.lastSetComplete'),
       tone: 'neutral',
     };
   }
@@ -132,8 +135,8 @@ function getCoachCue({
   if (cameraPresentationState === 'permission') {
     return {
       icon: 'camera-outline',
-      title: 'Camera needed',
-      body: 'Enable camera access so counting can start.',
+      title: t('workout.cameraNeededTitle'),
+      body: t('workout.cameraNeededBody'),
       tone: 'danger',
     };
   }
@@ -141,8 +144,8 @@ function getCoachCue({
   if (cameraPresentationState === 'preparing') {
     return {
       icon: 'scan-circle-outline',
-      title: 'Opening camera',
-      body: 'Set the phone down and face the circle.',
+      title: t('workout.openingCamera'),
+      body: t('workout.openingCameraBody'),
       tone: 'neutral',
     };
   }
@@ -150,8 +153,8 @@ function getCoachCue({
   if (cameraPresentationState === 'manualFallback') {
     return {
       icon: 'phone-portrait-outline',
-      title: 'Face tracking unavailable',
-      body: 'Use a real iPhone camera path for automatic counting.',
+      title: t('workout.trackingUnavailableTitle'),
+      body: t('workout.trackingUnavailableBody'),
       tone: 'warning',
     };
   }
@@ -159,8 +162,8 @@ function getCoachCue({
   if (cameraPresentationState === 'unavailable') {
     return {
       icon: 'warning-outline',
-      title: 'Camera unavailable',
-      body: 'Close this session and reopen it on a real iPhone.',
+      title: t('workout.cameraUnavailableTitle'),
+      body: t('workout.cameraUnavailableBody'),
       tone: 'danger',
     };
   }
@@ -168,8 +171,8 @@ function getCoachCue({
   if (trackingProblem === 'dark') {
     return {
       icon: 'sunny-outline',
-      title: 'Need more light',
-      body: 'Add light so the camera can lock onto your face.',
+      title: t('workout.needLightTitle'),
+      body: t('workout.needLightBody'),
       tone: 'warning',
     };
   }
@@ -177,18 +180,18 @@ function getCoachCue({
   if (trackingProblem === 'noFace' || !faceDetected) {
     return {
       icon: 'scan-circle-outline',
-      title: 'Need face in frame',
-      body: 'Bring your face into the circle.',
+      title: t('workout.needFaceTitle'),
+      body: t('workout.needFaceBody'),
       tone: 'warning',
     };
   }
 
   if (trackingProblem === 'offCenter') {
-    const horizontalHint = faceCenterX < 0.5 ? 'Move a little right.' : 'Move a little left.';
-    const verticalHint = faceCenterY < 0.5 ? ' Lower the phone slightly.' : ' Raise the phone slightly.';
+    const horizontalHint = faceCenterX < 0.5 ? t('workout.moveRight') : t('workout.moveLeft');
+    const verticalHint = faceCenterY < 0.5 ? t('workout.lowerPhone') : t('workout.raisePhone');
     return {
       icon: 'locate-outline',
-      title: 'Center your face',
+      title: t('workout.centerFaceTitle'),
       body: `${horizontalHint}${Math.abs(faceCenterY - 0.5) > 0.24 ? verticalHint : ''}`,
       tone: 'warning',
     };
@@ -197,8 +200,8 @@ function getCoachCue({
   if (trackingProblem === 'tooFar') {
     return {
       icon: 'resize-outline',
-      title: 'Move closer',
-      body: 'Your face is too small for clean counting.',
+      title: t('workout.moveCloserTitle'),
+      body: t('workout.moveCloserBody'),
       tone: 'warning',
     };
   }
@@ -206,8 +209,8 @@ function getCoachCue({
   if (sessionState === 'waitingForFace' || trackingPhase === 'waiting') {
     return {
       icon: 'scan-outline',
-      title: 'Find your face',
-      body: 'Timer starts when your face is stable.',
+      title: t('workout.findFaceTitle'),
+      body: t('workout.findFaceBody'),
       tone: 'neutral',
     };
   }
@@ -215,8 +218,8 @@ function getCoachCue({
   if (trackingPhase === 'calibratingTop') {
     return {
       icon: 'scan-outline',
-      title: 'Hold top',
-      body: 'Stay still for one moment. Then start reps.',
+      title: t('workout.holdTopTitle'),
+      body: t('workout.holdTopBody'),
       tone: 'neutral',
     };
   }
@@ -224,8 +227,8 @@ function getCoachCue({
   if (trackingPhase === 'down') {
     return {
       icon: 'arrow-up-circle-outline',
-      title: 'Drive up',
-      body: 'Return to the top position to count.',
+      title: t('workout.driveUpTitle'),
+      body: t('workout.driveUpBody'),
       tone: 'good',
     };
   }
@@ -233,28 +236,28 @@ function getCoachCue({
   if (trackingPhase === 'returning') {
     return {
       icon: 'arrow-up-outline',
-      title: 'Finish the rep',
-      body: 'Come back to the top cleanly.',
+      title: t('workout.finishRepTitle'),
+      body: t('workout.finishRepBody'),
       tone: 'good',
     };
   }
 
   return {
     icon: 'checkmark-circle-outline',
-    title: 'Ready',
-    body: 'Go down. Come up. Clean reps count.',
+    title: t('workout.readyTitle'),
+    body: t('workout.readyBody'),
     tone: 'good',
   };
 }
 
 export default function WorkoutSessionScreen() {
   const router = useRouter();
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const { t } = useAppLocale();
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastMetricsAtRef = useRef(0);
   const lastTrackingSyncAtRef = useRef(0);
   const lastBadTrackingHapticAtRef = useRef(0);
   const trackingIssueSinceRef = useRef<number | null>(null);
-  const draftWorkoutSyncedRef = useRef(false);
   const finishStartedRef = useRef(false);
   const trackerRef = useRef<FacePushupTrackerState>(createFacePushupTrackerState());
 
@@ -316,7 +319,6 @@ export default function WorkoutSessionScreen() {
   const repsBeforeCurrentSet = hasSetPlan ? setProgress.repsBeforeCurrentSet : 0;
   const repsInCurrentSet = hasSetPlan ? setProgress.repsInCurrentSet : reps;
   const nextSetTarget = hasSetPlan ? sets[currentSetIndex + 1] : undefined;
-  const submitWorkout = useMutation(api.workouts.submitWorkout);
   const logWorkoutEvent = useMutation(api.telemetry.logWorkoutEvent);
   const logFaceTrackingSample = useMutation(api.telemetry.logFaceTrackingSample);
 
@@ -406,9 +408,9 @@ export default function WorkoutSessionScreen() {
     setCurrentSetIndex(nextSetIndex);
     setSessionState('active');
     resumeWorkout();
-    speakCue(`Next set. ${sets[nextSetIndex] ?? currentSetTarget} reps.`);
+    speakCue(t('workout.nextSet', { count: sets[nextSetIndex] ?? currentSetTarget }));
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }, [currentSetIndex, currentSetTarget, restRemaining, resumeWorkout, sessionState, sets]);
+  }, [currentSetIndex, currentSetTarget, restRemaining, resumeWorkout, sessionState, sets, t]);
 
   useEffect(() => {
     const staleTimer = setInterval(() => {
@@ -531,7 +533,7 @@ export default function WorkoutSessionScreen() {
     if (!finishedWorkout) {
       finishStartedRef.current = false;
       setSessionState('failed');
-      Alert.alert('Could not finish session', 'The workout was already closed. Go back to Practice and start a fresh session.');
+      Alert.alert(t('workout.alertCouldNotFinishTitle'), t('workout.alertCouldNotFinishBody'));
       return;
     }
 
@@ -585,12 +587,12 @@ export default function WorkoutSessionScreen() {
         setRestRemaining(currentWorkout?.restTime ?? 60);
         setSessionState('resting');
         pauseWorkout();
-        speakCue('Rest');
+        speakCue(t('workout.rest'));
         hapticNotification(Haptics.NotificationFeedbackType.Success);
       } else if (setCompletionAction === 'finish') {
         setSessionState('completed');
         pauseWorkout();
-        speakCue('Finished');
+        speakCue(t('common.finish'));
         hapticNotification(Haptics.NotificationFeedbackType.Success);
         finishSession(true);
       }
@@ -663,7 +665,7 @@ export default function WorkoutSessionScreen() {
     if (nextTracker.events.includes('sessionStarted')) {
       setSessionState('active');
       setFormFeedback('incomplete');
-      speakCue('Start');
+      speakCue(t('workout.startCue'));
       hapticNotification(Haptics.NotificationFeedbackType.Success);
 
       if (currentWorkout?.id && canSyncConvex) {
@@ -700,10 +702,10 @@ export default function WorkoutSessionScreen() {
     finishStartedRef.current = true;
 
     if (getSessionFinishKind(reps) === 'discardableZero') {
-      Alert.alert('No reps counted', 'Do you want to discard this session or save it as an incomplete attempt?', [
-        { text: 'Keep going', style: 'cancel', onPress: () => { finishStartedRef.current = false; } },
+      Alert.alert(t('workout.noRepsTitle'), t('workout.noRepsBody'), [
+        { text: t('workout.keepGoing'), style: 'cancel', onPress: () => { finishStartedRef.current = false; } },
         {
-          text: 'Discard',
+          text: t('common.discard'),
           style: 'destructive',
           onPress: () => {
             discardWorkout();
@@ -711,17 +713,17 @@ export default function WorkoutSessionScreen() {
           },
         },
         {
-          text: 'Save incomplete',
+          text: t('workout.saveIncomplete'),
           onPress: () => { finishSession(false); },
         },
       ]);
       return;
     }
 
-    Alert.alert('Finish workout?', 'Your results will be saved.', [
-      { text: 'Keep going', style: 'cancel', onPress: () => { finishStartedRef.current = false; } },
+    Alert.alert(t('workout.alertFinishTitle'), t('workout.alertFinishBody'), [
+      { text: t('workout.keepGoing'), style: 'cancel', onPress: () => { finishStartedRef.current = false; } },
       {
-        text: 'Finish',
+        text: t('common.finish'),
         style: 'destructive',
         onPress: () => { finishSession(true); },
       },
@@ -734,72 +736,37 @@ export default function WorkoutSessionScreen() {
     }
   }, [cameraPresentationState, currentWorkout?.id, updateCurrentWorkout]);
 
-  useEffect(() => {
-    if (!currentWorkout?.id || draftWorkoutSyncedRef.current || !canSyncConvex) {
-      return;
-    }
-
-    draftWorkoutSyncedRef.current = true;
-
-    async function syncWorkoutDraft() {
-      try {
-        await submitWorkout({
-          clientUserId: convexUserId,
-          clientWorkoutId: currentWorkout!.id!,
-          date: currentWorkout!.date || new Date().toISOString(),
-          type: currentWorkout!.type || 'open',
-          trainingCameraMode: currentWorkout!.trainingCameraMode || 'faceFocus',
-          reps: currentWorkout!.reps || 0,
-          duration: currentWorkout!.duration || 0,
-          calories: currentWorkout!.calories || 0,
-          completed: false,
-          goal: currentWorkout!.goal,
-          sets: currentWorkout!.sets,
-          restTime: currentWorkout!.restTime,
-          formFeedbackState: currentWorkout!.formFeedbackState,
-          cameraPresentationState,
-          qualityScore: currentWorkout!.qualityScore,
-        });
-      } catch (error) {
-        draftWorkoutSyncedRef.current = false;
-        console.warn('Convex workout draft sync failed', error);
-      }
-    }
-
-    void syncWorkoutDraft();
-  }, [cameraPresentationState, canSyncConvex, convexUserId, currentWorkout, submitWorkout]);
-
   const statusLabel = {
-    permission: 'Permission needed',
-    preparing: 'Preparing camera',
-    tracking: 'Live tracking',
-    manualFallback: 'Tracking unavailable',
-    unavailable: 'Real camera required',
+    permission: t('workout.permissionNeeded'),
+    preparing: t('workout.preparingCamera'),
+    tracking: t('workout.liveTracking'),
+    manualFallback: t('workout.noTracking'),
+    unavailable: t('workout.realCameraRequired'),
   }[cameraPresentationState];
 
   const phaseLabel = {
-    waiting: 'Find face',
-    calibratingTop: 'Hold top',
-    ready: 'Ready',
-    down: 'Down',
-    returning: 'Up',
+    waiting: t('workout.findFaceTitle'),
+    calibratingTop: t('workout.holdTopTitle'),
+    ready: t('workout.readyTitle'),
+    down: t('workout.down'),
+    returning: t('workout.up'),
   }[trackingPhase];
 
   const trackingProblemLabel = {
     none: phaseLabel,
-    noFace: 'Find face',
-    dark: 'More light',
-    offCenter: 'Center face',
-    tooFar: 'Move closer',
-    unavailable: 'No tracking',
+    noFace: t('workout.findFaceTitle'),
+    dark: t('workout.moreLight'),
+    offCenter: t('workout.centerFace'),
+    tooFar: t('workout.moveCloserTitle'),
+    unavailable: t('workout.noTracking'),
   }[trackingProblem];
   const visibleTrackingProblemLabel = {
     none: '',
-    noFace: 'Find face',
-    dark: 'More light',
-    offCenter: 'Center face',
-    tooFar: 'Move closer',
-    unavailable: 'No tracking',
+    noFace: t('workout.findFaceTitle'),
+    dark: t('workout.moreLight'),
+    offCenter: t('workout.centerFace'),
+    tooFar: t('workout.moveCloserTitle'),
+    unavailable: t('workout.noTracking'),
   }[visibleTrackingProblem];
   const liveStatusBadgeLabel =
     visibleTrackingProblem !== 'none'
@@ -811,7 +778,7 @@ export default function WorkoutSessionScreen() {
   const openCameraSettings = () => {
     void Linking.openSettings().catch((error) => {
       console.warn('Could not open settings for camera permission', error);
-      Alert.alert('Open Settings', 'Open the Settings app and allow camera access for Push Counter.');
+      Alert.alert(t('workout.openSettings'), t('workout.openSettingsBody'));
     });
   };
 
@@ -828,6 +795,7 @@ export default function WorkoutSessionScreen() {
     sessionState,
     trackingPhase,
     trackingProblem: delayedCueProblem,
+    t,
   }) : null;
 
   const cameraRingState: CameraRingState =
@@ -863,7 +831,7 @@ export default function WorkoutSessionScreen() {
     >
       {shouldRenderNativeCamera && (cameraPresentationState === 'tracking' || cameraPresentationState === 'preparing') ? (
         <PushupCameraView
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           paused={isPaused}
           onFaceMetrics={handleFaceMetrics}
         />
@@ -871,7 +839,7 @@ export default function WorkoutSessionScreen() {
 
       {shouldRenderNativeCamera && cameraPresentationState === 'manualFallback' ? (
         <CameraView
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           facing="front"
           {...(!isFullMirror ? { ratio: '1:1' } : {})}
           onMountError={() => setExpoCameraFailed(true)}
@@ -882,7 +850,7 @@ export default function WorkoutSessionScreen() {
         <View style={[styles.cameraEmpty, isFullMirror && styles.fullMirrorCameraEmpty]}>
           <Ionicons name={cameraPresentationState === 'permission' ? 'camera-outline' : 'warning-outline'} size={42} color={colors.textPrimary} />
           <Text style={styles.cameraEmptyText}>
-            {cameraPresentationState === 'permission' ? 'Camera permission needed' : 'Camera unavailable'}
+            {cameraPresentationState === 'permission' ? t('workout.cameraPermissionNeeded') : t('workout.cameraUnavailableTitle')}
           </Text>
           {cameraPresentationState === 'permission' ? (
             <Pressable
@@ -891,7 +859,7 @@ export default function WorkoutSessionScreen() {
               style={styles.settingsButton}
             >
               <Ionicons name="settings-outline" size={16} color="#050505" />
-              <Text style={styles.settingsButtonText}>Open Settings</Text>
+              <Text style={styles.settingsButtonText}>{t('workout.openSettings')}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -899,7 +867,7 @@ export default function WorkoutSessionScreen() {
       {cameraPresentationState === 'preparing' ? (
         <View style={[styles.cameraEmpty, isFullMirror && styles.fullMirrorCameraEmpty]}>
           <Ionicons name="scan-circle-outline" size={42} color={colors.textPrimary} />
-          <Text style={styles.cameraEmptyText}>Opening camera</Text>
+          <Text style={styles.cameraEmptyText}>{t('workout.openingCamera')}</Text>
         </View>
       ) : null}
       <View style={styles.cameraStatusBadge}>
@@ -948,12 +916,12 @@ export default function WorkoutSessionScreen() {
         <View style={styles.metricsRow}>
           <View style={styles.metricBlock}>
             <Text style={styles.metricValue}>{reps}</Text>
-            <Text style={styles.metricLabel}>REPS</Text>
+            <Text style={styles.metricLabel}>{t('workout.reps')}</Text>
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metricBlock}>
             <Text style={styles.metricValueSmall}>{sessionState === 'resting' ? restRemaining : Math.max(0, goal - reps)}</Text>
-            <Text style={styles.metricLabel}>{sessionState === 'resting' ? 'REST' : 'LEFT'}</Text>
+            <Text style={styles.metricLabel}>{sessionState === 'resting' ? t('workout.rest') : t('workout.left')}</Text>
           </View>
         </View>
 
@@ -962,13 +930,15 @@ export default function WorkoutSessionScreen() {
 
           {hasSetPlan ? (
             <View style={styles.setGuide}>
-              <Text style={styles.setGuideTitle}>Set {Math.min(currentSetIndex + 1, sets.length)} of {sets.length}</Text>
+              <Text style={styles.setGuideTitle}>
+                {t('workout.setGuide', { current: Math.min(currentSetIndex + 1, sets.length), total: sets.length })}
+              </Text>
               <Text style={styles.setGuideBody}>
                 {sessionState === 'resting'
                   ? nextSetTarget
-                    ? `Next set: ${nextSetTarget} reps`
-                    : 'Final set complete'
-                  : `${Math.min(repsInCurrentSet, currentSetTarget)} / ${currentSetTarget} reps`}
+                    ? t('workout.nextSet', { count: nextSetTarget })
+                    : t('workout.finalSetComplete')
+                  : `${Math.min(repsInCurrentSet, currentSetTarget)} / ${currentSetTarget} ${t('profile.repsUnit').toLowerCase()}`}
               </Text>
             </View>
           ) : null}
@@ -989,7 +959,7 @@ export default function WorkoutSessionScreen() {
             accessibilityLabel="session-end"
           >
             <Ionicons name="stop" size={22} color={colors.textPrimary} />
-            <Text style={styles.endText}>End</Text>
+            <Text style={styles.endText}>{t('workout.end')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -1010,7 +980,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   fullMirrorCameraLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
   },
   topBar: {
@@ -1103,7 +1073,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fullMirrorCameraFrame: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: '100%',
     height: '100%',
     borderWidth: 0,
@@ -1125,7 +1095,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 77, 109, 0.82)',
   },
   cameraEmpty: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,

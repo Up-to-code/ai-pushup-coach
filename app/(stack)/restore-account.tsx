@@ -52,7 +52,7 @@ export default function RestoreAccountScreen() {
   const handlePermanentDelete = () => {
     Alert.alert(
       'Permanently delete data?',
-      'This removes synced app data now and cannot be undone. Active App Store subscriptions must still be managed from your Apple account.',
+      'This removes app data now and cannot be undone. Active App Store subscriptions must still be managed from your Apple account.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -100,8 +100,8 @@ export default function RestoreAccountScreen() {
           <Text style={styles.title}>{expired ? 'Restore window ended' : 'Account deletion requested'}</Text>
           <Text style={styles.body}>
             {expired
-              ? 'This account is past the restore window. Permanently delete the remaining synced app data to start fresh.'
-              : 'Your profile is hidden and synced app data is paused. You can restore your data until the final deletion date.'}
+              ? 'This account is past the restore window. Permanently delete the remaining app data to start fresh.'
+              : 'Your profile is hidden and app data is paused. You can restore your data until the final deletion date.'}
           </Text>
         </View>
 

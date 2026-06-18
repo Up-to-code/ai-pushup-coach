@@ -1,6 +1,6 @@
 # Adapty integration
 
-This app uses `react-native-adapty` for subscription state, purchases, restore purchases, and Adapty Paywall Builder presentation.
+This app uses `react-native-adapty` for subscription state, purchases, restore purchases, and Adapty Paywall Builder presentation. The production paywall UI is owned by Adapty Paywall Builder, not by a custom React Native screen.
 
 ## Install
 
@@ -33,19 +33,21 @@ If the Adapty access level or placement identifiers change later, update the env
    - `com.ahmedmansour.pushcounter.monthly`
 5. Configure a 3-day free trial introductory offer for the yearly subscription product only in App Store Connect.
 6. Attach both products to the `premium` access level.
-7. Create a paywall and connect it to the `main` placement.
+7. Create or edit the visual paywall in Adapty Paywall Builder and connect it to the `main` placement.
 8. Publish the paywall for the target audience used by App Review.
 
 ## App integration
 
 - `src/subscriptions/config.ts` contains the SDK key, access level id, placement id, and product identifiers.
-- `src/subscriptions/adapty.ts` wraps the SDK APIs: activation, profile checks, products, purchases, restore, and paywall presentation.
+- `src/subscriptions/adapty.ts` wraps the SDK APIs: activation, profile checks, products, purchases, restore, and Adapty Paywall Builder presentation.
 - `src/subscriptions/SubscriptionProvider.tsx` owns app subscription state and exposes `useSubscription()`.
 - `app/_layout.tsx` mounts `SubscriptionProvider` around the whole app.
-- `app/(stack)/settings.tsx` restores purchases and opens the Adapty paywall, with an App Store subscription management fallback.
+- `app/(stack)/settings.tsx` restores purchases and opens the Adapty Paywall Builder view, with an App Store subscription management fallback.
+- `app/(stack)/paywall.tsx` is only a compatibility launcher for old navigation/deep-link paths. It immediately presents the Adapty Builder paywall and exits.
 
 ## Notes
 
 - Use the same app user id across auth sessions; this app identifies Adapty profiles with the Better Auth user id.
 - Missing Adapty config does not block app launch. The app keeps core local use available and marks subscriptions unavailable.
 - Adapty does not provide an in-app customer center in this integration; subscription management opens Apple subscriptions.
+- Do not edit the old local `ProPaywall` component for production paywall design. Build and publish the paywall in Adapty instead.

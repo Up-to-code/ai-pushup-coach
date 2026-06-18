@@ -3,7 +3,6 @@ import { ConvexReactClient } from 'convex/react';
 import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react';
 import { authClient } from '../auth';
 import { fallbackConvexUrl } from '../config/links';
-import { BackendSync } from './BackendSync';
 
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL ?? fallbackConvexUrl;
 
@@ -22,7 +21,6 @@ export function ConvexBackendProvider({ children }: PropsWithChildren) {
 
   return (
     <ConvexBetterAuthProvider client={client} authClient={authClient}>
-      <BackendSync />
       {children}
     </ConvexBetterAuthProvider>
   );

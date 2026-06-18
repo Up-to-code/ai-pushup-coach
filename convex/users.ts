@@ -4,6 +4,12 @@ import { requireMatchingIdentity } from './auth';
 import { ACCOUNT_RESTORE_WINDOW_MS, assertActiveUser, isPendingDeletion } from './deletedUsers';
 import type { Doc, TableNames } from './_generated/dataModel';
 import type { MutationCtx } from './_generated/server';
+import { findLegacyFitnessUser, getBetterAuthDisplayName, getBetterAuthUserById } from './leaderboardProfiles';
+import { capturePosthogEvent } from './posthog';
+import {
+  buildProfileCreatedProperties,
+  buildSubscriptionUpdatedProperties,
+} from './posthogEvents';
 
 async function deleteRows<TableName extends TableNames>(
   ctx: MutationCtx,
@@ -102,6 +108,25 @@ function hasPatchChanges<T extends Record<string, unknown>>(existing: T, patch: 
   return Object.entries(patch).some(([key, value]) => !valuesEqual(existing[key], value));
 }
 
+export function resolveProfileCountry(
+  existing: Pick<Doc<'users'>, 'countryCode' | 'countryName'> | null | undefined,
+  incoming: { countryCode: string; countryName: string }
+) {
+  const incomingCountry = {
+    countryCode: incoming.countryCode.trim().toUpperCase() || 'GLOBAL',
+    countryName: incoming.countryName,
+  };
+
+  if (existing?.countryCode && existing.countryCode !== 'GLOBAL' && incomingCountry.countryCode === 'GLOBAL') {
+    return {
+      countryCode: existing.countryCode,
+      countryName: existing.countryName,
+    };
+  }
+
+  return incomingCountry;
+}
+
 export const upsertProfile = mutation({
   args: {
     clientUserId: v.string(),
@@ -135,6 +160,10 @@ export const upsertProfile = mutation({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', args.clientUserId))
       .unique();
+    const country = resolveProfileCountry(existing, {
+      countryCode: args.countryCode,
+      countryName: args.countryName,
+    });
 
     const payload = {
       clientUserId: args.clientUserId,
@@ -144,8 +173,8 @@ export const upsertProfile = mutation({
       bio: args.bio,
       coachTone: args.coachTone,
       personalityTags: args.personalityTags,
-      countryCode: args.countryCode,
-      countryName: args.countryName,
+      countryCode: country.countryCode,
+      countryName: country.countryName,
       avatar: args.avatar,
       proStatus: args.proStatus ?? existing?.proStatus ?? 'free',
       subscriptionStatus: args.subscriptionStatus ?? existing?.subscriptionStatus,
@@ -183,7 +212,16 @@ export const upsertProfile = mutation({
       return existing._id;
     }
 
-    return await ctx.db.insert('users', { ...payload, updatedAt: now, deletionStatus: 'active', restoreTokenVersion: 0 });
+    const userId = await ctx.db.insert('users', { ...payload, updatedAt: now, deletionStatus: 'active', restoreTokenVersion: 0 });
+    const created = await ctx.db.get(userId);
+    if (created) {
+      await capturePosthogEvent(ctx, {
+        distinctId: created.clientUserId,
+        event: 'profile_created',
+        properties: buildProfileCreatedProperties(created),
+      });
+    }
+    return userId;
   },
 });
 
@@ -226,6 +264,12 @@ export const updateSubscription = mutation({
       updatedAt: Date.now(),
     });
 
+    await capturePosthogEvent(ctx, {
+      distinctId: user.clientUserId,
+      event: 'subscription_updated',
+      properties: buildSubscriptionUpdatedProperties(user, args),
+    });
+
     return { ok: true, status: 'updated' as const };
   },
 });
@@ -235,10 +279,47 @@ export const me = query({
   handler: async (ctx, { clientUserId }) => {
     await requireMatchingIdentity(ctx, clientUserId);
 
-    return await ctx.db
+    const appUser = await ctx.db
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', clientUserId))
       .unique();
+
+    if (appUser) {
+      return appUser;
+    }
+
+    const authUser = await getBetterAuthUserById(ctx, clientUserId);
+    if (!authUser) {
+      return null;
+    }
+
+    const displayName = getBetterAuthDisplayName(authUser);
+    return {
+      clientUserId,
+      name: displayName,
+      displayName,
+      nickname: displayName,
+      bio: undefined,
+      coachTone: undefined,
+      personalityTags: undefined,
+      countryCode: 'GLOBAL',
+      countryName: 'Earth',
+      avatar: authUser.image ?? undefined,
+      proStatus: 'free' as const,
+      subscriptionStatus: undefined,
+      subscriptionProvider: undefined,
+      activeProductIdentifier: undefined,
+      activeAccessLevelId: undefined,
+      subscriptionUpdatedAt: undefined,
+      subscriptionOwnerUserId: undefined,
+      createdAt: authUser.createdAt || Date.now(),
+      streak: 0,
+      energy: 100,
+      totalReps: 0,
+      bestReps: 0,
+      deletionStatus: 'active' as const,
+      updatedAt: authUser.createdAt || Date.now(),
+    };
   },
 });
 
@@ -305,14 +386,19 @@ export const deleteAccount = mutation({
 export const deletionStatus = query({
   args: { clientUserId: v.string() },
   handler: async (ctx, { clientUserId }) => {
-    await requireMatchingIdentity(ctx, clientUserId);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { status: 'unauthenticated' as const };
+    if (identity.subject !== clientUserId) return { status: 'mismatch' as const };
 
     const user = await ctx.db
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', clientUserId))
       .unique();
 
-    if (!user) return { status: 'missing' as const };
+    if (!user) {
+      const authUser = await getBetterAuthUserById(ctx, clientUserId);
+      return authUser ? { status: 'active' as const } : { status: 'missing' as const };
+    }
     return {
       status: user.deletionStatus ?? 'active',
       deletedAt: user.deletedAt,
@@ -382,8 +468,37 @@ export const publicProfile = query({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', userId))
       .unique();
+    const authProfile = profile ? null : await getBetterAuthUserById(ctx, userId);
 
-    if (!viewer || !profile || isPendingDeletion(profile)) return null;
+    if (!profile && !authProfile) return null;
+    if (profile && isPendingDeletion(profile)) return null;
+
+    const publicProfile = profile ?? {
+      clientUserId: authProfile!._id,
+      name: getBetterAuthDisplayName(authProfile!),
+      displayName: getBetterAuthDisplayName(authProfile!),
+      nickname: getBetterAuthDisplayName(authProfile!),
+      countryCode: 'GLOBAL',
+      countryName: '',
+      avatar: authProfile!.image ?? undefined,
+      bio: undefined,
+      streak: 0,
+      totalReps: (await findLegacyFitnessUser(ctx, authProfile!))?.totalReps ?? 0,
+      bestReps: 0,
+    };
+
+    if (!viewer || !profile) {
+      return {
+        ...publicProfile,
+        isCurrentUser: viewerClientUserId === userId,
+        isFollowing: false,
+        followsYou: false,
+        isFriend: false,
+        followersCount: 0,
+        followingCount: 0,
+        friendsCount: 0,
+      };
+    }
 
     const following = await ctx.db
       .query('follows')
@@ -430,8 +545,34 @@ export const sharedProfile = query({
       .query('users')
       .withIndex('by_client_user_id', (q) => q.eq('clientUserId', userId))
       .unique();
+    const authProfile = profile ? null : await getBetterAuthUserById(ctx, userId);
 
-    if (!profile || isPendingDeletion(profile)) return null;
+    if (!profile && !authProfile) return null;
+    if (profile && isPendingDeletion(profile)) return null;
+
+    if (!profile) {
+      const displayName = getBetterAuthDisplayName(authProfile!);
+      const legacyFitnessUser = await findLegacyFitnessUser(ctx, authProfile!);
+      return {
+        clientUserId: authProfile!._id,
+        displayName,
+        nickname: displayName,
+        bio: undefined,
+        countryCode: 'GLOBAL',
+        countryName: '',
+        avatar: authProfile!.image ?? undefined,
+        streak: 0,
+        totalReps: legacyFitnessUser?.totalReps ?? 0,
+        bestReps: 0,
+        followersCount: 0,
+        followingCount: 0,
+        totalWorkouts: 0,
+        totalDuration: 0,
+        totalCalories: 0,
+        recentDays: [],
+        updatedAt: authProfile!.createdAt,
+      };
+    }
 
     const followers = await ctx.db
       .query('follows')

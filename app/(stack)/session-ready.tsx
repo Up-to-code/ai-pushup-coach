@@ -3,10 +3,12 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useWorkoutStore } from '../../src/store';
+import { useAppLocale } from '../../src/localization';
 import { colors, spacing, typography } from '../../src/theme';
 
 export default function SessionReadyScreen() {
   const router = useRouter();
+  const { t } = useAppLocale();
   const currentWorkout = useWorkoutStore((state) => state.currentWorkout);
 
   useEffect(() => {
@@ -22,8 +24,8 @@ export default function SessionReadyScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.content}>
         <ActivityIndicator color={colors.accent} />
-        <Text style={styles.title}>Opening live session</Text>
-        <Text style={styles.subtitle}>Moving directly into the workout camera now.</Text>
+        <Text style={styles.title}>{t('workout.openingTitle')}</Text>
+        <Text style={styles.subtitle}>{t('workout.openingSubtitle')}</Text>
       </View>
     </SafeAreaView>
   );

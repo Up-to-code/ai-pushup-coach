@@ -16,6 +16,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { useAuthenticatedBackendState, useClientUserId } from '../../../src/features/shared/currentUser';
+import { useAppLocale } from '../../../src/localization';
 import { colors, spacing, typography } from '../../../src/theme';
 
 type FeedbackKind = 'feature' | 'bug';
@@ -34,6 +35,7 @@ type FeedbackRow = {
 
 export default function FeedbackScreen() {
   const router = useRouter();
+  const { t } = useAppLocale();
   const clientUserId = useClientUserId();
   const { authLoading, canUseAuthenticatedBackend } = useAuthenticatedBackendState();
   const rows = useQuery(
@@ -61,11 +63,11 @@ export default function FeedbackScreen() {
     const nextTitle = title.trim();
     const nextDetails = details.trim();
     if (!canUseAuthenticatedBackend) {
-      Alert.alert('Sign in required', 'Sign in before sending a feature request or bug report.');
+      Alert.alert(t('feedback.alertSignInTitle'), t('feedback.alertSignInBody'));
       return;
     }
     if (nextTitle.length < 6) {
-      Alert.alert('Add a title', 'Use at least 6 characters so the request is clear.');
+      Alert.alert(t('feedback.alertTitleTitle'), t('feedback.alertTitleBody'));
       return;
     }
 
@@ -81,7 +83,7 @@ export default function FeedbackScreen() {
       setDetails('');
     } catch (error) {
       console.warn('Feedback submit failed', error);
-      Alert.alert('Could not send feedback', error instanceof Error ? error.message : 'Please try again shortly.');
+      Alert.alert(t('feedback.alertSubmitFailedTitle'), error instanceof Error ? error.message : t('feedback.alertSubmitFailedBody'));
     } finally {
       setSubmitting(false);
     }
@@ -98,7 +100,7 @@ export default function FeedbackScreen() {
       });
     } catch (error) {
       console.warn('Feedback vote failed', error);
-      Alert.alert('Could not update vote', error instanceof Error ? error.message : 'Please try again shortly.');
+      Alert.alert(t('feedback.alertVoteFailedTitle'), error instanceof Error ? error.message : t('feedback.alertVoteFailedBody'));
     } finally {
       setBusyVoteId(null);
     }
@@ -111,8 +113,8 @@ export default function FeedbackScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </Pressable>
         <View style={styles.headerCopy}>
-          <Text style={styles.title}>Feature requests</Text>
-          <Text style={styles.subtitle}>Report bugs and vote on what matters.</Text>
+          <Text style={styles.title}>{t('feedback.title')}</Text>
+          <Text style={styles.subtitle}>{t('feedback.subtitle')}</Text>
         </View>
       </View>
 
@@ -124,19 +126,19 @@ export default function FeedbackScreen() {
         {!canUseAuthenticatedBackend && !authLoading ? (
           <View style={styles.emptyPanel}>
             <Ionicons name="lock-closed-outline" size={28} color={colors.textSecondary} />
-            <Text style={styles.emptyTitle}>Sign in to send feedback</Text>
-          <Text style={styles.emptyBody}>Requests are tied to your account so support can follow up if needed.</Text>
+            <Text style={styles.emptyTitle}>{t('feedback.signInTitle')}</Text>
+          <Text style={styles.emptyBody}>{t('feedback.signInBody')}</Text>
           </View>
         ) : (
           <View style={styles.form}>
             <View style={styles.kindSwitch}>
-              <KindButton active={kind === 'feature'} label="Feature" icon="sparkles-outline" onPress={() => setKind('feature')} />
-              <KindButton active={kind === 'bug'} label="Bug" icon="bug-outline" onPress={() => setKind('bug')} />
+              <KindButton active={kind === 'feature'} label={t('feedback.feature')} icon="sparkles-outline" onPress={() => setKind('feature')} />
+              <KindButton active={kind === 'bug'} label={t('feedback.bug')} icon="bug-outline" onPress={() => setKind('bug')} />
             </View>
             <TextInput
               value={title}
               onChangeText={setTitle}
-              placeholder={kind === 'feature' ? 'What should be added?' : 'What is broken?'}
+              placeholder={kind === 'feature' ? t('feedback.featurePlaceholder') : t('feedback.bugPlaceholder')}
               placeholderTextColor={colors.textMuted}
               style={styles.titleInput}
               maxLength={120}
@@ -145,7 +147,7 @@ export default function FeedbackScreen() {
             <TextInput
               value={details}
               onChangeText={setDetails}
-              placeholder="Add useful details, steps, or expected behavior"
+              placeholder={t('feedback.detailsPlaceholder')}
               placeholderTextColor={colors.textMuted}
               style={styles.detailsInput}
               maxLength={1200}
@@ -163,7 +165,7 @@ export default function FeedbackScreen() {
               ) : (
                 <>
                   <Ionicons name="send-outline" size={17} color={colors.accentContrast} />
-                  <Text style={styles.submitText}>Send</Text>
+                  <Text style={styles.submitText}>{t('common.send')}</Text>
                 </>
               )}
             </Pressable>
@@ -172,13 +174,13 @@ export default function FeedbackScreen() {
 
         <View style={styles.sectionTitleRow}>
           <Ionicons name="chatbubbles-outline" size={17} color={colors.textSecondary} />
-          <Text style={styles.sectionTitle}>My requests</Text>
+          <Text style={styles.sectionTitle}>{t('feedback.myRequests')}</Text>
         </View>
 
         {loading ? (
           <View style={styles.emptyPanel}>
             <ActivityIndicator color={colors.accent} />
-            <Text style={styles.emptyBody}>Loading requests...</Text>
+            <Text style={styles.emptyBody}>{t('feedback.loadingRequests')}</Text>
           </View>
         ) : feedbackRows.length ? (
           <View style={styles.requestList}>
@@ -186,6 +188,9 @@ export default function FeedbackScreen() {
               <FeedbackCard
                 key={request._id}
                 request={request}
+                featureLabel={t('feedback.feature')}
+                bugLabel={t('feedback.bug')}
+                mineLabel={t('feedback.mine')}
                 busy={busyVoteId === request._id}
                 onVote={() => toggleVote(request)}
               />
@@ -194,8 +199,8 @@ export default function FeedbackScreen() {
         ) : (
           <View style={styles.emptyPanel}>
             <Ionicons name="chatbox-ellipses-outline" size={28} color={colors.textSecondary} />
-            <Text style={styles.emptyTitle}>No requests yet</Text>
-            <Text style={styles.emptyBody}>Start with one focused idea or bug report.</Text>
+            <Text style={styles.emptyTitle}>{t('feedback.emptyTitle')}</Text>
+            <Text style={styles.emptyBody}>{t('feedback.emptyBody')}</Text>
           </View>
         )}
       </ScrollView>
@@ -224,10 +229,16 @@ function KindButton({
 
 function FeedbackCard({
   request,
+  featureLabel,
+  bugLabel,
+  mineLabel,
   busy,
   onVote,
 }: {
   request: FeedbackRow;
+  featureLabel: string;
+  bugLabel: string;
+  mineLabel: string;
   busy: boolean;
   onVote: () => void;
 }) {
@@ -244,10 +255,10 @@ function FeedbackCard({
       <View style={styles.cardTop}>
         <View style={styles.cardCopy}>
           <View style={styles.metaRow}>
-            <Text style={styles.kindLabel}>{request.kind === 'feature' ? 'Feature' : 'Bug'}</Text>
+            <Text style={styles.kindLabel}>{request.kind === 'feature' ? featureLabel : bugLabel}</Text>
             <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
             <Text style={styles.statusLabel}>{request.status}</Text>
-            {request.isMine ? <Text style={styles.mineLabel}>Mine</Text> : null}
+            {request.isMine ? <Text style={styles.mineLabel}>{mineLabel}</Text> : null}
           </View>
           <Text style={styles.requestTitle}>{request.title}</Text>
         </View>

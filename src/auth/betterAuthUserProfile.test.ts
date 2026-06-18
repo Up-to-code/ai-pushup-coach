@@ -39,9 +39,15 @@ describe('toLocalUserUpdates', () => {
   });
 
   it('uses a deterministic fallback creation date when Better Auth has no createdAt', () => {
-    const now = new Date('2026-04-30T12:00:00.000Z');
+    const fallbackCreatedAt = new Date('2026-04-30T12:00:00.000Z');
 
-    expect(toLocalUserUpdates({ id: 'user_123' }, now).createdAt).toBe(
+    expect(toLocalUserUpdates({ id: 'user_123' }, fallbackCreatedAt).createdAt).toBe(
+      '2026-04-30T12:00:00.000Z'
+    );
+  });
+
+  it('can reuse the existing local creation date to avoid repeated profile writes', () => {
+    expect(toLocalUserUpdates({ id: 'user_123' }, '2026-04-30T12:00:00.000Z').createdAt).toBe(
       '2026-04-30T12:00:00.000Z'
     );
   });

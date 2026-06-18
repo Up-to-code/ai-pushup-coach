@@ -8,6 +8,7 @@ export default function StackLayout() {
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },
         animation: 'slide_from_right',
+        gestureEnabled: true,
       }}
     >
       <Stack.Screen
@@ -29,6 +30,7 @@ export default function StackLayout() {
         options={{
           presentation: 'fullScreenModal',
           animation: 'slide_from_bottom',
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen
@@ -36,6 +38,7 @@ export default function StackLayout() {
         options={{
           presentation: 'card',
           animation: 'slide_from_bottom',
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen
@@ -50,6 +53,7 @@ export default function StackLayout() {
         options={{
           presentation: 'card',
           animation: 'slide_from_right',
+          gestureEnabled: true,
         }}
       />
       <Stack.Screen
@@ -61,6 +65,13 @@ export default function StackLayout() {
       />
       <Stack.Screen
         name="settings/country"
+        options={{
+          presentation: 'card',
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="settings/language"
         options={{
           presentation: 'card',
           animation: 'slide_from_right',
@@ -92,6 +103,7 @@ export default function StackLayout() {
         options={{
           presentation: 'fullScreenModal',
           animation: 'fade',
+          gestureEnabled: false,
         }}
       />
       <Stack.Screen name="legal/data-camera" />

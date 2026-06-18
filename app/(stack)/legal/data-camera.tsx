@@ -3,37 +3,39 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackHeader } from '../../../src/components';
+import { useAppLocale, type TranslationKey } from '../../../src/localization';
 import { colors, spacing, typography } from '../../../src/theme';
 
-const sections = [
+const sections: Array<{ title: TranslationKey; body: TranslationKey }> = [
   {
-    title: 'Camera access',
-    body: 'Used during a live workout to estimate movement and count push-up reps. The permission prompt clearly mentions rep tracking, and video is not saved to the photo library by default.',
+    title: 'legal.cameraAccessTitle',
+    body: 'legal.cameraAccessBody',
   },
   {
-    title: 'Workout telemetry',
-    body: 'The app may sync reps, duration, camera state, quality score, and form feedback to support progress history and leaderboard features.',
+    title: 'legal.workoutTelemetryTitle',
+    body: 'legal.workoutTelemetryBody',
   },
   {
-    title: 'Local reminders',
-    body: 'Workout and missed‑start reminders are scheduled locally for your chosen training days and time.',
+    title: 'legal.localRemindersTitle',
+    body: 'legal.localRemindersBody',
   },
   {
-    title: 'Release checklist',
-    body: 'App Store Connect privacy labels should include profile, fitness/workout, purchase history, diagnostics, photo avatar, social, and camera-related usage as applicable.',
+    title: 'legal.releaseChecklistTitle',
+    body: 'legal.releaseChecklistBody',
   },
 ];
 
 export default function DataCameraScreen() {
   const router = useRouter();
+  const { t } = useAppLocale();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <StackHeader
-          eyebrow="Product safety"
-          title="Camera and data"
-          subtitle="What the app needs, why it needs it, and how it supports Apple review."
+          eyebrow={t('legal.productSafety')}
+          title={t('legal.cameraTitle')}
+          subtitle={t('legal.cameraSubtitle')}
           onBack={() => router.back()}
         />
       </View>
@@ -44,8 +46,8 @@ export default function DataCameraScreen() {
       >
         {sections.map((section, index) => (
           <View key={section.title} style={styles.section}>
-            <Text style={styles.title}>{section.title}</Text>
-            <Text style={styles.body}>{section.body}</Text>
+            <Text style={styles.title}>{t(section.title)}</Text>
+            <Text style={styles.body}>{t(section.body)}</Text>
             {index < sections.length - 1 && <View style={styles.divider} />}
           </View>
         ))}

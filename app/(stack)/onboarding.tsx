@@ -12,11 +12,11 @@ import {
   Animated as RNAnimated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOut } from 'react-native-reanimated';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
+import { useAnalytics } from '../../src/analytics';
 import { useAuth } from '../../src/auth';
 import { useSaveBackendSettings } from '../../src/backend';
 import { useSubscription } from '../../src/subscriptions';
@@ -26,15 +26,19 @@ import { cancelPlanNotifications, syncNotificationsForPlan } from '../../src/ser
 import { useResponsive } from '../../src/hooks/useResponsive';
 import { colors, typography } from '../../src/theme';
 import { CFEView, NeonButton } from '../../src/components';
+import { useAppLocale, type TranslationKey } from '../../src/localization';
+import { buildOnboardingStepIds, type OnboardingStepId } from '../../src/features/onboarding/steps';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-type StepId = 'landing' | 'base' | 'ritual' | 'ready';
+type StepId = OnboardingStepId;
 
 type SelectableItem = {
   id: string;
   title: string;
   detail: string;
+  titleKey?: TranslationKey;
+  detailKey?: TranslationKey;
   icon: IconName;
   meta?: string;
 };
@@ -42,38 +46,89 @@ type SelectableItem = {
 type OnboardingStep = {
   id: StepId;
   title: string;
+  titleKey: TranslationKey;
+};
+
+type GuideStep = {
+  id: Extract<StepId, 'guidePlan' | 'guideCamera' | 'guideStart' | 'guideProgress'>;
+  title: string;
+  titleKey: TranslationKey;
+  bodyKey: TranslationKey;
+  icon: IconName;
 };
 
 const welcomeSetupSteps: OnboardingStep[] = [
-  { id: 'landing', title: 'Transformation is a ritual.' },
-  { id: 'base', title: 'Built for your body.' },
-  { id: 'ritual', title: 'Owned by your life.' },
-  { id: 'ready', title: 'Your path is clear.' },
+  { id: 'landing', title: 'Transformation is a ritual.', titleKey: 'onboarding.transformationRitual' },
+  { id: 'base', title: 'Built for your body.', titleKey: 'onboarding.builtForBody' },
+  { id: 'ritual', title: 'Owned by your life.', titleKey: 'onboarding.ownedByLife' },
+  { id: 'ready', title: 'Your path is clear.', titleKey: 'onboarding.pathClear' },
 ];
 
 const directSetupSteps: OnboardingStep[] = [
-  { id: 'landing', title: 'Set up your plan.' },
-  { id: 'base', title: 'Choose your level and goal.' },
-  { id: 'ritual', title: 'Set your training rhythm.' },
-  { id: 'ready', title: 'Your plan is ready.' },
+  { id: 'landing', title: 'Set up your plan.', titleKey: 'onboarding.setupPlan' },
+  { id: 'base', title: 'Choose your level and goal.', titleKey: 'onboarding.chooseLevelGoal' },
+  { id: 'ritual', title: 'Set your training rhythm.', titleKey: 'onboarding.trainingRhythm' },
+  { id: 'ready', title: 'Your plan is ready.', titleKey: 'onboarding.planReady' },
 ];
 
 const rebuildSteps: OnboardingStep[] = [
-  { id: 'base', title: 'Update your plan.' },
-  { id: 'ritual', title: 'Edit your schedule.' },
-  { id: 'ready', title: 'Save your updated plan.' },
+  { id: 'base', title: 'Update your plan.', titleKey: 'onboarding.updatePlan' },
+  { id: 'ritual', title: 'Edit your schedule.', titleKey: 'onboarding.editSchedule' },
+  { id: 'ready', title: 'Save your updated plan.', titleKey: 'onboarding.saveUpdatedPlan' },
 ];
 
+const guideSteps: GuideStep[] = [
+  {
+    id: 'guidePlan',
+    title: 'Build a plan that fits.',
+    titleKey: 'onboarding.guide.planTitle',
+    bodyKey: 'onboarding.guide.planBody',
+    icon: 'calendar-outline',
+  },
+  {
+    id: 'guideCamera',
+    title: 'Set the phone down.',
+    titleKey: 'onboarding.guide.cameraTitle',
+    bodyKey: 'onboarding.guide.cameraBody',
+    icon: 'scan-circle-outline',
+  },
+  {
+    id: 'guideStart',
+    title: 'Start, count, save.',
+    titleKey: 'onboarding.guide.startTitle',
+    bodyKey: 'onboarding.guide.startBody',
+    icon: 'play-circle-outline',
+  },
+  {
+    id: 'guideProgress',
+    title: 'Track what changes.',
+    titleKey: 'onboarding.guide.progressTitle',
+    bodyKey: 'onboarding.guide.progressBody',
+    icon: 'stats-chart-outline',
+  },
+];
+
+const stepCopyById: Record<StepId, OnboardingStep | GuideStep> = {
+  landing: welcomeSetupSteps[0],
+  base: welcomeSetupSteps[1],
+  ritual: welcomeSetupSteps[2],
+  ready: welcomeSetupSteps[3],
+  guidePlan: guideSteps[0],
+  guideCamera: guideSteps[1],
+  guideStart: guideSteps[2],
+  guideProgress: guideSteps[3],
+};
+
 const levels: SelectableItem[] = [
-  { id: 'beginner', title: 'Beginner', detail: '0-10 clean reps', icon: 'walk-outline', meta: 'Start' },
-  { id: 'intermediate', title: 'Intermediate', detail: '11-30 clean reps', icon: 'body-outline', meta: 'Grow' },
-  { id: 'advanced', title: 'Advanced', detail: '31+ clean reps', icon: 'flame-outline', meta: 'Peak' },
+  { id: 'beginner', title: 'Beginner', titleKey: 'onboarding.beginner', detail: '0-10 clean reps', detailKey: 'onboarding.beginnerDetail', icon: 'walk-outline', meta: 'Start' },
+  { id: 'intermediate', title: 'Intermediate', titleKey: 'onboarding.intermediate', detail: '11-30 clean reps', detailKey: 'onboarding.intermediateDetail', icon: 'body-outline', meta: 'Grow' },
+  { id: 'advanced', title: 'Advanced', titleKey: 'onboarding.advanced', detail: '31+ clean reps', detailKey: 'onboarding.advancedDetail', icon: 'flame-outline', meta: 'Peak' },
 ];
 
 const goals: SelectableItem[] = [
-  { id: 'first_25', title: 'First 25', detail: 'Build the base.', icon: 'flag-outline', meta: 'Base' },
-  { id: 'road_50', title: 'Road to 50', detail: 'Volume and pace.', icon: 'trending-up-outline', meta: 'Grow' },
-  { id: 'road_100', title: 'Road to 100', detail: 'Hard milestones.', icon: 'trophy-outline', meta: 'Peak' },
+  { id: 'first_25', title: 'First 25', titleKey: 'onboarding.first25', detail: 'Build the base.', detailKey: 'onboarding.first25Detail', icon: 'flag-outline', meta: 'Base' },
+  { id: 'road_50', title: 'Road to 50', titleKey: 'onboarding.road50', detail: 'Volume and pace.', detailKey: 'onboarding.road50Detail', icon: 'trending-up-outline', meta: 'Grow' },
+  { id: 'road_100', title: 'Road to 100', titleKey: 'onboarding.road100', detail: 'Hard milestones.', detailKey: 'onboarding.road100Detail', icon: 'trophy-outline', meta: 'Peak' },
 ];
 
 const daysOfWeek = [
@@ -90,7 +145,7 @@ const SLIDER_WIDTH = 300;
 const KNOB_SIZE = 60;
 
 // Swipe slider – only on landing
-function SwipeSlider({ onComplete }: { onComplete: () => void }) {
+function SwipeSlider({ label, onComplete }: { label: string; onComplete: () => void }) {
   const { normalize } = useResponsive();
   const pan = useRef(new RNAnimated.Value(0)).current;
   const travelDistance = normalize(SLIDER_WIDTH - KNOB_SIZE - 8);
@@ -135,7 +190,7 @@ function SwipeSlider({ onComplete }: { onComplete: () => void }) {
   return (
     <View style={[sliderStyles.container, { width: normalize(SLIDER_WIDTH), height: normalize(68) }]}>
       <RNAnimated.Text style={[sliderStyles.text, { opacity: textOpacity, fontSize: normalize(15) }]}>
-        Swipe to continue
+        {label}
       </RNAnimated.Text>
       <RNAnimated.View
         {...panResponder.panHandlers}
@@ -182,6 +237,8 @@ const sliderStyles = StyleSheet.create({
 });
 
 export default function OnboardingScreen() {
+  const posthog = useAnalytics();
+  const { t } = useAppLocale();
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string; returnTo?: string }>();
   const { normalize, verticalScale } = useResponsive();
@@ -196,7 +253,18 @@ export default function OnboardingScreen() {
   const isRebuildMode = params.mode === 'rebuild';
   const useWelcomeCopy = !isRebuildMode && (auth.status === 'signedOut' || auth.status === 'guest');
   const steps = useMemo(
-    () => (isRebuildMode ? rebuildSteps : useWelcomeCopy ? welcomeSetupSteps : directSetupSteps),
+    () => {
+      if (isRebuildMode) return rebuildSteps;
+      const setupSteps = useWelcomeCopy ? welcomeSetupSteps : directSetupSteps;
+      const stepIds = buildOnboardingStepIds({ isRebuildMode });
+      return stepIds.map((id) => {
+        if (id === 'landing') return setupSteps[0];
+        if (id === 'base') return setupSteps[1];
+        if (id === 'ritual') return setupSteps[2];
+        if (id === 'ready') return setupSteps[3];
+        return stepCopyById[id];
+      });
+    },
     [isRebuildMode, useWelcomeCopy]
   );
   const returnRoute = params.returnTo === 'settings' ? '/settings' : '/(tabs)';
@@ -224,9 +292,17 @@ export default function OnboardingScreen() {
     step.id === 'base' ? (isRebuildMode ? Boolean(level && goal) : Boolean(level)) :
     step.id === 'ritual' ? selectedDays.length > 0 :
     true;
+  const guideStep = guideSteps.find((item) => item.id === step.id);
 
   const persist = () => {
     updateOnboardingProfile({ goal, pains: [], preferences: [], statements: [], trainingSequence: ['baseline', 'volume', 'camera'] });
+  };
+
+  const skipOnboarding = () => {
+    persist();
+    completeOnboarding();
+    posthog.capture('onboarding_skipped', { step: step.id });
+    router.replace(auth.status === 'signedOut' ? '/sign-in' : '/(tabs)');
   };
 
   const goNext = () => {
@@ -306,24 +382,29 @@ export default function OnboardingScreen() {
       setPlan({ ...plan, notificationIds });
       persist();
       completeOnboarding();
+      if (isRebuildMode) {
+        posthog.capture('plan_rebuilt', { level: level ?? 'beginner', goal: goal ?? 'first_25', training_days: selectedDays.length });
+      } else {
+        posthog.capture('onboarding_completed', { level: level ?? 'beginner', goal: goal ?? 'first_25', training_days: selectedDays.length });
+      }
       router.replace(isRebuildMode ? (returnRoute as any) : auth.status === 'signedOut' ? '/sign-in' : '/(tabs)');
     } catch (error) {
       finishingRef.current = false;
       setBusy(false);
       setFinishing(false);
-      Alert.alert('Error', 'Something went wrong while saving your plan.');
+      Alert.alert(t('common.error'), t('onboarding.saveErrorBody'));
     }
   };
 
   const getButtonLabel = () => {
     if (step.id === 'base') {
-      if (isRebuildMode) return 'Next';
-      if (!level) return 'Select level';
-      return goal ? 'Continue' : 'Select goal';
+      if (isRebuildMode) return t('common.next');
+      if (!level) return t('onboarding.selectLevel');
+      return goal ? t('common.continue') : t('onboarding.selectGoal');
     }
-    if (step.id === 'ritual') return 'Continue';
-    if (step.id === 'ready') return finishing ? 'Saving...' : isRebuildMode ? 'Save' : 'Start';
-    return 'Continue';
+    if (step.id === 'ritual') return t('common.continue');
+    if (step.id === 'ready') return finishing ? t('common.saving') : isRebuildMode ? t('common.save') : t('onboarding.start');
+    return t('common.continue');
   };
 
   return (
@@ -342,8 +423,8 @@ export default function OnboardingScreen() {
             </View>
           </View>
           {showSkip ? (
-            <Pressable onPress={() => router.replace('/sign-in')} style={styles.skipButton}>
-              <Text style={[styles.skipText, { fontSize: normalize(14) }]}>Skip</Text>
+            <Pressable onPress={skipOnboarding} style={styles.skipButton}>
+              <Text style={[styles.skipText, { fontSize: normalize(14) }]}>{t('common.skip')}</Text>
             </Pressable>
           ) : <View style={{ width: 44 }} />}
         </Animated.View>
@@ -360,23 +441,6 @@ export default function OnboardingScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {isLanding && (
-          <View
-            style={{
-              position: 'absolute',
-              top: verticalScale(60),
-              left: -normalize(40),
-              width: normalize(200),
-              height: normalize(200),
-              borderRadius: normalize(100),
-              backgroundColor: colors.accent,
-              opacity: 0.15,
-              transform: [{ scale: 1.5 }],
-            }}
-          >
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
-          </View>
-        )}
         <Animated.View key={step.id} entering={FadeInDown.duration(400)} exiting={FadeOut.duration(200)} style={[styles.stepContainer, { gap: normalize(48) }]}>
           <View style={[styles.textBlock, isLanding && styles.textBlockHero]}>
             <Text
@@ -399,17 +463,17 @@ export default function OnboardingScreen() {
                 <>
                   {useWelcomeCopy ? (
                     <>
-                      <Text style={{ color: '#FFF' }}>Transformation</Text>{'\n'}
-                      <Text style={{ color: colors.accent }}>is a ritual.</Text>
+                      <Text style={{ color: '#FFF' }}>{t('onboarding.welcomeLine1')}</Text>{'\n'}
+                      <Text style={{ color: colors.accent }}>{t('onboarding.welcomeLine2')}</Text>
                     </>
                   ) : (
                     <>
-                      <Text style={{ color: '#FFF' }}>Refine</Text>{'\n'}
-                      <Text style={{ color: colors.accent }}>your ritual.</Text>
+                      <Text style={{ color: '#FFF' }}>{t('onboarding.refineLine1')}</Text>{'\n'}
+                      <Text style={{ color: colors.accent }}>{t('onboarding.refineLine2')}</Text>
                     </>
                   )}
                 </>
-              ) : step.title}
+              ) : t(step.titleKey)}
             </Text>
           </View>
 
@@ -433,8 +497,8 @@ export default function OnboardingScreen() {
                     >
                       <Ionicons name={item.icon} size={normalize(20)} color={level === item.id ? '#fff' : 'rgba(255,255,255,0.4)'} />
                       <View style={styles.cardContent}>
-                        <Text style={[styles.cardTitle, { fontSize: normalize(17) }]}>{item.title}</Text>
-                        <Text style={[styles.cardDetail, { fontSize: normalize(13) }]}>{item.detail}</Text>
+                        <Text style={[styles.cardTitle, { fontSize: normalize(17) }]}>{item.titleKey ? t(item.titleKey) : item.title}</Text>
+                        <Text style={[styles.cardDetail, { fontSize: normalize(13) }]}>{item.detailKey ? t(item.detailKey) : item.detail}</Text>
                       </View>
                       {level === item.id && <Ionicons name="checkmark" size={normalize(18)} color="#fff" />}
                     </Pressable>
@@ -460,8 +524,8 @@ export default function OnboardingScreen() {
                     >
                       <Ionicons name={item.icon} size={normalize(20)} color={goal === item.id ? '#fff' : 'rgba(255,255,255,0.4)'} />
                       <View style={styles.cardContent}>
-                        <Text style={[styles.cardTitle, { fontSize: normalize(17) }]}>{item.title}</Text>
-                        <Text style={[styles.cardDetail, { fontSize: normalize(13) }]}>{item.detail}</Text>
+                        <Text style={[styles.cardTitle, { fontSize: normalize(17) }]}>{item.titleKey ? t(item.titleKey) : item.title}</Text>
+                        <Text style={[styles.cardDetail, { fontSize: normalize(13) }]}>{item.detailKey ? t(item.detailKey) : item.detail}</Text>
                       </View>
                       {goal === item.id && <Ionicons name="checkmark" size={normalize(18)} color="#fff" />}
                     </Pressable>
@@ -469,6 +533,16 @@ export default function OnboardingScreen() {
                 </Animated.View>
               )}
             </View>
+          )}
+
+          {guideStep && (
+            <GuidePanel
+              icon={guideStep.icon}
+              title={t(guideStep.titleKey)}
+              body={t(guideStep.bodyKey)}
+              index={guideSteps.findIndex((item) => item.id === guideStep.id) + 1}
+              total={guideSteps.length}
+            />
           )}
 
           {step.id === 'ritual' && (
@@ -514,21 +588,21 @@ export default function OnboardingScreen() {
           {step.id === 'ready' && (
             <View style={[styles.readyCard, { borderRadius: normalize(20), padding: normalize(20) }]}>
               <View style={[styles.summaryRow, { paddingVertical: normalize(14) }]}>
-                <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>Level</Text>
+                <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>{t('onboarding.level')}</Text>
                 <Text style={[styles.summaryValue, { fontSize: normalize(17) }]}>
-                  {levels.find(l => l.id === level)?.title ?? 'Beginner'}
+                  {t(levels.find(l => l.id === level)?.titleKey ?? 'onboarding.beginner')}
                 </Text>
               </View>
               <View style={styles.summaryDivider} />
               <View style={[styles.summaryRow, { paddingVertical: normalize(14) }]}>
-                <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>Goal</Text>
+                <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>{t('onboarding.goal')}</Text>
                 <Text style={[styles.summaryValue, { fontSize: normalize(17) }]}>
-                  {goals.find(g => g.id === goal)?.title ?? 'First 25'}
+                  {t(goals.find(g => g.id === goal)?.titleKey ?? 'onboarding.first25')}
                 </Text>
               </View>
               <View style={styles.summaryDivider} />
               <View style={[styles.summaryRow, { paddingVertical: normalize(14) }]}>
-                <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>Days</Text>
+                <Text style={[styles.summaryLabel, { fontSize: normalize(12) }]}>{t('onboarding.days')}</Text>
                 <Text style={[styles.summaryValue, { fontSize: normalize(17) }]}>
                   {selectedDays.map(d => daysOfWeek.find(dw => dw.id === d)?.letter).join('  ')}
                 </Text>
@@ -553,7 +627,7 @@ export default function OnboardingScreen() {
       >
         {isLanding ? (
           <View style={{ alignItems: 'center' }}>
-            <SwipeSlider onComplete={goNext} />
+            <SwipeSlider label={t('onboarding.swipe')} onComplete={goNext} />
           </View>
         ) : (
           <NeonButton
@@ -570,12 +644,27 @@ export default function OnboardingScreen() {
             style={styles.secondaryButton}
           >
             <Text style={[styles.secondaryText, { fontSize: normalize(15) }]}>
-              {paywallAvailable ? 'View Pro →' : 'Pro setup required'}
+              {paywallAvailable ? `${t('onboarding.viewPro')} →` : t('onboarding.proSetupRequired')}
             </Text>
           </Pressable>
         )}
       </Animated.View>
     </CFEView>
+  );
+}
+
+function GuidePanel({ icon, title, body, index, total }: { icon: IconName; title: string; body: string; index: number; total: number }) {
+  return (
+    <View style={styles.guidePanel}>
+      <View style={styles.guideIconWrap}>
+        <Ionicons name={icon} size={28} color="#fff" />
+      </View>
+      <View style={styles.guideCopy}>
+        <Text style={styles.guideKicker}>{index}/{total}</Text>
+        <Text style={styles.guideTitle}>{title}</Text>
+        <Text style={styles.guideBody}>{body}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -609,6 +698,27 @@ const styles = StyleSheet.create({
   textBlockHero: { marginTop: 40 },
   title: { color: '#fff' },
   grid: { gap: 10 },
+  guidePanel: {
+    gap: 22,
+    padding: 22,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  guideIconWrap: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,77,109,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guideCopy: { gap: 10 },
+  guideKicker: { fontSize: 12, fontWeight: '800', color: colors.accent, textTransform: 'uppercase', letterSpacing: 0.8 },
+  guideTitle: { fontSize: 25, lineHeight: 31, fontWeight: '900', color: '#fff' },
+  guideBody: { fontSize: 15, lineHeight: 22, fontWeight: '600', color: 'rgba(255,255,255,0.58)' },
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     backgroundColor: 'rgba(255,255,255,0.04)',
